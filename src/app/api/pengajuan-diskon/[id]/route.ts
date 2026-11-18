@@ -1,0 +1,65 @@
+import { NextResponse } from 'next/server';
+import { db } from '@/shared/lib/db';
+import { diskonRequest, logs } from '@/shared/lib/db/schema';
+import { auth } from '@/shared/lib/auth/config';
+import { eq } from 'drizzle-orm';
+
+// ============================================================
+// API: /api/pengajuan-diskon/[id]
+// PUT (approval status: approved / rejected) + DELETE
+// ============================================================
+
+export async function PUT(
+  req: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const session = await auth();
+    if (!session) {
+      return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { id } = await params;
+    const { status } = await req.json();
+    const user = (session.user as any)?.name || (session.user as any)?.username || 'Manager';
+
+    const [updated] = await db
+      .update(diskonRequest)
+      .set({
+        status, // approved | rejected
+        approvedBy: user,
+        updatedAt: new Date(),
+      })
+      .where(eq(diskonRequest.id, id))
+      .returning();
+
+    await db.insert(logs).values({
+      user,
+      aksi: `DISKON_${status.toUpperCase()}`,
+      detail: `${status === 'approved' ? 'Menyetujui' : 'Menolak'} pengajuan diskon ID: ${id}`,
+    });
+
+    return NextResponse.json({ success: true, data: updated });
+  } catch (err: any) {
+    return NextResponse.json({ success: false, message: err.message }, { status: 500 });
+  }
+}
+
+export async function DELETE(
+  req: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const session = await auth();
+    if (!session) {
+      return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { id } = await params;
+    await db.delete(diskonRequest).where(eq(diskonRequest.id, id));
+
+    return NextResponse.json({ success: true, message: 'Pengajuan dihapus' });
+  } catch (err: any) {
+    return NextResponse.json({ success: false, message: err.message }, { status: 500 });
+  }
+}

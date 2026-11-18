@@ -1,0 +1,163 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { db } from '@/shared/lib/db';
+import { inventory } from '@/shared/lib/db/schema';
+import { sql, or, ilike, desc, eq } from 'drizzle-orm';
+import { auth } from '@/shared/lib/auth/config';
+
+// ============================================================
+// API ROUTE: Master Inventory List & Create
+// Endpoint:
+// - GET /api/inventory (list with pagination + search)
+// - POST /api/inventory (create item)
+// ============================================================
+
+export async function GET(req: NextRequest) {
+  try {
+    const session = await auth();
+    if (!session) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized: Harap login terlebih dahulu' },
+        { status: 401 }
+      );
+    }
+
+    const { searchParams } = new URL(req.url);
+    const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
+    const limit = Math.max(1, parseInt(searchParams.get('limit') || '10', 10));
+    const search = searchParams.get('search')?.trim() || '';
+
+    const offset = (page - 1) * limit;
+
+    // Filter pencarian: SKU, Nama Barang, atau Brand
+    const searchCondition = search
+      ? or(
+          ilike(inventory.sku, `%${search}%`),
+          ilike(inventory.namaBarang, `%${search}%`),
+          ilike(inventory.brand, `%${search}%`)
+        )
+      : undefined;
+
+    // Hitung total data
+    const [countResult] = await db
+      .select({ count: sql<number>`CAST(COUNT(*) AS INTEGER)` })
+      .from(inventory)
+      .where(searchCondition);
+
+    const total = Number(countResult?.count) || 0;
+    const totalPages = Math.ceil(total / limit) || 1;
+
+    // Ambil data halaman saat ini
+    const items = await db
+      .select()
+      .from(inventory)
+      .where(searchCondition)
+      .orderBy(desc(inventory.updatedAt), desc(inventory.createdAt))
+      .limit(limit)
+      .offset(offset);
+
+    return NextResponse.json({
+      success: true,
+      data: items,
+      total,
+      page,
+      limit,
+      totalPages,
+    });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Gagal memuat data inventory';
+    console.error('Error in GET /api/inventory:', error);
+    return NextResponse.json(
+      { success: false, error: message },
+      { status: 500 }
+    );
+  }
+}
+
+export async function POST(req: NextRequest) {
+  try {
+    const session = await auth();
+    if (!session) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized: Harap login terlebih dahulu' },
+        { status: 401 }
+      );
+    }
+
+    const body = await req.json();
+    const {
+      sku,
+      namaBarang,
+      brand,
+      gramasi,
+      varian,
+      stok,
+      hargaBeli,
+      hargaJual,
+      settingPcs,
+      pakaiKarton,
+      stokMinimum,
+      keterangan,
+    } = body;
+
+    // Validasi input wajib
+    if (!sku?.trim() || !namaBarang?.trim()) {
+      return NextResponse.json(
+        { success: false, error: 'SKU dan Nama Barang wajib diisi' },
+        { status: 400 }
+      );
+    }
+
+    const normalizedSku = sku.trim().toUpperCase();
+
+    // Periksa keunikan SKU
+    const [existing] = await db
+      .select({ id: inventory.id })
+      .from(inventory)
+      .where(eq(inventory.sku, normalizedSku))
+      .limit(1);
+
+    if (existing) {
+      return NextResponse.json(
+        { success: false, error: `SKU "${normalizedSku}" sudah terdaftar` },
+        { status: 400 }
+      );
+    }
+
+    // Insert ke database
+    const [inserted] = await db
+      .insert(inventory)
+      .values({
+        sku: normalizedSku,
+        namaBarang: namaBarang.trim(),
+        brand: brand?.trim() || null,
+        gramasi: gramasi?.trim() || null,
+        varian: varian?.trim() || null,
+        stok: Number(stok) || 0,
+        hargaBeli: hargaBeli !== undefined && hargaBeli !== '' ? String(hargaBeli) : '0',
+        hargaJual: hargaJual !== undefined && hargaJual !== '' ? String(hargaJual) : '0',
+        settingPcs: Number(settingPcs) > 0 ? Number(settingPcs) : 1,
+        pakaiKarton: pakaiKarton === undefined ? true : Boolean(pakaiKarton),
+        stokMinimum: stokMinimum !== undefined && stokMinimum !== '' ? Number(stokMinimum) : 10,
+        keterangan: keterangan?.trim() || null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .returning();
+
+    return NextResponse.json(
+      {
+        success: true,
+        data: inserted,
+        message: 'Barang baru berhasil ditambahkan ke inventory',
+      },
+      { status: 201 }
+    );
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Gagal menyimpan barang baru';
+    console.error('Error in POST /api/inventory:', error);
+    return NextResponse.json(
+      { success: false, error: message },
+      { status: 500 }
+    );
+  }
+}

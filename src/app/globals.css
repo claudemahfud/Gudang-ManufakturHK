@@ -1,0 +1,60 @@
+@import "tailwindcss";
+
+:root {
+  /* Brand colors */
+  --primary: #00C853;
+  --primary-dark: #0A7A33;
+  --secondary: #009688;
+  --secondary-dark: #006B61;
+  --gold: #FFD700;
+  --gold-text: #8B6200;
+  --red: #FF5252;
+  --red-text: #C62828;
+  --orange: #F2994A;
+  --orange-text: #9A5200;
+  --dark: #1A202C;
+
+  /* Text tokens */
+  --text: #2C3E50;
+  --muted: #4A5568;
+  --muted-light: #6B7280;
+  --bg: #F0F4F8;
+  --sidebar-w: 280px;
+  --card-r: 16px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  font-family: var(--font-poppins), 'Poppins', sans-serif;
+  color: var(--text);
+  background: var(--bg);
+}
+
+/* Scrollbar custom */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 10px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
+
+/* Toast animations */
+@keyframes slideIn {
+  from { opacity: 0; transform: translateX(30px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
