@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession, signOut } from 'next-auth/react';
 import { useDivision, DivisionMode } from '@/shared/context/DivisionContext';
@@ -24,6 +24,15 @@ export default function SelectMode() {
   const { setDivision } = useDivision();
   const [selected, setSelected] = useState<DivisionMode | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  // Jika akun Bawahan yang divisinya sudah ditentukan di awal, auto-redirect ke Dashboard
+  useEffect(() => {
+    const divisiAssigned = (session?.user as any)?.divisiAssigned;
+    if (divisiAssigned && divisiAssigned !== 'ALL') {
+      setDivision(divisiAssigned);
+      router.replace(ROUTES.DASHBOARD);
+    }
+  }, [session, router, setDivision]);
 
   const userName = session?.user?.name || 'Administrator';
   const userRole = (session?.user as any)?.role || 'Petugas';
@@ -226,7 +235,7 @@ export default function SelectMode() {
       {/* Bottom Note */}
       <footer className="relative z-10 text-center max-w-5xl mx-auto w-full py-4 border-t border-slate-900 text-[11px] text-slate-500">
         <p>
-          Anda dapat berpindah mode kapan saja melalui switcher di pojok kanan atas Header atau Sidebar Dashboard.
+          Privasi Terjamin &bull; Mode yang Anda pilih terkunci selama sesi aktif. Untuk berpindah mode, wajib Logout terlebih dahulu.
         </p>
       </footer>
     </div>

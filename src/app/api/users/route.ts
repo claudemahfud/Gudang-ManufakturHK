@@ -29,6 +29,8 @@ export async function GET() {
         role: users.role,
         email: users.email,
         aktif: users.aktif,
+        divisiAssigned: users.divisiAssigned,
+        cabang: users.cabang,
         createdAt: users.createdAt,
       })
       .from(users)
@@ -80,6 +82,8 @@ export async function POST(req: Request) {
         role,
         email: email || null,
         passwordHash,
+        divisiAssigned: body.divisiAssigned || (['Administrator', 'Direktur Utama', 'Manager'].includes(role) ? 'ALL' : 'MANUFAKTUR'),
+        cabang: body.cabang || 'Pusat',
         aktif: true,
       })
       .returning({
@@ -88,6 +92,8 @@ export async function POST(req: Request) {
         namaLengkap: users.namaLengkap,
         role: users.role,
         email: users.email,
+        divisiAssigned: users.divisiAssigned,
+        cabang: users.cabang,
         aktif: users.aktif,
       });
 
