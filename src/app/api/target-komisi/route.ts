@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/shared/lib/db';
 import { targetKomisi, logs } from '@/shared/lib/db/schema';
-import { auth } from '@/shared/lib/auth/config';
-import { desc } from 'drizzle-orm';
+import { requireAuthRole, ROLES_SALES_OPS } from '@/shared/lib/auth/rbac';
+import { desc, eq } from 'drizzle-orm';
 
 // ============================================================
 // API: /api/target-komisi
@@ -11,16 +11,28 @@ import { desc } from 'drizzle-orm';
 
 export async function GET() {
   try {
-    const session = await auth();
-    if (!session) {
-      return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
-    }
+    const authResult = await requireAuthRole(ROLES_SALES_OPS);
+    if (!authResult.authorized) return authResult.response;
 
-    const items = await db
-      .select()
-      .from(targetKomisi)
-      .orderBy(desc(targetKomisi.createdAt))
-      .limit(100);
+    const { user, userRole } = authResult;
+
+    // Jika sales biasa, hanya boleh melihat target & komisi miliknya sendiri
+    let query = db.select().from(targetKomisi);
+    let items;
+    if (userRole === 'Salesman' || userRole === 'Agen') {
+      items = await db
+        .select()
+        .from(targetKomisi)
+        .where(eq(targetKomisi.salesman, user.name || user.username))
+        .orderBy(desc(targetKomisi.createdAt))
+        .limit(100);
+    } else {
+      items = await db
+        .select()
+        .from(targetKomisi)
+        .orderBy(desc(targetKomisi.createdAt))
+        .limit(100);
+    }
 
     return NextResponse.json({ success: true, data: items });
   } catch (err: any) {
@@ -30,10 +42,9 @@ export async function GET() {
 
 export async function POST(req: Request) {
   try {
-    const session = await auth();
-    if (!session) {
-      return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
-    }
+    // Hanya manajemen / admin salesman yang boleh membuat/mengubah target
+    const authResult = await requireAuthRole(['Administrator', 'Direktur Utama', 'Manager', 'Admin Salesman']);
+    if (!authResult.authorized) return authResult.response;
 
     const body = await req.json();
     const { salesman, periode, target, realisasi, pctKomisi } = body;
@@ -45,7 +56,7 @@ export async function POST(req: Request) {
       );
     }
 
-    const user = (session.user as any)?.name || (session.user as any)?.username || 'System';
+    const user = authResult.user?.name || authResult.user?.username || 'System';
 
     const [row] = await db
       .insert(targetKomisi)

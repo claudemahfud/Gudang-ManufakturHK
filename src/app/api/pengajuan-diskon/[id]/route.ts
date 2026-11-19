@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/shared/lib/db';
 import { diskonRequest, logs } from '@/shared/lib/db/schema';
-import { auth } from '@/shared/lib/auth/config';
+import { requireAuthRole } from '@/shared/lib/auth/rbac';
 import { eq } from 'drizzle-orm';
 
 // ============================================================
@@ -14,14 +14,12 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await auth();
-    if (!session) {
-      return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
-    }
+    const authResult = await requireAuthRole(['Administrator', 'Direktur Utama', 'Manager', 'Admin Salesman']);
+    if (!authResult.authorized) return authResult.response;
 
     const { id } = await params;
     const { status } = await req.json();
-    const user = (session.user as any)?.name || (session.user as any)?.username || 'Manager';
+    const user = authResult.user?.name || authResult.user?.username || 'Manager';
 
     const [updated] = await db
       .update(diskonRequest)
@@ -50,10 +48,8 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await auth();
-    if (!session) {
-      return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
-    }
+    const authResult = await requireAuthRole(['Administrator', 'Direktur Utama', 'Manager']);
+    if (!authResult.authorized) return authResult.response;
 
     const { id } = await params;
     await db.delete(diskonRequest).where(eq(diskonRequest.id, id));
