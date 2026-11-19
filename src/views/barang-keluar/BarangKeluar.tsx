@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { formatTanggal, formatRupiah } from '@/shared/lib/utils';
+import { Truck, ShoppingBag, Layers, CheckCircle2, AlertCircle } from 'lucide-react';
 
 // ============================================================
 // PAGE: Barang Keluar & Loading Penjualan
@@ -21,6 +22,7 @@ interface ItemKeluar {
   pelanggan: string | null;
   salesman: string | null;
   diskon: string | null;
+  channel?: string;
   createdBy: string | null;
 }
 
@@ -50,6 +52,7 @@ export default function BarangKeluar() {
   const [search, setSearch] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+  const [selectedChannel, setSelectedChannel] = useState<'GROSIR' | 'POS' | 'ALL'>('GROSIR');
 
   // Modal Create
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -77,6 +80,7 @@ export default function BarangKeluar() {
       if (startDate) params.set('startDate', startDate);
       if (endDate) params.set('endDate', endDate);
       if (search) params.set('search', search);
+      if (selectedChannel !== 'ALL') params.set('channel', selectedChannel);
 
       const res = await fetch(`/api/barang-keluar?${params.toString()}`);
       const json = await res.json();
@@ -102,8 +106,11 @@ export default function BarangKeluar() {
 
   useEffect(() => {
     fetchData();
+  }, [startDate, endDate, selectedChannel]);
+
+  useEffect(() => {
     fetchInventory();
-  }, [startDate, endDate]);
+  }, []);
 
   const showToast = (message: string, type: 'success' | 'error') => {
     setToast({ message, type });
@@ -255,6 +262,46 @@ export default function BarangKeluar() {
         </button>
       </div>
 
+      {/* Channel Switcher Tabs */}
+      <div className="flex flex-wrap items-center gap-2">
+        <button
+          type="button"
+          onClick={() => setSelectedChannel('GROSIR')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition shadow-2xs ${
+            selectedChannel === 'GROSIR'
+              ? 'bg-blue-600 text-white shadow-sm'
+              : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
+          }`}
+        >
+          <Truck className="w-3.5 h-3.5" />
+          <span>Muatan Gudang & Grosir (B2B)</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => setSelectedChannel('POS')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition shadow-2xs ${
+            selectedChannel === 'POS'
+              ? 'bg-emerald-600 text-white shadow-sm'
+              : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
+          }`}
+        >
+          <ShoppingBag className="w-3.5 h-3.5" />
+          <span>Transaksi Kasir POS</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => setSelectedChannel('ALL')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition shadow-2xs ${
+            selectedChannel === 'ALL'
+              ? 'bg-gray-900 text-white shadow-sm'
+              : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
+          }`}
+        >
+          <Layers className="w-3.5 h-3.5" />
+          <span>Semua Pengeluaran</span>
+        </button>
+      </div>
+
       {/* Filters */}
       <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex flex-col md:flex-row gap-4 items-center justify-between">
         <div className="w-full md:w-72">
@@ -299,6 +346,7 @@ export default function BarangKeluar() {
               <tr>
                 <th className="py-3.5 px-4">No. Transaksi</th>
                 <th className="py-3.5 px-4">Tanggal</th>
+                <th className="py-3.5 px-4">Jalur Distribusi</th>
                 <th className="py-3.5 px-4">Pelanggan / Salesman</th>
                 <th className="py-3.5 px-4">Item Barang</th>
                 <th className="py-3.5 px-4">Jumlah</th>
@@ -309,13 +357,13 @@ export default function BarangKeluar() {
             <tbody className="divide-y divide-gray-100">
               {loading ? (
                 <tr>
-                  <td colSpan={7} className="py-12 text-center text-gray-400">
+                  <td colSpan={8} className="py-12 text-center text-gray-400">
                     Memuat data barang keluar...
                   </td>
                 </tr>
               ) : data.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="py-12 text-center text-gray-400">
+                  <td colSpan={8} className="py-12 text-center text-gray-400">
                     Belum ada catatan barang keluar
                   </td>
                 </tr>
@@ -327,6 +375,19 @@ export default function BarangKeluar() {
                     </td>
                     <td className="py-3.5 px-4 text-xs text-gray-600 whitespace-nowrap">
                       {formatTanggal(row.tanggal)}
+                    </td>
+                    <td className="py-3.5 px-4 whitespace-nowrap">
+                      {row.channel === 'POS' ? (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
+                          <ShoppingBag className="w-2.5 h-2.5" />
+                          <span>Kasir POS</span>
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-blue-50 text-blue-800 border border-blue-200">
+                          <Truck className="w-2.5 h-2.5" />
+                          <span>Gudang / Grosir</span>
+                        </span>
+                      )}
                     </td>
                     <td className="py-3.5 px-4">
                       <div className="font-semibold text-gray-800">{row.pelanggan || '-'}</div>
@@ -452,8 +513,20 @@ export default function BarangKeluar() {
                             min="1"
                             value={row.qty}
                             onChange={(e) => updateItemRow(idx, 'qty', parseInt(e.target.value) || 0)}
-                            className="w-full px-2 py-1.5 rounded-lg border border-gray-200 text-xs focus:border-emerald-500 outline-none bg-white"
+                            className="w-full px-2 py-1.5 rounded-lg border border-gray-200 text-xs focus:border-emerald-500 outline-none bg-white font-bold text-gray-800"
                           />
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            {[1, 5, 10, 20, 50].map((add) => (
+                              <button
+                                key={add}
+                                type="button"
+                                onClick={() => updateItemRow(idx, 'qty', (row.qty || 0) + add)}
+                                className="text-[9px] px-1.5 py-0.2 bg-gray-200/80 hover:bg-gray-300 text-gray-700 font-bold rounded"
+                              >
+                                +{add}
+                              </button>
+                            ))}
+                          </div>
                         </div>
                         <div className="sm:col-span-3">
                           <label className="block text-[10px] font-semibold text-gray-500 mb-0.5">Harga Jual (Rp)</label>

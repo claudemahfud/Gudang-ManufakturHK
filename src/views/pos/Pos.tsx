@@ -158,6 +158,7 @@ export default function PosView() {
   const [lastReceipt, setLastReceipt] = useState<any>(null);
   const [mobileCartOpen, setMobileCartOpen] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [waPhone, setWaPhone] = useState('');
 
   // POS Settings State (Local to device / independent from backoffice)
   const [posSettings, setPosSettings] = useState<PosSettings>(DEFAULT_POS_SETTINGS);
@@ -385,6 +386,27 @@ export default function PosView() {
   // Trigger Native 58mm Thermal Print
   const handlePrintThermal = () => {
     window.print();
+  };
+
+  // Kirim Nota via WhatsApp Otomatis
+  const handleSendWhatsApp = () => {
+    if (!lastReceipt) return;
+    const itemsList = lastReceipt.items
+      ?.map(
+        (it: any) =>
+          `• ${it.namaBarang} (${it.qty} x Rp ${it.hargaJual?.toLocaleString('id-ID')}) = Rp ${(
+            it.qty * it.hargaJual
+          )?.toLocaleString('id-ID')}`
+      )
+      .join('\n');
+    const msg = `*STRUK PEMBAYARAN KASIR*\n*${posSettings.namaToko}*\n${posSettings.alamatToko}\n--------------------------------\nNo: ${lastReceipt.trxId}\nWaktu: ${new Date(lastReceipt.tanggal).toLocaleString('id-ID')}\nKasir: ${lastReceipt.kasir}\nPelanggan: ${lastReceipt.pelanggan}\n--------------------------------\n${itemsList}\n--------------------------------\n*TOTAL: Rp ${lastReceipt.grandTotal?.toLocaleString('id-ID')}*\nBayar (${lastReceipt.metodePembayaran}): Rp ${lastReceipt.uangDiterima?.toLocaleString('id-ID')}\nKembalian: Rp ${lastReceipt.kembalian?.toLocaleString('id-ID')}\n--------------------------------\n${posSettings.pesanFooter || 'Terima kasih atas kunjungan Anda!'}`;
+
+    const clean = waPhone.replace(/[^0-9]/g, '');
+    const phoneParam = clean ? (clean.startsWith('0') ? '62' + clean.slice(1) : clean) : '';
+    const url = phoneParam
+      ? `https://api.whatsapp.com/send?phone=${phoneParam}&text=${encodeURIComponent(msg)}`
+      : `https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`;
+    window.open(url, '_blank');
   };
 
   return (
@@ -1081,6 +1103,25 @@ export default function PosView() {
                   {posSettings.pesanFooter}
                 </div>
               </div>
+            </div>
+
+            {/* WhatsApp Share Box */}
+            <div className="px-4 py-3 bg-slate-950 border-t border-slate-800 flex items-center gap-2">
+              <input
+                type="tel"
+                placeholder="No. WA Pelanggan (08xx)..."
+                value={waPhone}
+                onChange={(e) => setWaPhone(e.target.value)}
+                className="flex-1 bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 font-mono"
+              />
+              <button
+                type="button"
+                onClick={handleSendWhatsApp}
+                className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white font-bold text-xs flex items-center gap-1.5 transition shadow-sm whitespace-nowrap"
+                title="Kirim Struk via WhatsApp"
+              >
+                <span>Kirim WA</span>
+              </button>
             </div>
 
             {/* Modal Actions */}
