@@ -1,13 +1,31 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { formatTanggal } from '@/shared/lib/utils';
-import type { UserRole } from '@/shared/types';
-
 // ============================================================
 // PAGE: Manajemen Pengguna & Hak Akses
 // Route: /users
+// Fitur:
+// 1. Kelola akun pengguna & 14 tingkatan role
+// 2. Penetapan Divisi (MANUFAKTUR vs FNB vs ALL)
+// 3. Penempatan Cabang (Pusat vs Cabang Regional)
+// 4. Karyawan Cabang terisolasi ke cabangnya masing-masing
 // ============================================================
+
+import { useState, useEffect } from 'react';
+import { formatTanggal } from '@/shared/lib/utils';
+import type { UserRole } from '@/shared/types';
+import {
+  Users as UsersIcon,
+  Plus,
+  Building2,
+  Lock,
+  ShieldCheck,
+  CheckCircle2,
+  AlertCircle,
+  X,
+  Factory,
+  Coffee,
+  Boxes,
+} from 'lucide-react';
 
 interface UserItem {
   id: string;
@@ -16,7 +34,15 @@ interface UserItem {
   role: UserRole;
   email: string | null;
   aktif: boolean;
+  divisiAssigned?: 'ALL' | 'MANUFAKTUR' | 'FNB';
+  cabang?: string;
   createdAt: string;
+}
+
+interface CabangOption {
+  id: number;
+  kodeCabang: string;
+  namaCabang: string;
 }
 
 const ROLES: UserRole[] = [
@@ -38,6 +64,7 @@ const ROLES: UserRole[] = [
 
 export default function Users() {
   const [data, setData] = useState<UserItem[]>([]);
+  const [branches, setBranches] = useState<CabangOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -48,6 +75,8 @@ export default function Users() {
     role: 'Staff Gudang' as UserRole,
     email: '',
     password: '',
+    divisiAssigned: 'MANUFAKTUR' as 'ALL' | 'MANUFAKTUR' | 'FNB',
+    cabang: 'Pusat',
   });
 
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
@@ -55,11 +84,20 @@ export default function Users() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/users');
-      const json = await res.json();
-      if (json.success) setData(json.data);
+      const [resUsers, resCabang] = await Promise.all([
+        fetch('/api/users'),
+        fetch('/api/cabang'),
+      ]);
+
+      const jsonUsers = await resUsers.json();
+      if (jsonUsers.success) setData(jsonUsers.data);
+
+      const jsonCabang = await resCabang.json();
+      if (jsonCabang.success && Array.isArray(jsonCabang.data)) {
+        setBranches(jsonCabang.data);
+      }
     } catch {
-      showToast('Gagal memuat pengguna', 'error');
+      showToast('Gagal memuat data pengguna', 'error');
     } finally {
       setLoading(false);
     }
@@ -72,6 +110,16 @@ export default function Users() {
   const showToast = (message: string, type: 'success' | 'error') => {
     setToast({ message, type });
     setTimeout(() => setToast(null), 3000);
+  };
+
+  const handleRoleChange = (selectedRole: UserRole) => {
+    const isExec = ['Administrator', 'Direktur Utama', 'Manager'].includes(selectedRole);
+    setForm((prev) => ({
+      ...prev,
+      role: selectedRole,
+      divisiAssigned: isExec ? 'ALL' : 'MANUFAKTUR',
+      cabang: isExec ? 'Pusat' : prev.cabang || 'Pusat',
+    }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -98,25 +146,28 @@ export default function Users() {
           role: 'Staff Gudang',
           email: '',
           password: '',
+          divisiAssigned: 'MANUFAKTUR',
+          cabang: 'Pusat',
         });
         fetchData();
       } else {
-        showToast(json.message || 'Gagal membuat pengguna', 'error');
+        showToast(json.message || 'Gagal menyimpan', 'error');
       }
     } catch {
-      showToast('Terjadi kesalahan', 'error');
+      showToast('Terjadi kesalahan koneksi', 'error');
     } finally {
       setSubmitting(false);
     }
   };
 
   const handleDelete = async (username: string) => {
-    if (!confirm(`Hapus pengguna @${username}?`)) return;
+    if (!confirm(`Yakin ingin menonaktifkan pengguna @${username}?`)) return;
+
     try {
       const res = await fetch(`/api/users/${username}`, { method: 'DELETE' });
       const json = await res.json();
       if (json.success) {
-        showToast('Pengguna dihapus', 'success');
+        showToast('Pengguna berhasil dihapus', 'success');
         fetchData();
       } else {
         showToast(json.message || 'Gagal menghapus', 'error');
@@ -127,143 +178,219 @@ export default function Users() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
       {toast && (
         <div
-          className={`fixed top-5 right-5 z-50 px-5 py-3 rounded-xl shadow-lg border text-sm font-medium ${
+          className={`fixed top-5 right-5 z-50 px-5 py-3 rounded-2xl shadow-xl border text-xs sm:text-sm font-semibold flex items-center gap-2 animate-in fade-in duration-200 ${
             toast.type === 'success'
-              ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
-              : 'bg-red-50 text-red-800 border-red-200'
+              ? 'bg-emerald-50 text-emerald-900 border-emerald-200'
+              : 'bg-red-50 text-red-900 border-red-200'
           }`}
         >
-          {toast.message}
+          {toast.type === 'success' ? (
+            <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+          ) : (
+            <AlertCircle className="w-4 h-4 text-red-600" />
+          )}
+          <span>{toast.message}</span>
         </div>
       )}
 
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      {/* Header Halaman */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-3xl border border-gray-200/80 shadow-xs">
         <div>
-          <h1 className="text-2xl font-bold text-gray-800">Manajemen Pengguna & Hak Akses</h1>
-          <p className="text-sm text-gray-500 mt-1">
-            Pengaturan akun staf gudang, sales, administrasi, dan 14 tingkatan hak akses role
-          </p>
+          <div className="flex items-center gap-2.5">
+            <div className="w-10 h-10 rounded-2xl bg-gray-900 flex items-center justify-center text-white shadow-sm">
+              <UsersIcon className="w-5 h-5" />
+            </div>
+            <div>
+              <h1 className="text-xl sm:text-2xl font-bold text-gray-900 tracking-tight">
+                Manajemen Pengguna & Penempatan Cabang
+              </h1>
+              <p className="text-xs sm:text-sm text-gray-500 font-medium">
+                Atur 14 tingkatan role akses, penugasan divisi operasional, dan lokasi cabang penempatan karyawan.
+              </p>
+            </div>
+          </div>
         </div>
+
         <button
           onClick={() => setIsModalOpen(true)}
-          className="inline-flex items-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-semibold shadow-sm transition"
+          className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-gray-900 hover:bg-gray-800 text-white rounded-xl text-xs sm:text-sm font-semibold shadow-sm transition"
         >
-          <span>＋</span> Tambah Pengguna Baru
+          <Plus className="w-4 h-4" />
+          <span>Tambah Pengguna Baru</span>
         </button>
       </div>
 
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+      {/* Info Card Isolasi Penempatan */}
+      <div className="bg-amber-50/70 border border-amber-200/80 rounded-2xl p-4 flex items-start gap-3">
+        <Lock className="w-4 h-4 text-amber-700 flex-shrink-0 mt-0.5" />
+        <div className="text-xs text-amber-900 leading-relaxed">
+          <span className="font-bold">Aturan Keamanan Isolasi Cabang:</span> Karyawan yang ditempatkan di cabang regional selain Pusat hanya dapat melihat stok, barang masuk/keluar, dan transaksi POS pada cabangnya sendiri. Menu ganti cabang di Header mereka akan otomatis terkunci.
+        </div>
+      </div>
+
+      {/* Tabel Pengguna */}
+      <div className="bg-white rounded-3xl border border-gray-200/80 shadow-xs overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm text-gray-600">
-            <thead className="bg-gray-50/75 border-b border-gray-100 text-xs font-semibold uppercase tracking-wider text-gray-500">
+          <table className="w-full text-left text-xs border-collapse">
+            <thead className="bg-gray-50/75 border-b border-gray-200/80 text-[11px] font-semibold uppercase tracking-wider text-gray-500">
               <tr>
                 <th className="py-3.5 px-4">Nama Lengkap</th>
                 <th className="py-3.5 px-4">Username</th>
                 <th className="py-3.5 px-4">Role Akses</th>
-                <th className="py-3.5 px-4">Email Terdaftar</th>
-                <th className="py-3.5 px-4">Terdaftar Sejak</th>
+                <th className="py-3.5 px-4">Divisi Ditugaskan</th>
+                <th className="py-3.5 px-4">Cabang Penempatan</th>
+                <th className="py-3.5 px-4">Email</th>
+                <th className="py-3.5 px-4">Terdaftar</th>
                 <th className="py-3.5 px-4 text-center">Aksi</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
               {loading ? (
                 <tr>
-                  <td colSpan={6} className="py-12 text-center text-gray-400">
+                  <td colSpan={8} className="py-12 text-center text-gray-400">
                     Memuat daftar pengguna...
                   </td>
                 </tr>
               ) : data.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="py-12 text-center text-gray-400">
-                    Belum ada pengguna
+                  <td colSpan={8} className="py-12 text-center text-gray-400">
+                    Belum ada pengguna terdaftar
                   </td>
                 </tr>
               ) : (
-                data.map((row) => (
-                  <tr key={row.id} className="hover:bg-gray-50/50 transition">
-                    <td className="py-3.5 px-4 font-bold text-gray-800">{row.namaLengkap}</td>
-                    <td className="py-3.5 px-4 font-mono text-xs text-gray-600">@{row.username}</td>
-                    <td className="py-3.5 px-4 whitespace-nowrap">
-                      <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200">
-                        {row.role}
-                      </span>
-                    </td>
-                    <td className="py-3.5 px-4 text-gray-600 text-xs">{row.email || '-'}</td>
-                    <td className="py-3.5 px-4 text-xs text-gray-500 whitespace-nowrap">
-                      {formatTanggal(row.createdAt)}
-                    </td>
-                    <td className="py-3.5 px-4 text-center">
-                      <button
-                        onClick={() => handleDelete(row.username)}
-                        className="text-red-500 hover:text-red-700 text-xs font-semibold px-2 py-1 rounded hover:bg-red-50 transition"
-                      >
-                        Hapus
-                      </button>
-                    </td>
-                  </tr>
-                ))
+                data.map((row) => {
+                  const isExec = ['Administrator', 'Direktur Utama', 'Manager'].includes(row.role);
+                  const isLocked = !isExec && row.cabang && row.cabang !== 'Pusat' && row.cabang !== 'ALL';
+
+                  return (
+                    <tr key={row.id} className="hover:bg-gray-50/60 transition">
+                      <td className="py-3.5 px-4 font-bold text-gray-900">{row.namaLengkap}</td>
+                      <td className="py-3.5 px-4 font-mono text-[11px] text-gray-600">@{row.username}</td>
+                      <td className="py-3.5 px-4 whitespace-nowrap">
+                        <span className="px-2.5 py-1 rounded-md text-[11px] font-semibold bg-gray-100 text-gray-800 border border-gray-200">
+                          {row.role}
+                        </span>
+                      </td>
+                      <td className="py-3.5 px-4">
+                        <span
+                          className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold ${
+                            row.divisiAssigned === 'MANUFAKTUR'
+                              ? 'bg-blue-50 text-blue-800 border border-blue-200'
+                              : row.divisiAssigned === 'FNB'
+                              ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+                              : 'bg-purple-50 text-purple-800 border border-purple-200'
+                          }`}
+                        >
+                          {row.divisiAssigned === 'MANUFAKTUR' && <Factory className="w-2.5 h-2.5" />}
+                          {row.divisiAssigned === 'FNB' && <Coffee className="w-2.5 h-2.5" />}
+                          {row.divisiAssigned === 'ALL' && <Boxes className="w-2.5 h-2.5" />}
+                          <span>{row.divisiAssigned || 'ALL'}</span>
+                        </span>
+                      </td>
+                      <td className="py-3.5 px-4">
+                        <div className="flex items-center gap-1.5">
+                          <Building2 className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+                          <span className="font-semibold text-gray-800">{row.cabang || 'Pusat'}</span>
+                          {isLocked && (
+                            <span className="text-[9px] font-semibold text-amber-800 bg-amber-50 border border-amber-200 px-1 py-0.2 rounded">
+                              Terkunci
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="py-3.5 px-4 text-gray-500 text-[11px]">{row.email || '-'}</td>
+                      <td className="py-3.5 px-4 text-[11px] text-gray-500 whitespace-nowrap">
+                        {formatTanggal(row.createdAt)}
+                      </td>
+                      <td className="py-3.5 px-4 text-center">
+                        <button
+                          onClick={() => handleDelete(row.username)}
+                          className="text-red-500 hover:text-red-700 text-xs font-semibold px-2 py-1 rounded hover:bg-red-50 transition"
+                        >
+                          Hapus
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>
         </div>
       </div>
 
+      {/* Modal Tambah Pengguna Baru */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden border border-gray-100">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/40 backdrop-blur-xs animate-in fade-in duration-150">
+          <div className="bg-white rounded-3xl shadow-2xl border border-gray-200 w-full max-w-lg overflow-hidden animate-in zoom-in-95 duration-150">
             <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-              <h2 className="font-bold text-gray-800">Tambah Pengguna Baru</h2>
-              <button onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-gray-600 font-bold">
-                
+              <div className="flex items-center gap-2">
+                <UsersIcon className="w-5 h-5 text-gray-900" />
+                <h3 className="font-bold text-gray-900 text-sm sm:text-base">Tambah Pengguna Baru</h3>
+              </div>
+              <button
+                onClick={() => setIsModalOpen(false)}
+                className="text-gray-400 hover:text-gray-600 p-1 rounded-lg"
+              >
+                <X className="w-4 h-4" />
               </button>
             </div>
+
             <form onSubmit={handleSubmit} className="p-6 space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1">Nama Lengkap *</label>
+                <label className="block text-xs font-semibold text-gray-700 mb-1">
+                  Nama Lengkap <span className="text-red-500">*</span>
+                </label>
                 <input
                   type="text"
                   required
                   placeholder="Nama Lengkap Staf"
                   value={form.namaLengkap}
                   onChange={(e) => setForm({ ...form, namaLengkap: e.target.value })}
-                  className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm focus:border-emerald-500 outline-none"
+                  className="w-full px-3 py-2 rounded-xl border border-gray-200 text-xs bg-gray-50 focus:bg-white focus:ring-2 focus:ring-gray-900/10 focus:border-gray-900 outline-none"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">Username *</label>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">
+                    Username <span className="text-red-500">*</span>
+                  </label>
                   <input
                     type="text"
                     required
                     placeholder="username"
                     value={form.username}
-                    onChange={(e) => setForm({ ...form, username: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm focus:border-emerald-500 outline-none lowercase font-mono"
+                    onChange={(e) => setForm({ ...form, username: e.target.value.toLowerCase() })}
+                    className="w-full px-3 py-2 rounded-xl border border-gray-200 text-xs bg-gray-50 focus:bg-white focus:ring-2 focus:ring-gray-900/10 focus:border-gray-900 outline-none font-mono"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">Password *</label>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">
+                    Password <span className="text-red-500">*</span>
+                  </label>
                   <input
                     type="password"
                     required
                     placeholder="Min 6 karakter"
                     value={form.password}
                     onChange={(e) => setForm({ ...form, password: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm focus:border-emerald-500 outline-none"
+                    className="w-full px-3 py-2 rounded-xl border border-gray-200 text-xs bg-gray-50 focus:bg-white focus:ring-2 focus:ring-gray-900/10 focus:border-gray-900 outline-none"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1">Role / Tingkat Akses *</label>
+                <label className="block text-xs font-semibold text-gray-700 mb-1">
+                  Role / Tingkat Akses <span className="text-red-500">*</span>
+                </label>
                 <select
                   value={form.role}
-                  onChange={(e) => setForm({ ...form, role: e.target.value as UserRole })}
-                  className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm focus:border-emerald-500 outline-none"
+                  onChange={(e) => handleRoleChange(e.target.value as UserRole)}
+                  className="w-full px-3 py-2 rounded-xl border border-gray-200 text-xs bg-gray-50 focus:bg-white focus:ring-2 focus:ring-gray-900/10 focus:border-gray-900 outline-none"
                 >
                   {ROLES.map((r) => (
                     <option key={r} value={r}>
@@ -273,14 +400,53 @@ export default function Users() {
                 </select>
               </div>
 
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">
+                    Divisi Operasional
+                  </label>
+                  <select
+                    value={form.divisiAssigned}
+                    onChange={(e) => setForm({ ...form, divisiAssigned: e.target.value as any })}
+                    className="w-full px-3 py-2 rounded-xl border border-gray-200 text-xs bg-gray-50 focus:bg-white focus:ring-2 focus:ring-gray-900/10 focus:border-gray-900 outline-none"
+                  >
+                    <option value="MANUFAKTUR">Divisi Manufaktur</option>
+                    <option value="FNB">Divisi F&B</option>
+                    <option value="ALL">Pimpinan (Semua Divisi)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">
+                    Penempatan Cabang <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    value={form.cabang}
+                    onChange={(e) => setForm({ ...form, cabang: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl border border-gray-200 text-xs bg-gray-50 focus:bg-white focus:ring-2 focus:ring-gray-900/10 focus:border-gray-900 outline-none font-semibold"
+                  >
+                    <option value="Pusat">Pusat (Default)</option>
+                    {branches
+                      .filter((b) => b.namaCabang !== 'Pusat')
+                      .map((b) => (
+                        <option key={b.id} value={b.namaCabang}>
+                          {b.namaCabang} ({b.kodeCabang})
+                        </option>
+                      ))}
+                  </select>
+                </div>
+              </div>
+
               <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1">Alamat Email (untuk OTP)</label>
+                <label className="block text-xs font-semibold text-gray-700 mb-1">
+                  Alamat Email (opsional untuk OTP)
+                </label>
                 <input
                   type="email"
                   placeholder="staf@dutapangan.com"
                   value={form.email}
                   onChange={(e) => setForm({ ...form, email: e.target.value })}
-                  className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm focus:border-emerald-500 outline-none"
+                  className="w-full px-3 py-2 rounded-xl border border-gray-200 text-xs bg-gray-50 focus:bg-white focus:ring-2 focus:ring-gray-900/10 focus:border-gray-900 outline-none"
                 />
               </div>
 
@@ -288,14 +454,14 @@ export default function Users() {
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2 border border-gray-200 text-gray-600 rounded-xl text-sm font-medium hover:bg-gray-50 transition"
+                  className="px-4 py-2 border border-gray-200 text-gray-600 rounded-xl text-xs font-semibold hover:bg-gray-100 transition"
                 >
                   Batal
                 </button>
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-semibold transition disabled:opacity-50"
+                  className="px-5 py-2 bg-gray-900 hover:bg-gray-800 text-white rounded-xl text-xs font-semibold transition disabled:opacity-50"
                 >
                   {submitting ? 'Menyimpan...' : 'Simpan Pengguna'}
                 </button>

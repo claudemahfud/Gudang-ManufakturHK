@@ -1,11 +1,22 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { useSession, signOut } from 'next-auth/react';
 import type { UserRole } from '@/shared/types';
 import { ROUTES } from '@/router/routes';
 
 export type DivisionMode = 'MANUFAKTUR' | 'FNB';
+
+export interface CabangItem {
+  id: number;
+  kodeCabang: string;
+  namaCabang: string;
+  divisi: string;
+  alamat?: string | null;
+  telepon?: string | null;
+  isPusat: boolean;
+  status: string;
+}
 
 interface DivisionContextType {
   division: DivisionMode;
@@ -16,22 +27,14 @@ interface DivisionContextType {
   cabang: string;
   setCabang: (branch: string) => void;
   availableCabang: string[];
+  allCabangList: CabangItem[];
   canSwitchDivision: boolean;
+  canSwitchCabang: boolean;
+  isCabangLocked: boolean;
   isBawahan: boolean;
   logoutAndSwitchMode: () => void;
+  refetchCabang: () => Promise<void>;
 }
-
-const CABANG_MANUFAKTUR = [
-  'Cabang Pusat (Pabrik)',
-  'Gudang Cikarang',
-  'Depo Surabaya',
-];
-
-const CABANG_FNB = [
-  'Outlet 1 (Pusat)',
-  'Outlet 2 (Senopati)',
-  'Outlet 3 (Bandung)',
-];
 
 const DivisionContext = createContext<DivisionContextType>({
   division: 'MANUFAKTUR',
@@ -39,12 +42,16 @@ const DivisionContext = createContext<DivisionContextType>({
   isManufaktur: true,
   isFnb: false,
   divisionLabel: 'Manufaktur',
-  cabang: 'Cabang Pusat (Pabrik)',
+  cabang: 'Pusat',
   setCabang: () => {},
-  availableCabang: CABANG_MANUFAKTUR,
+  availableCabang: ['Pusat'],
+  allCabangList: [],
   canSwitchDivision: false,
+  canSwitchCabang: false,
+  isCabangLocked: false,
   isBawahan: true,
   logoutAndSwitchMode: () => {},
+  refetchCabang: async () => {},
 });
 
 const COOKIE_NAME = 'app_active_division';
@@ -55,18 +62,57 @@ export function DivisionProvider({ children }: { children: React.ReactNode }) {
   const user = session?.user as any;
   const userRole = user?.role as UserRole | undefined;
   const divisiAssigned = user?.divisiAssigned as 'ALL' | 'MANUFAKTUR' | 'FNB' | undefined;
+  const userCabang = user?.cabang || 'Pusat';
 
-  // Hanya Pimpinan (Admin, Direktur Utama, Manager) atau user dengan divisi_assigned === 'ALL' yang punya izin ganti mode
+  // Hanya Pimpinan (Admin, Direktur Utama, Manager) yang punya izin ganti mode & multi-cabang
   const isExecutive = ['Administrator', 'Direktur Utama', 'Manager'].includes(userRole as any);
   const canSwitchDivision = isExecutive || divisiAssigned === 'ALL';
   const isBawahan = !canSwitchDivision;
 
+  // Karyawan Cabang: Jika bukan eksekutif dan cabang bukan 'Pusat' / 'ALL', terkunci ke cabangnya sendiri!
+  const isBranchEmployee = !isExecutive && userCabang !== 'ALL' && userCabang !== 'Pusat';
+
   const [division, setDivisionState] = useState<DivisionMode>('MANUFAKTUR');
-  const [cabang, setCabangState] = useState<string>('Cabang Pusat (Pabrik)');
-  const [mounted, setMounted] = useState(false);
+  const [cabang, setCabangState] = useState<string>(isBranchEmployee ? userCabang : 'Pusat');
+  const [allCabangList, setAllCabangList] = useState<CabangItem[]>([]);
+  const [availableCabang, setAvailableCabang] = useState<string[]>(['Pusat']);
+
+  // Fetch daftar cabang aktif dari API
+  const refetchCabang = useCallback(async () => {
+    if (isBranchEmployee) {
+      setAvailableCabang([userCabang]);
+      setCabangState(userCabang);
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/cabang?divisi=${division}`);
+      const json = await res.json();
+      if (json.success && Array.isArray(json.data) && json.data.length > 0) {
+        setAllCabangList(json.data);
+        const names = json.data.map((c: CabangItem) => c.namaCabang);
+        setAvailableCabang(names);
+
+        // Validasi apakah cabang yang tersimpan masih valid di daftar cabang
+        setCabangState((current) => {
+          if (names.includes(current)) return current;
+          const saved = localStorage.getItem('app_active_cabang');
+          if (saved && names.includes(saved)) return saved;
+          return 'Pusat';
+        });
+      } else {
+        // Fallback default: Hanya Pusat
+        setAvailableCabang(['Pusat']);
+        setCabangState('Pusat');
+      }
+    } catch (err) {
+      console.error('Failed to fetch cabang:', err);
+      setAvailableCabang(['Pusat']);
+    }
+  }, [division, isBranchEmployee, userCabang]);
 
   useEffect(() => {
-    // 1. Jika bawahan dan sudah di-assign mode tertentu di awal, kunci mati ke divisi tersebut!
+    // 1. Inisialisasi Divisi
     if (divisiAssigned === 'MANUFAKTUR') {
       setDivisionState('MANUFAKTUR');
       localStorage.setItem('app_active_division', 'MANUFAKTUR');
@@ -76,7 +122,6 @@ export function DivisionProvider({ children }: { children: React.ReactNode }) {
       localStorage.setItem('app_active_division', 'FNB');
       document.cookie = `${COOKIE_NAME}=FNB; path=/; max-age=31536000`;
     } else {
-      // Pimpinan (ALL): baca dari localStorage / cookie
       const saved = localStorage.getItem('app_active_division') as DivisionMode | null;
       if (saved === 'MANUFAKTUR' || saved === 'FNB') {
         setDivisionState(saved);
@@ -84,17 +129,18 @@ export function DivisionProvider({ children }: { children: React.ReactNode }) {
       }
     }
 
-    // Baca cabang
-    const savedCabang = localStorage.getItem('app_active_cabang');
-    if (savedCabang) {
-      setCabangState(savedCabang);
+    // 2. Inisialisasi Cabang
+    if (isBranchEmployee) {
+      setCabangState(userCabang);
+      setAvailableCabang([userCabang]);
+      localStorage.setItem('app_active_cabang', userCabang);
+      document.cookie = `${CABANG_COOKIE_NAME}=${encodeURIComponent(userCabang)}; path=/; max-age=31536000`;
+    } else {
+      refetchCabang();
     }
-
-    setMounted(true);
-  }, [divisiAssigned]);
+  }, [divisiAssigned, isBranchEmployee, userCabang, refetchCabang]);
 
   const setDivision = (mode: DivisionMode) => {
-    // Bawahan tidak boleh ganti mode
     if (isBawahan) return;
     setDivisionState(mode);
     localStorage.setItem('app_active_division', mode);
@@ -102,6 +148,9 @@ export function DivisionProvider({ children }: { children: React.ReactNode }) {
   };
 
   const setCabang = (newCabang: string) => {
+    // Karyawan cabang tidak boleh berpindah cabang
+    if (isBranchEmployee) return;
+
     setCabangState(newCabang);
     localStorage.setItem('app_active_cabang', newCabang);
     document.cookie = `${CABANG_COOKIE_NAME}=${encodeURIComponent(newCabang)}; path=/; max-age=31536000`;
@@ -110,14 +159,19 @@ export function DivisionProvider({ children }: { children: React.ReactNode }) {
   // Aturan Bisnis: Ganti Mode WAJIB LOGOUT DULU!
   const logoutAndSwitchMode = () => {
     localStorage.removeItem('app_active_division');
+    localStorage.removeItem('app_active_cabang');
     document.cookie = `${COOKIE_NAME}=; path=/; max-age=0`;
+    document.cookie = `${CABANG_COOKIE_NAME}=; path=/; max-age=0`;
     signOut({ callbackUrl: ROUTES.LOGIN });
   };
 
   const isManufaktur = division === 'MANUFAKTUR';
   const isFnb = division === 'FNB';
   const divisionLabel = isManufaktur ? 'Manufaktur & Distribusi' : 'Food & Beverages (F&B)';
-  const availableCabang = isManufaktur ? CABANG_MANUFAKTUR : CABANG_FNB;
+
+  // canSwitchCabang: hanya aktif jika bukan karyawan cabang DAN ada lebih dari 1 cabang di sistem
+  const canSwitchCabang = !isBranchEmployee && availableCabang.length > 1;
+  const isCabangLocked = isBranchEmployee;
 
   return (
     <DivisionContext.Provider
@@ -130,9 +184,13 @@ export function DivisionProvider({ children }: { children: React.ReactNode }) {
         cabang,
         setCabang,
         availableCabang,
+        allCabangList,
         canSwitchDivision,
+        canSwitchCabang,
+        isCabangLocked,
         isBawahan,
         logoutAndSwitchMode,
+        refetchCabang,
       }}
     >
       {children}

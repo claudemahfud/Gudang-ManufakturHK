@@ -37,6 +37,8 @@ export default function Header({ onMenuClick, title }: HeaderProps) {
     setCabang,
     availableCabang,
     canSwitchDivision,
+    canSwitchCabang,
+    isCabangLocked,
     logoutAndSwitchMode,
   } = useDivision();
 
@@ -76,20 +78,35 @@ export default function Header({ onMenuClick, title }: HeaderProps) {
         </span>
       </div>
 
-      {/* 2. Ganti Cabang (Boleh di Dalam Apps) */}
+      {/* 2. Cabang Operasional */}
       <div className="relative">
-        <button
-          onClick={() => setShowCabangMenu((p) => !p)}
-          className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-gray-800 text-xs font-semibold shadow-sm transition"
-          title="Klik untuk berpindah Cabang / Lokasi Operasional"
-        >
-          <Building2 className="w-3.5 h-3.5 text-gray-500" />
-          <span className="truncate max-w-[140px] sm:max-w-none">{cabang}</span>
-          <ChevronDown className="w-3 h-3 text-gray-400" />
-        </button>
+        {canSwitchCabang ? (
+          <button
+            onClick={() => setShowCabangMenu((p) => !p)}
+            className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-gray-800 text-xs font-semibold shadow-sm transition"
+            title="Klik untuk berpindah Cabang / Lokasi Operasional"
+          >
+            <Building2 className="w-3.5 h-3.5 text-gray-500" />
+            <span className="truncate max-w-[140px] sm:max-w-none">{cabang}</span>
+            <ChevronDown className="w-3 h-3 text-gray-400" />
+          </button>
+        ) : (
+          <div
+            className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-gray-200 bg-gray-50/80 text-gray-700 text-xs font-semibold shadow-sm"
+            title={isCabangLocked ? `Akses Cabang Terkunci: ${cabang}` : `Lokasi Operasional: ${cabang}`}
+          >
+            <Building2 className="w-3.5 h-3.5 text-gray-500" />
+            <span className="truncate max-w-[140px] sm:max-w-none">{cabang}</span>
+            {isCabangLocked && (
+              <span className="text-[9px] bg-amber-100 text-amber-800 font-semibold px-1.5 py-0.2 rounded">
+                Terkunci
+              </span>
+            )}
+          </div>
+        )}
 
-        {/* Dropdown Ganti Cabang */}
-        {showCabangMenu && (
+        {/* Dropdown Ganti Cabang (Hanya jika canSwitchCabang) */}
+        {canSwitchCabang && showCabangMenu && (
           <div className="absolute left-0 top-full mt-2 w-60 bg-white rounded-2xl shadow-xl border border-gray-200 p-2 z-50 animate-in fade-in zoom-in-95 duration-150">
             <div className="px-3 py-1.5 text-[10px] font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1.5 border-b border-gray-100 mb-1">
               <MapPin className="w-3 h-3" />

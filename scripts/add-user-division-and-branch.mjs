@@ -17,7 +17,11 @@ async function run() {
   await sql`ALTER TABLE keuangan ADD COLUMN IF NOT EXISTS cabang VARCHAR(50) NOT NULL DEFAULT 'Pusat'`;
   console.log('✓ cabang column added to operational tables');
 
-  // 3. Tampilkan list users
+  // 3. Set default demo users division
+  await sql`UPDATE users SET divisi_assigned = 'MANUFAKTUR', cabang = 'Cabang Pusat (Pabrik)' WHERE username = 'sales1'`;
+  await sql`UPDATE users SET divisi_assigned = 'MANUFAKTUR', cabang = 'Cabang Pusat (Pabrik)' WHERE username = 'kepalagudang'`;
+
+  // 4. Tampilkan list users
   const userList = await sql`SELECT username, role, divisi_assigned, cabang FROM users`;
   console.log('Current users list:');
   for (const u of userList) {

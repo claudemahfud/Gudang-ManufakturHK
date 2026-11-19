@@ -31,6 +31,13 @@ export async function PUT(
       updatedAt: new Date(),
     };
 
+    if (body.divisiAssigned) {
+      updateData.divisiAssigned = body.divisiAssigned;
+    }
+    if (body.cabang) {
+      updateData.cabang = body.cabang;
+    }
+
     if (password && password.trim().length > 0) {
       updateData.passwordHash = sha256(password);
     }

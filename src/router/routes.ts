@@ -52,5 +52,6 @@ export const ROUTES = {
 
   // Admin
   USERS: '/users',
+  CABANG: '/cabang',
   LOGS: '/logs',
 } as const;

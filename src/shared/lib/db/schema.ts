@@ -36,6 +36,7 @@ export const inventory = pgTable('inventory', {
   stokMinimum: integer('stok_minimum').default(10),
   keterangan: text('keterangan'),
   divisi: varchar('divisi', { length: 30 }).notNull().default('MANUFAKTUR'), // MANUFAKTUR | FNB
+  cabang: varchar('cabang', { length: 50 }).notNull().default('Pusat'),
   tipeItem: varchar('tipe_item', { length: 30 }).notNull().default('barang_jadi'), // barang_jadi | bahan_baku | kemasan | menu_olahan
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow(),
@@ -391,4 +392,19 @@ export const hutangSupplier = pgTable('hutang_supplier', {
   catatan: text('catatan'),
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow(),
+});
+
+// ============================================================
+// MASTER CABANG
+// ============================================================
+export const masterCabang = pgTable('master_cabang', {
+  id: serial('id').primaryKey(),
+  kodeCabang: varchar('kode_cabang', { length: 20 }).notNull().unique(),
+  namaCabang: varchar('nama_cabang', { length: 100 }).notNull().unique(),
+  divisi: varchar('divisi', { length: 30 }).notNull().default('ALL'),
+  alamat: text('alamat'),
+  telepon: varchar('telepon', { length: 50 }),
+  isPusat: boolean('is_pusat').notNull().default(false),
+  status: varchar('status', { length: 20 }).notNull().default('ACTIVE'),
+  createdAt: timestamp('created_at').defaultNow(),
 });
