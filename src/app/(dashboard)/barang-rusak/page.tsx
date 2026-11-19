@@ -1,5 +1,6 @@
-import BarangRusak from '@/views/barang-rusak';
+import { redirect } from 'next/navigation';
+import { ROUTES } from '@/router/routes';
 
 export default function BarangRusakPage() {
-  return <BarangRusak />;
+  redirect(ROUTES.LAPORAN_RUSAK_RETUR);
 }

@@ -33,6 +33,7 @@ export async function POST(req: Request) {
       diskonPct = 0,
       uangDiterima = 0,
       catatan = '',
+      divisi = 'MANUFAKTUR',
     } = body as {
       items: CartItemInput[];
       pelanggan?: string;
@@ -40,6 +41,7 @@ export async function POST(req: Request) {
       diskonPct?: number;
       uangDiterima?: number;
       catatan?: string;
+      divisi?: 'MANUFAKTUR' | 'FNB';
     };
 
     if (!items || !Array.isArray(items) || items.length === 0) {
@@ -138,7 +140,8 @@ export async function POST(req: Request) {
           pelanggan,
           salesman: cashierName,
           diskon: String(diskonPct || 0),
-          keterangan: `POS Checkout (${metodePembayaran})${catatan ? ` - ${catatan}` : ''}`,
+          divisi,
+          keterangan: `POS Checkout (${metodePembayaran}) [${divisi}]${catatan ? ` - ${catatan}` : ''}`,
           createdBy: user.username,
         })
         .returning();
@@ -152,7 +155,8 @@ export async function POST(req: Request) {
       jenis: 'masuk',
       kategori: 'Penjualan POS',
       jumlah: String(grandTotal),
-      keterangan: `Penjualan POS #${trxId} (${metodePembayaran}) oleh ${cashierName} (${userRole})`,
+      divisi,
+      keterangan: `Penjualan POS [${divisi}] #${trxId} (${metodePembayaran}) oleh ${cashierName} (${userRole})`,
       createdBy: user.username,
     });
 

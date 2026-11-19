@@ -1,14 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/shared/lib/db';
 import { inventory } from '@/shared/lib/db/schema';
-import { sql, or, ilike, desc, eq } from 'drizzle-orm';
+import { sql, or, and, ilike, desc, eq } from 'drizzle-orm';
 import { auth } from '@/shared/lib/auth/config';
 
 // ============================================================
 // API ROUTE: Master Inventory List & Create
 // Endpoint:
-// - GET /api/inventory (list with pagination + search)
-// - POST /api/inventory (create item)
+// - GET /api/inventory (list with pagination + search + filter divisi)
+// - POST /api/inventory (create item dengan tagging divisi)
 // ============================================================
 
 export async function GET(req: NextRequest) {
@@ -25,6 +25,7 @@ export async function GET(req: NextRequest) {
     const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
     const limit = Math.max(1, parseInt(searchParams.get('limit') || '10', 10));
     const search = searchParams.get('search')?.trim() || '';
+    const divisiParam = searchParams.get('divisi') || req.cookies.get('app_active_division')?.value || 'MANUFAKTUR';
 
     const offset = (page - 1) * limit;
 
@@ -37,11 +38,20 @@ export async function GET(req: NextRequest) {
         )
       : undefined;
 
+    // Filter divisi: MANUFAKTUR | FNB (atau SEMUA)
+    const divisiCondition = (divisiParam && divisiParam !== 'SEMUA')
+      ? eq(inventory.divisi, divisiParam)
+      : undefined;
+
+    const whereClause = searchCondition && divisiCondition
+      ? and(searchCondition, divisiCondition)
+      : searchCondition || divisiCondition;
+
     // Hitung total data
     const [countResult] = await db
       .select({ count: sql<number>`CAST(COUNT(*) AS INTEGER)` })
       .from(inventory)
-      .where(searchCondition);
+      .where(whereClause);
 
     const total = Number(countResult?.count) || 0;
     const totalPages = Math.ceil(total / limit) || 1;
@@ -50,7 +60,7 @@ export async function GET(req: NextRequest) {
     const items = await db
       .select()
       .from(inventory)
-      .where(searchCondition)
+      .where(whereClause)
       .orderBy(desc(inventory.updatedAt), desc(inventory.createdAt))
       .limit(limit)
       .offset(offset);
@@ -139,6 +149,8 @@ export async function POST(req: NextRequest) {
         pakaiKarton: pakaiKarton === undefined ? true : Boolean(pakaiKarton),
         stokMinimum: stokMinimum !== undefined && stokMinimum !== '' ? Number(stokMinimum) : 10,
         keterangan: keterangan?.trim() || null,
+        divisi: body.divisi || req.cookies.get('app_active_division')?.value || 'MANUFAKTUR',
+        tipeItem: body.tipeItem || (body.divisi === 'FNB' ? 'bahan_mentah' : 'barang_jadi'),
         createdAt: new Date(),
         updatedAt: new Date(),
       })

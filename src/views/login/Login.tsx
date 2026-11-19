@@ -35,7 +35,8 @@ export default function Login() {
       if (result?.error) {
         setError('Username atau password salah. Silakan coba lagi.');
       } else {
-        router.push(callbackUrl);
+        // Alur: Login Berhasil > Pilih Mode (Manufaktur / F&B) > Dashboard
+        router.push(ROUTES.SELECT_MODE);
         router.refresh();
       }
     } catch {

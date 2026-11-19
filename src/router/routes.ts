@@ -6,6 +6,7 @@
 export const ROUTES = {
   // Auth
   LOGIN: '/login',
+  SELECT_MODE: '/select-mode',
   FORGOT_PASSWORD: '/forgot-password',
 
   // Core
@@ -34,6 +35,11 @@ export const ROUTES = {
   // Keuangan
   KEUANGAN: '/keuangan',
   BIAYA_OPERASIONAL: '/biaya-operasional',
+  NERACA: '/neraca',
+
+  // F&B & Resto (Harmonisasi Plafon Terpadu)
+  KALKULATOR_HPP: '/kalkulator-hpp',
+  CASH_OPNAME: '/cash-opname',
 
   // Salesman & Agen
   PENGAJUAN_DISKON: '/pengajuan-diskon',

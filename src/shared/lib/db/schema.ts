@@ -33,6 +33,8 @@ export const inventory = pgTable('inventory', {
   pakaiKarton: boolean('pakai_karton').notNull().default(true),
   stokMinimum: integer('stok_minimum').default(10),
   keterangan: text('keterangan'),
+  divisi: varchar('divisi', { length: 30 }).notNull().default('MANUFAKTUR'), // MANUFAKTUR | FNB
+  tipeItem: varchar('tipe_item', { length: 30 }).notNull().default('barang_jadi'), // barang_jadi | bahan_baku | kemasan | menu_olahan
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow(),
 });
@@ -50,6 +52,7 @@ export const barangMasuk = pgTable('barang_masuk', {
   hargaBeli: decimal('harga_beli', { precision: 15, scale: 2 }).default('0'),
   supplier: varchar('supplier', { length: 150 }),
   noFaktur: varchar('no_faktur', { length: 100 }),
+  divisi: varchar('divisi', { length: 30 }).notNull().default('MANUFAKTUR'),
   keterangan: text('keterangan'),
   createdBy: varchar('created_by', { length: 50 }),
   createdAt: timestamp('created_at').defaultNow(),
@@ -71,6 +74,7 @@ export const barangKeluar = pgTable('barang_keluar', {
   pelanggan: varchar('pelanggan', { length: 150 }),
   salesman: varchar('salesman', { length: 100 }),
   diskon: decimal('diskon', { precision: 5, scale: 2 }).default('0'),
+  divisi: varchar('divisi', { length: 30 }).notNull().default('MANUFAKTUR'),
   keterangan: text('keterangan'),
   createdBy: varchar('created_by', { length: 50 }),
   createdAt: timestamp('created_at').defaultNow(),
@@ -141,6 +145,7 @@ export const returBarang = pgTable('retur_barang', {
   qty: integer('qty').notNull(),
   alasan: text('alasan'),
   pelanggan: varchar('pelanggan', { length: 150 }),
+  divisi: varchar('divisi', { length: 30 }).notNull().default('MANUFAKTUR'),
   status: varchar('status', { length: 30 }).notNull().default('pending'),
   createdBy: varchar('created_by', { length: 50 }),
   createdAt: timestamp('created_at').defaultNow(),
@@ -155,6 +160,7 @@ export const barangRusak = pgTable('barang_rusak', {
   sku: varchar('sku', { length: 50 }).notNull(),
   namaBarang: varchar('nama_barang', { length: 150 }).notNull(),
   qty: integer('qty').notNull(),
+  divisi: varchar('divisi', { length: 30 }).notNull().default('MANUFAKTUR'),
   keterangan: text('keterangan'),
   createdBy: varchar('created_by', { length: 50 }),
   createdAt: timestamp('created_at').defaultNow(),
@@ -171,6 +177,7 @@ export const mutasiBarang = pgTable('mutasi_barang', {
   qty: integer('qty').notNull(),
   dari: varchar('dari', { length: 100 }).notNull(),
   ke: varchar('ke', { length: 100 }).notNull(),
+  divisi: varchar('divisi', { length: 30 }).notNull().default('MANUFAKTUR'),
   keterangan: text('keterangan'),
   createdBy: varchar('created_by', { length: 50 }),
   createdAt: timestamp('created_at').defaultNow(),
@@ -214,6 +221,7 @@ export const keuangan = pgTable('keuangan', {
   jenis: varchar('jenis', { length: 20 }).notNull(), // masuk | keluar
   kategori: varchar('kategori', { length: 100 }).notNull(),
   jumlah: decimal('jumlah', { precision: 15, scale: 2 }).notNull(),
+  divisi: varchar('divisi', { length: 30 }).notNull().default('MANUFAKTUR'), // MANUFAKTUR | FNB | HOLDING
   keterangan: text('keterangan'),
   createdBy: varchar('created_by', { length: 50 }),
   createdAt: timestamp('created_at').defaultNow(),
@@ -227,6 +235,7 @@ export const biayaOperasional = pgTable('biaya_operasional', {
   tanggal: timestamp('tanggal').notNull(),
   kategori: varchar('kategori', { length: 100 }).notNull(),
   jumlah: decimal('jumlah', { precision: 15, scale: 2 }).notNull(),
+  divisi: varchar('divisi', { length: 30 }).notNull().default('MANUFAKTUR'), // MANUFAKTUR | FNB | HOLDING
   keterangan: text('keterangan'),
   createdBy: varchar('created_by', { length: 50 }),
   createdAt: timestamp('created_at').defaultNow(),
@@ -322,4 +331,56 @@ export const stokFisik = pgTable('stok_fisik', {
   stokFisikAktual: integer('stok_fisik_aktual').notNull().default(0),
   selisih: integer('selisih').notNull().default(0),
   keterangan: text('keterangan'),
+});
+
+// ============================================================
+// RESEP / BILL OF MATERIALS (BOM) — F&B & Olahan Manufaktur
+// ============================================================
+export const resepItems = pgTable('resep_items', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  menuSku: varchar('menu_sku', { length: 50 }).notNull(),
+  bahanSku: varchar('bahan_sku', { length: 50 }).notNull(),
+  namaBahan: varchar('nama_bahan', { length: 150 }).notNull(),
+  takaran: decimal('takaran', { precision: 10, scale: 2 }).notNull().default('1'),
+  satuan: varchar('satuan', { length: 20 }).notNull().default('gram'),
+  jenis: varchar('jenis', { length: 20 }).notNull().default('bahan'), // bahan | kemasan
+  createdAt: timestamp('created_at').defaultNow(),
+});
+
+// ============================================================
+// CASH OPNAME — Rekonsiliasi Kasir Laci Harian
+// ============================================================
+export const cashOpname = pgTable('cash_opname', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  tanggal: timestamp('tanggal').notNull().defaultNow(),
+  shift: varchar('shift', { length: 50 }).notNull().default('Shift 1'),
+  kasir: varchar('kasir', { length: 100 }).notNull(),
+  kasAwal: decimal('kas_awal', { precision: 15, scale: 2 }).notNull().default('0'),
+  omsetTunai: decimal('omset_tunai', { precision: 15, scale: 2 }).notNull().default('0'),
+  kasKeluar: decimal('kas_keluar', { precision: 15, scale: 2 }).notNull().default('0'),
+  kasSeharusnya: decimal('kas_seharusnya', { precision: 15, scale: 2 }).notNull().default('0'),
+  kasFisik: decimal('kas_fisik', { precision: 15, scale: 2 }).notNull().default('0'),
+  selisih: decimal('selisih', { precision: 15, scale: 2 }).notNull().default('0'),
+  status: varchar('status', { length: 30 }).notNull().default('pas'), // pas | lebih | kurang
+  catatan: text('catatan'),
+  createdBy: varchar('created_by', { length: 50 }),
+  createdAt: timestamp('created_at').defaultNow(),
+});
+
+// ============================================================
+// HUTANG SUPPLIER (Accounts Payable)
+// ============================================================
+export const hutangSupplier = pgTable('hutang_supplier', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  supplier: varchar('supplier', { length: 150 }).notNull(),
+  noFaktur: varchar('no_faktur', { length: 100 }),
+  tanggal: timestamp('tanggal').notNull().defaultNow(),
+  jatuhTempo: timestamp('jatuh_tempo'),
+  totalHutang: decimal('total_hutang', { precision: 15, scale: 2 }).notNull().default('0'),
+  sisaHutang: decimal('sisa_hutang', { precision: 15, scale: 2 }).notNull().default('0'),
+  status: varchar('status', { length: 30 }).notNull().default('belum_lunas'), // belum_lunas | lunas
+  divisi: varchar('divisi', { length: 30 }).notNull().default('MANUFAKTUR'), // MANUFAKTUR | FNB
+  catatan: text('catatan'),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
 });

@@ -19,9 +19,10 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
     const startDate = searchParams.get('startDate');
     const endDate = searchParams.get('endDate');
+    const divisi = searchParams.get('divisi');
 
     // 1. Ambil data barang rusak join inventory untuk tahu estimasi kerugian (harga beli)
-    const rusakList = await db
+    let rusakList = await db
       .select({
         id: barangRusak.id,
         tanggal: barangRusak.tanggal,
@@ -30,17 +31,26 @@ export async function GET(req: Request) {
         qty: barangRusak.qty,
         keterangan: barangRusak.keterangan,
         createdBy: barangRusak.createdBy,
+        divisi: barangRusak.divisi,
         hargaBeli: inventory.hargaBeli,
       })
       .from(barangRusak)
       .leftJoin(inventory, eq(barangRusak.sku, inventory.sku))
       .orderBy(desc(barangRusak.tanggal));
 
+    if (divisi && divisi !== 'SEMUA') {
+      rusakList = rusakList.filter((r) => !r.divisi || r.divisi === divisi);
+    }
+
     // 2. Ambil data retur barang
-    const returList = await db
+    let returList = await db
       .select()
       .from(returBarang)
       .orderBy(desc(returBarang.tanggal));
+
+    if (divisi && divisi !== 'SEMUA') {
+      returList = returList.filter((rt: any) => !rt.divisi || rt.divisi === divisi);
+    }
 
     // Filter tanggal
     const isWithin = (dateObj: Date | string | null) => {
