@@ -196,8 +196,8 @@ export default function Users() {
         </div>
       )}
 
-      {/* Header Halaman */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-3xl border border-gray-200/80 shadow-xs">
+      {/* 1. Header (F-Pattern Top Row) */}
+      <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-3xl border border-gray-200/80 shadow-xs">
         <div>
           <div className="flex items-center gap-2.5">
             <div className="w-10 h-10 rounded-2xl bg-gray-900 flex items-center justify-center text-white shadow-sm">
@@ -221,18 +221,18 @@ export default function Users() {
           <Plus className="w-4 h-4" />
           <span>Tambah Pengguna Baru</span>
         </button>
-      </div>
+      </header>
 
-      {/* Info Card Isolasi Penempatan */}
-      <div className="bg-amber-50/70 border border-amber-200/80 rounded-2xl p-4 flex items-start gap-3">
+      {/* 2. Info Card Isolasi Penempatan */}
+      <section aria-label="Aturan Isolasi Penempatan" className="bg-amber-50/70 border border-amber-200/80 rounded-2xl p-4 flex items-start gap-3">
         <Lock className="w-4 h-4 text-amber-700 flex-shrink-0 mt-0.5" />
         <div className="text-xs text-amber-900 leading-relaxed">
           <span className="font-bold">Aturan Keamanan Isolasi Cabang:</span> Karyawan yang ditempatkan di cabang regional selain Pusat hanya dapat melihat stok, barang masuk/keluar, dan transaksi POS pada cabangnya sendiri. Menu ganti cabang di Header mereka akan otomatis terkunci.
         </div>
-      </div>
+      </section>
 
-      {/* Tabel Pengguna */}
-      <div className="bg-white rounded-3xl border border-gray-200/80 shadow-xs overflow-hidden">
+      {/* 3. Tabel Pengguna (F-Pattern Table Section) */}
+      <section aria-label="Tabel Daftar Pengguna" className="bg-white rounded-3xl border border-gray-200/80 shadow-xs overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs border-collapse">
             <thead className="bg-gray-50/75 border-b border-gray-200/80 text-[11px] font-semibold uppercase tracking-wider text-gray-500">
@@ -320,7 +320,13 @@ export default function Users() {
             </tbody>
           </table>
         </div>
-      </div>
+
+        {/* Semantic Table Footer */}
+        <footer className="px-5 py-3.5 bg-gray-50/50 border-t border-gray-100 flex items-center justify-between text-xs text-gray-500">
+          <span>Menampilkan <strong>{data.length}</strong> akun pengguna terdaftar</span>
+          <span className="text-[11px] text-gray-400">Tingkat RBAC 14 Role & RLS Terlindungi</span>
+        </footer>
+      </section>
 
       {/* Modal Tambah Pengguna Baru */}
       {isModalOpen && (

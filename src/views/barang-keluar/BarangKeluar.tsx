@@ -246,8 +246,8 @@ export default function BarangKeluar() {
         </div>
       )}
 
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      {/* 1. Header (F-Pattern Top Row) */}
+      <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-800">Barang Keluar</h1>
           <p className="text-sm text-gray-500 mt-1">
@@ -260,10 +260,10 @@ export default function BarangKeluar() {
         >
           <span>＋</span> Buat Surat Loading / Keluar
         </button>
-      </div>
+      </header>
 
-      {/* Channel Switcher Tabs */}
-      <div className="flex flex-wrap items-center gap-2">
+      {/* 2. Channel Switcher Tabs (Semantic <nav>) */}
+      <nav aria-label="Tab Saluran Distribusi" className="flex flex-wrap items-center gap-2">
         <button
           type="button"
           onClick={() => setSelectedChannel('GROSIR')}
@@ -300,10 +300,10 @@ export default function BarangKeluar() {
           <Layers className="w-3.5 h-3.5" />
           <span>Semua Pengeluaran</span>
         </button>
-      </div>
+      </nav>
 
-      {/* Filters */}
-      <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex flex-col md:flex-row gap-4 items-center justify-between">
+      {/* 3. Filters (F-Pattern Second Row) */}
+      <section aria-label="Filter dan Pencarian Muatan" className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex flex-col md:flex-row gap-4 items-center justify-between">
         <div className="w-full md:w-72">
           <input
             type="text"
@@ -336,10 +336,10 @@ export default function BarangKeluar() {
             Terapkan
           </button>
         </div>
-      </div>
+      </section>
 
-      {/* Table */}
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+      {/* 4. Table (F-Pattern Reading Grid) */}
+      <section aria-label="Tabel Data Barang Keluar" className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm text-gray-600">
             <thead className="bg-gray-50/75 border-b border-gray-100 text-xs font-semibold uppercase tracking-wider text-gray-500">
@@ -423,7 +423,13 @@ export default function BarangKeluar() {
             </tbody>
           </table>
         </div>
-      </div>
+
+        {/* Semantic table footer summary */}
+        <footer className="px-4 py-3 bg-gray-50/50 border-t border-gray-100 flex items-center justify-between text-xs text-gray-500">
+          <span>Menampilkan <strong>{data.length}</strong> transaksi pengeluaran barang</span>
+          <span className="text-[11px] text-gray-400">Jalur Grosir (Muatan Bal) & POS Kasir Terpisah Otomatis</span>
+        </footer>
+      </section>
 
       {/* Modal Buat Surat Loading */}
       {isModalOpen && (

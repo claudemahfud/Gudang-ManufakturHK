@@ -187,8 +187,8 @@ export default function BarangMasuk() {
         </div>
       )}
 
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      {/* 1. Header (F-Pattern Top Row) */}
+      <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-800">Barang Masuk</h1>
           <p className="text-sm text-gray-500 mt-1">
@@ -201,10 +201,10 @@ export default function BarangMasuk() {
         >
           <span>＋</span> Catat Barang Masuk
         </button>
-      </div>
+      </header>
 
-      {/* Filters */}
-      <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex flex-col md:flex-row gap-4 items-center justify-between">
+      {/* 2. Filters (F-Pattern Second Row) */}
+      <section aria-label="Filter dan Pencarian" className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex flex-col md:flex-row gap-4 items-center justify-between">
         <div className="w-full md:w-72">
           <input
             type="text"
@@ -237,10 +237,10 @@ export default function BarangMasuk() {
             Terapkan
           </button>
         </div>
-      </div>
+      </section>
 
-      {/* Table */}
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+      {/* 3. Table Section (F-Pattern Reading Grid) */}
+      <section aria-label="Daftar Riwayat Barang Masuk" className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm text-gray-600">
             <thead className="bg-gray-50/75 border-b border-gray-100 text-xs font-semibold uppercase tracking-wider text-gray-500">
@@ -303,7 +303,13 @@ export default function BarangMasuk() {
             </tbody>
           </table>
         </div>
-      </div>
+
+        {/* Semantic footer for table summary */}
+        <footer className="px-4 py-3 bg-gray-50/50 border-t border-gray-100 flex items-center justify-between text-xs text-gray-500">
+          <span>Menampilkan total <strong>{data.length}</strong> transaksi barang masuk</span>
+          <span className="text-[11px] text-gray-400">Pembaruan stok otomatis terhubung ke Master Inventory</span>
+        </footer>
+      </section>
 
       {/* Modal Tambah Barang Masuk */}
       {isModalOpen && (

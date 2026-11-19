@@ -102,12 +102,12 @@ export default function SelectMode() {
           </p>
         </div>
 
-        {/* 2 Big Action Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* 2 Big Action Cards (Split Screen / Two-Column Archetype) */}
+        <section aria-label="Pilihan Divisi" className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* CARD 1: MANUFAKTUR */}
-          <div
+          <article
             onClick={() => !submitting && handleSelect('MANUFAKTUR')}
-            className={`group cursor-pointer relative rounded-2xl p-6 sm:p-8 border transition-all duration-300 flex flex-col justify-between ${
+            className={`group cursor-pointer relative rounded-3xl p-6 sm:p-8 border transition-all duration-300 flex flex-col justify-between ${
               selected === 'MANUFAKTUR'
                 ? 'bg-slate-900 border-white ring-2 ring-white shadow-xl scale-[1.01]'
                 : 'bg-slate-900/70 border-slate-800 hover:border-slate-600 hover:bg-slate-900 hover:shadow-lg'
@@ -165,12 +165,12 @@ export default function SelectMode() {
                 <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
               </button>
             </div>
-          </div>
+          </article>
 
           {/* CARD 2: FOOD AND BEVERAGES */}
-          <div
+          <article
             onClick={() => !submitting && handleSelect('FNB')}
-            className={`group cursor-pointer relative rounded-2xl p-6 sm:p-8 border transition-all duration-300 flex flex-col justify-between ${
+            className={`group cursor-pointer relative rounded-3xl p-6 sm:p-8 border transition-all duration-300 flex flex-col justify-between ${
               selected === 'FNB'
                 ? 'bg-slate-900 border-white ring-2 ring-white shadow-xl scale-[1.01]'
                 : 'bg-slate-900/70 border-slate-800 hover:border-slate-600 hover:bg-slate-900 hover:shadow-lg'
@@ -228,8 +228,8 @@ export default function SelectMode() {
                 <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
               </button>
             </div>
-          </div>
-        </div>
+          </article>
+        </section>
       </main>
 
       {/* Bottom Note */}

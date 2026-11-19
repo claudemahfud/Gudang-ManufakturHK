@@ -363,8 +363,8 @@ export default function Inventory() {
         </div>
       )}
 
-      {/* Header Halaman & Action Button */}
-      <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
+      {/* 1. Header Halaman & Action Button (F-Pattern Top Row) */}
+      <header className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <div className="inline-flex items-center gap-2 text-xs font-medium mb-1">
             <span
@@ -397,10 +397,10 @@ export default function Inventory() {
           <span className="text-lg leading-none">+</span>
           <span>Tambah Barang Baru</span>
         </button>
-      </div>
+      </header>
 
-      {/* Filter & Search Bar */}
-      <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-4">
+      {/* 2. Filter & Search Bar (F-Pattern Second Row) */}
+      <section aria-label="Pencarian dan Filter Stok" className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-4">
         {/* Search Input */}
         <div className="relative w-full sm:w-96">
           <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-gray-400">
@@ -442,7 +442,7 @@ export default function Inventory() {
             <span className={`inline-block ${loading ? 'animate-spin' : ''}`}></span>
           </button>
         </div>
-      </div>
+      </section>
 
       {/* Error Alert */}
       {error && (
@@ -458,9 +458,9 @@ export default function Inventory() {
       )}
 
       {/* ============================================================ */}
-      {/* SECTION: Tabel Inventory */}
+      {/* 3. SECTION: Tabel Inventory (F-Pattern Reading Grid) */}
       {/* ============================================================ */}
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+      <section aria-label="Tabel Master Inventory" className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse text-sm">
             <thead>
@@ -599,7 +599,8 @@ export default function Inventory() {
         {/* ============================================================ */}
         {/* SECTION: Pagination */}
         {/* ============================================================ */}
-        <div className="p-4 border-t border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-gray-600 bg-gray-50/50">
+        {/* Semantic Pagination Footer */}
+        <footer className="p-4 border-t border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-gray-600 bg-gray-50/50">
           <div>
             Halaman <strong className="text-gray-900">{page}</strong> dari{' '}
             <strong className="text-gray-900">{totalPages}</strong> (Total {total} data)
@@ -632,8 +633,8 @@ export default function Inventory() {
               Berikutnya &rarr;
             </button>
           </div>
-        </div>
-      </div>
+        </footer>
+      </section>
 
       {/* ============================================================ */}
       {/* SECTION: Modal Form (Tambah / Edit Barang) */}

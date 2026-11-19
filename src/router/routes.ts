@@ -11,6 +11,7 @@ export const ROUTES = {
 
   // Core
   DASHBOARD: '/dashboard',
+  PROFILE: '/profile',
   INVENTORY: '/inventory',
   POS: '/pos',
 
