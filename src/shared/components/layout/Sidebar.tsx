@@ -280,10 +280,7 @@ export default function Sidebar({ userRole, onClose }: SidebarProps) {
     isManufaktur,
     isFnb,
     cabang,
-    canSwitchDivision,
     isCabangLocked,
-    isBawahan,
-    logoutAndSwitchMode,
   } = useDivision();
 
   // State dropdown terbuka (id menu -> boolean)
@@ -344,26 +341,15 @@ export default function Sidebar({ userRole, onClose }: SidebarProps) {
         )}
       </div>
 
-      {/* Mode Status & Cabang Info Card */}
+      {/* Mode Status & Cabang Info Card (Read-Only di Sidebar) */}
       <div className="p-3 border-b border-gray-100 bg-gray-50/70 space-y-2">
         <div className="flex items-center justify-between">
           <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
             Domain Operasional
           </span>
-          {canSwitchDivision ? (
-            <button
-              onClick={logoutAndSwitchMode}
-              className="text-[10px] font-semibold text-blue-600 hover:text-blue-800 transition flex items-center gap-1"
-              title="Ganti mode operasional wajib logout terlebih dahulu"
-            >
-              <LogOut className="w-2.5 h-2.5" />
-              <span>Ganti Mode</span>
-            </button>
-          ) : (
-            <span className="text-[9px] font-medium text-slate-500 bg-gray-200/70 px-1.5 py-0.5 rounded">
-              Terkunci
-            </span>
-          )}
+          <span className="text-[9px] font-bold text-emerald-800 bg-emerald-100/90 px-1.5 py-0.5 rounded-md">
+            Aktif
+          </span>
         </div>
 
         <div
