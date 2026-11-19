@@ -345,13 +345,13 @@ export default function Inventory() {
                 : 'bg-red-600 text-white border-red-500'
             }`}
           >
-            <span>{toast.type === 'success' ? '✅' : '❌'}</span>
+            <span>{toast.type === 'success' ? '' : ''}</span>
             <span className="text-sm font-semibold">{toast.message}</span>
             <button
               onClick={() => setToast(null)}
               className="ml-2 text-white/80 hover:text-white text-xs font-bold"
             >
-              ✕
+              
             </button>
           </div>
         </div>
@@ -387,8 +387,7 @@ export default function Inventory() {
         {/* Search Input */}
         <div className="relative w-full sm:w-96">
           <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-gray-400">
-            🔍
-          </span>
+            </span>
           <input
             type="text"
             value={searchInput}
@@ -406,7 +405,7 @@ export default function Inventory() {
               }}
               className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 text-xs"
             >
-              ✕
+              
             </button>
           )}
         </div>
@@ -423,7 +422,7 @@ export default function Inventory() {
             title="Refresh tabel"
             className="p-2.5 bg-gray-100 hover:bg-gray-200 rounded-xl text-gray-600 transition"
           >
-            <span className={`inline-block ${loading ? 'animate-spin' : ''}`}>🔄</span>
+            <span className={`inline-block ${loading ? 'animate-spin' : ''}`}></span>
           </button>
         </div>
       </div>
@@ -475,7 +474,7 @@ export default function Inventory() {
                 <tr>
                   <td colSpan={8} className="py-16 text-center text-gray-400">
                     <div className="flex flex-col items-center justify-center gap-2">
-                      <span className="text-3xl">📦</span>
+                      <span className="text-3xl"></span>
                       <p className="font-semibold text-gray-600 text-base">Tidak ada data barang</p>
                       <p className="text-xs text-gray-400">
                         {searchQuery
@@ -563,15 +562,14 @@ export default function Inventory() {
                           className="px-2.5 py-1.5 bg-gray-100 hover:bg-emerald-100 hover:text-emerald-700 text-gray-700 rounded-lg text-xs font-semibold transition"
                           title="Edit Barang"
                         >
-                          ✏️ Edit
+                          ️ Edit
                         </button>
                         <button
                           onClick={() => setDeleteTarget(item)}
                           className="px-2.5 py-1.5 bg-gray-100 hover:bg-red-100 hover:text-red-700 text-gray-700 rounded-lg text-xs font-semibold transition"
                           title="Hapus Barang"
                         >
-                          🗑️
-                        </button>
+                          </button>
                       </div>
                     </td>
                   </tr>
@@ -641,14 +639,14 @@ export default function Inventory() {
                 disabled={submitting}
                 className="text-gray-400 hover:text-gray-600 text-lg p-1.5 rounded-lg hover:bg-gray-100 transition"
               >
-                ✕
+                
               </button>
             </div>
 
             {/* Error in modal */}
             {formError && (
               <div className="mt-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-xl text-xs font-semibold">
-                ⚠️ {formError}
+                {formError}
               </div>
             )}
 
@@ -880,8 +878,7 @@ export default function Inventory() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
           <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 text-center space-y-4">
             <div className="w-14 h-14 bg-red-100 text-red-600 rounded-full flex items-center justify-center text-2xl mx-auto">
-              🗑️
-            </div>
+              </div>
             <div>
               <h3 className="text-lg font-bold text-gray-900">Hapus Barang Ini?</h3>
               <p className="text-xs text-gray-500 mt-1">

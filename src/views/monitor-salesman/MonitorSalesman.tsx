@@ -81,7 +81,7 @@ export default function MonitorSalesman() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-800">👁️ Monitor Salesman</h1>
+          <h1 className="text-2xl font-bold text-gray-800">Monitor Salesman</h1>
           <p className="text-sm text-gray-500 mt-1">
             Tracking transaksi riil, kontribusi omzet penjualan, dan performa tim sales di lapangan
           </p>
@@ -133,7 +133,7 @@ export default function MonitorSalesman() {
                 data.map((row, idx) => (
                   <tr key={row.salesman} className="hover:bg-gray-50/50 transition">
                     <td className="py-3.5 px-4 font-bold text-gray-500">
-                      {idx === 0 ? '🥇 #1' : idx === 1 ? '🥈 #2' : idx === 2 ? '🥉 #3' : `#${idx + 1}`}
+                      {idx === 0 ? '#1' : idx === 1 ? '#2' : idx === 2 ? '#3' : `#${idx + 1}`}
                     </td>
                     <td className="py-3.5 px-4 font-bold text-gray-800">{row.salesman}</td>
                     <td className="py-3.5 px-4 text-center font-medium text-gray-700">

@@ -138,7 +138,7 @@ export default function PengajuanDiskon() {
 
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-800">🏷️ Pengajuan Diskon Khusus</h1>
+          <h1 className="text-2xl font-bold text-gray-800">Pengajuan Diskon Khusus</h1>
           <p className="text-sm text-gray-500 mt-1">
             Pengajuan potongan harga khusus pelanggan partai besar dari salesman ke pimpinan
           </p>
@@ -215,13 +215,13 @@ export default function PengajuanDiskon() {
                             onClick={() => handleAction(row.id, 'approved')}
                             className="px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-semibold rounded-lg transition"
                           >
-                            ✓ Terima
+                             Terima
                           </button>
                           <button
                             onClick={() => handleAction(row.id, 'rejected')}
                             className="px-2.5 py-1 bg-red-50 hover:bg-red-100 text-red-700 text-xs font-semibold rounded-lg transition"
                           >
-                            ✕ Tolak
+                             Tolak
                           </button>
                         </div>
                       ) : (
@@ -240,9 +240,9 @@ export default function PengajuanDiskon() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden border border-gray-100">
             <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-              <h2 className="font-bold text-gray-800">🏷️ Ajukan Diskon Khusus</h2>
+              <h2 className="font-bold text-gray-800">Ajukan Diskon Khusus</h2>
               <button onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-gray-600 font-bold">
-                ✕
+                
               </button>
             </div>
             <form onSubmit={handleSubmit} className="p-6 space-y-4">

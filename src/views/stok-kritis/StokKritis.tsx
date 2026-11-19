@@ -56,7 +56,7 @@ export default function StokKritis() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-800">⚠️ Monitor Stok Kritis</h1>
+          <h1 className="text-2xl font-bold text-gray-800">Monitor Stok Kritis</h1>
           <p className="text-sm text-gray-500 mt-1">
             Peringatan dini barang yang habis atau mendekati batas minimum stok gudang
           </p>
@@ -79,7 +79,7 @@ export default function StokKritis() {
               </div>
               <div className="text-3xl font-extrabold text-red-800 mt-1">{totalHabis} SKU</div>
             </div>
-            <span className="text-3xl">🚫</span>
+            <span className="text-3xl"></span>
           </div>
           <div className="text-xs text-red-600 mt-2 font-medium">
             Perlu restock darurat dari supplier
@@ -94,7 +94,7 @@ export default function StokKritis() {
               </div>
               <div className="text-3xl font-extrabold text-amber-800 mt-1">{totalKritis} SKU</div>
             </div>
-            <span className="text-3xl">⚠️</span>
+            <span className="text-3xl"></span>
           </div>
           <div className="text-xs text-amber-600 mt-2 font-medium">
             Stok masih ada namun di bawah batas aman
@@ -109,7 +109,7 @@ export default function StokKritis() {
               </div>
               <div className="text-3xl font-extrabold text-gray-800 mt-1">{items.length} SKU</div>
             </div>
-            <span className="text-3xl">📦</span>
+            <span className="text-3xl"></span>
           </div>
           <div className="text-xs text-gray-500 mt-2">
             Segera buat Purchase Order ke produsen
@@ -142,7 +142,7 @@ export default function StokKritis() {
               ) : items.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="py-12 text-center text-emerald-600 font-semibold">
-                    🎉 Luar biasa! Semua stok barang berada dalam batas aman.
+                    Luar biasa! Semua stok barang berada dalam batas aman.
                   </td>
                 </tr>
               ) : (

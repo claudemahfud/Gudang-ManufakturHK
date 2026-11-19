@@ -75,7 +75,7 @@ export default function Logs() {
 
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-800">📝 Log Aktivitas & Audit Trail</h1>
+          <h1 className="text-2xl font-bold text-gray-800">Log Aktivitas & Audit Trail</h1>
           <p className="text-sm text-gray-500 mt-1">
             Rekaman jejak digital seluruh tindakan operasional, perubahan data gudang, dan otorisasi sistem
           </p>
@@ -84,7 +84,7 @@ export default function Logs() {
           onClick={handleClear}
           className="inline-flex items-center gap-2 px-4 py-2.5 bg-red-50 hover:bg-red-100 text-red-700 rounded-xl text-sm font-semibold transition border border-red-200"
         >
-          <span>🗑️</span> Bersihkan Log
+          <span></span> Bersihkan Log
         </button>
       </div>
 

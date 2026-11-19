@@ -204,7 +204,7 @@ export default function PoLoading() {
 
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-800">📋 PO & Loading Sheet</h1>
+          <h1 className="text-2xl font-bold text-gray-800">PO & Loading Sheet</h1>
           <p className="text-sm text-gray-500 mt-1">
             Purchase Order ke pabrik produsen dan daftar loading muatan masuk
           </p>
@@ -292,9 +292,9 @@ export default function PoLoading() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden border border-gray-100">
             <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-              <h2 className="font-bold text-gray-800">📋 Terbitkan Purchase Order</h2>
+              <h2 className="font-bold text-gray-800">Terbitkan Purchase Order</h2>
               <button onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-gray-600 font-bold">
-                ✕
+                
               </button>
             </div>
             <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-4">
@@ -385,7 +385,7 @@ export default function PoLoading() {
                         disabled={items.length === 1}
                         className="text-red-400 hover:text-red-600 disabled:opacity-20 px-1 font-bold"
                       >
-                        ✕
+                        
                       </button>
                     </div>
                   ))}
@@ -430,11 +430,11 @@ export default function PoLoading() {
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-xl overflow-hidden border border-gray-100 p-6 space-y-4">
             <div className="flex items-start justify-between border-b pb-4">
               <div>
-                <h3 className="font-bold text-lg text-gray-800">📋 PURCHASE ORDER</h3>
+                <h3 className="font-bold text-lg text-gray-800">PURCHASE ORDER</h3>
                 <div className="text-xs font-mono text-gray-500">No: {selectedDetail.noPo}</div>
               </div>
               <button onClick={() => setSelectedDetail(null)} className="text-gray-400 hover:text-gray-600 font-bold">
-                ✕
+                
               </button>
             </div>
 
@@ -476,7 +476,7 @@ export default function PoLoading() {
                     onClick={() => receiveAllItems(selectedDetail.id)}
                     className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-xl transition"
                   >
-                    ✓ Terima Barang & Tambah Stok
+                     Terima Barang & Tambah Stok
                   </button>
                 )}
               </div>

@@ -220,7 +220,7 @@ export default function SuratJalan() {
 
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-800">🚚 Dokumen Surat Jalan</h1>
+          <h1 className="text-2xl font-bold text-gray-800">Dokumen Surat Jalan</h1>
           <p className="text-sm text-gray-500 mt-1">
             Manajemen dokumen legal pengiriman barang, ekspedisi pengantaran, dan bukti serah terima
           </p>
@@ -316,9 +316,9 @@ export default function SuratJalan() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden border border-gray-100">
             <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-              <h2 className="font-bold text-gray-800">🚚 Terbitkan Surat Jalan</h2>
+              <h2 className="font-bold text-gray-800">Terbitkan Surat Jalan</h2>
               <button onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-gray-600 font-bold">
-                ✕
+                
               </button>
             </div>
             <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-4">
@@ -432,7 +432,7 @@ export default function SuratJalan() {
                         disabled={items.length === 1}
                         className="text-red-400 hover:text-red-600 disabled:opacity-20 px-1 font-bold"
                       >
-                        ✕
+                        
                       </button>
                     </div>
                   ))}
@@ -466,11 +466,11 @@ export default function SuratJalan() {
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-xl overflow-hidden border border-gray-100 p-6 space-y-4">
             <div className="flex items-start justify-between border-b pb-4">
               <div>
-                <h3 className="font-bold text-lg text-gray-800">🚚 SURAT JALAN PENGIRIMAN</h3>
+                <h3 className="font-bold text-lg text-gray-800">SURAT JALAN PENGIRIMAN</h3>
                 <div className="text-xs font-mono text-gray-500">No: {selectedDetail.noSj}</div>
               </div>
               <button onClick={() => setSelectedDetail(null)} className="text-gray-400 hover:text-gray-600 font-bold">
-                ✕
+                
               </button>
             </div>
 
@@ -534,7 +534,7 @@ export default function SuratJalan() {
                     onClick={() => updateStatus(selectedDetail.id, 'selesai')}
                     className="px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-semibold rounded-lg transition"
                   >
-                    ✓ Tandai Selesai
+                     Tandai Selesai
                   </button>
                 )}
               </div>
@@ -543,7 +543,7 @@ export default function SuratJalan() {
                   onClick={() => window.print()}
                   className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-semibold rounded-xl transition"
                 >
-                  🖨️ Cetak Surat Jalan
+                  Cetak Surat Jalan
                 </button>
                 <button
                   onClick={() => setSelectedDetail(null)}

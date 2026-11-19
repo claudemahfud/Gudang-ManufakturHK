@@ -10,11 +10,14 @@ const poppins = Poppins({
 
 export const metadata: Metadata = {
   title: 'Gudang Manufaktur',
-  description: 'Sistem Inventory & Manajemen Gudang Manufaktur',
+  description: 'Sistem Inventory & Manajemen Pergudangan Manufaktur',
+  icons: {
+    icon: '/favicon.svg',
+  },
 };
 
 export const viewport: Viewport = {
-  themeColor: '#00C853',
+  themeColor: '#111827',
 };
 
 export default function RootLayout({
@@ -24,7 +27,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="id" className={poppins.variable}>
-      <body className="bg-gray-50 font-sans antialiased">
+      <head>
+        <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+      </head>
+      <body className="bg-gray-50 font-sans antialiased text-gray-900">
         {children}
       </body>
     </html>

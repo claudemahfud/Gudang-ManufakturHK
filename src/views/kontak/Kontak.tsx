@@ -136,7 +136,7 @@ export default function Kontak() {
 
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-800">📞 Kontak Mitra & Pelanggan</h1>
+          <h1 className="text-2xl font-bold text-gray-800">Kontak Mitra & Pelanggan</h1>
           <p className="text-sm text-gray-500 mt-1">
             Buku telepon dan direktori mitra bisnis (Pelanggan, Toko Grosir, dan Pabrik Supplier)
           </p>
@@ -248,9 +248,9 @@ export default function Kontak() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden border border-gray-100">
             <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-              <h2 className="font-bold text-gray-800">📞 Tambah Kontak Baru</h2>
+              <h2 className="font-bold text-gray-800">Tambah Kontak Baru</h2>
               <button onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-gray-600 font-bold">
-                ✕
+                
               </button>
             </div>
             <form onSubmit={handleSubmit} className="p-6 space-y-4">

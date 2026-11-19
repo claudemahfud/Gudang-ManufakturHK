@@ -242,7 +242,7 @@ export default function BarangKeluar() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-800">📤 Barang Keluar</h1>
+          <h1 className="text-2xl font-bold text-gray-800">Barang Keluar</h1>
           <p className="text-sm text-gray-500 mt-1">
             Surat loading barang penjualan, ekspedisi ke pelanggan & mutasi keluar
           </p>
@@ -347,7 +347,7 @@ export default function BarangKeluar() {
                         onClick={() => viewInvoice(row.trxId)}
                         className="text-emerald-600 hover:text-emerald-800 text-xs font-semibold px-2 py-1 rounded hover:bg-emerald-50 transition mr-1"
                       >
-                        📄 Faktur
+                        Faktur
                       </button>
                       <button
                         onClick={() => handleDelete(row.id)}
@@ -369,9 +369,9 @@ export default function BarangKeluar() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden border border-gray-100">
             <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-              <h2 className="font-bold text-gray-800">📤 Buat Surat Loading / Barang Keluar</h2>
+              <h2 className="font-bold text-gray-800">Buat Surat Loading / Barang Keluar</h2>
               <button onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-gray-600 font-bold">
-                ✕
+                
               </button>
             </div>
             <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-4">
@@ -471,7 +471,7 @@ export default function BarangKeluar() {
                             disabled={items.length === 1}
                             className="text-red-400 hover:text-red-600 font-bold disabled:opacity-20"
                           >
-                            ✕
+                            
                           </button>
                         </div>
                       </div>
@@ -518,11 +518,11 @@ export default function BarangKeluar() {
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-xl overflow-hidden border border-gray-100 p-6 space-y-4">
             <div className="flex items-start justify-between border-b pb-4">
               <div>
-                <h3 className="font-bold text-lg text-gray-800">📄 SURAT JALAN / INVOICE</h3>
+                <h3 className="font-bold text-lg text-gray-800">SURAT JALAN / INVOICE</h3>
                 <div className="text-xs font-mono text-gray-500">No. Trx: {invoiceData.trxId}</div>
               </div>
               <button onClick={() => setInvoiceData(null)} className="text-gray-400 hover:text-gray-600 font-bold">
-                ✕
+                
               </button>
             </div>
 
@@ -569,7 +569,7 @@ export default function BarangKeluar() {
                 onClick={() => window.print()}
                 className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-semibold rounded-xl transition"
               >
-                🖨️ Cetak / Print
+                Cetak / Print
               </button>
               <button
                 onClick={() => setInvoiceData(null)}

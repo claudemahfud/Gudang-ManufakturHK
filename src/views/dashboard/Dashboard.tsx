@@ -222,7 +222,7 @@ export default function Dashboard() {
               href={ROUTES.INVENTORY}
               className="inline-flex items-center gap-2 px-5 py-2.5 bg-white text-emerald-800 hover:bg-emerald-50 active:scale-95 rounded-xl text-sm font-semibold transition shadow-md"
             >
-              <span>📦 Buka Inventory</span>
+              <span>Buka Inventory</span>
             </Link>
           </div>
         </div>
@@ -232,7 +232,7 @@ export default function Dashboard() {
       {error && (
         <div className="bg-red-50 border border-red-200 text-red-700 px-5 py-4 rounded-2xl flex items-center justify-between shadow-sm">
           <div className="flex items-center gap-3">
-            <span className="text-xl">⚠️</span>
+            <span className="text-xl"></span>
             <div>
               <p className="font-semibold text-sm">Gagal Mengambil Data</p>
               <p className="text-xs text-red-600">{error}</p>
@@ -258,8 +258,7 @@ export default function Dashboard() {
               Total Nilai Inventory
             </span>
             <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold text-lg">
-              💰
-            </div>
+              </div>
           </div>
           <div className="text-xl font-bold text-gray-900 tracking-tight">
             {loading ? (
@@ -278,8 +277,7 @@ export default function Dashboard() {
               Total Master SKU
             </span>
             <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold text-lg">
-              🏷️
-            </div>
+              </div>
           </div>
           <div className="text-2xl font-bold text-gray-900 tracking-tight">
             {loading ? (
@@ -302,8 +300,7 @@ export default function Dashboard() {
                 stats.stokKritis > 0 ? 'bg-amber-50 text-amber-600' : 'bg-green-50 text-green-600'
               }`}
             >
-              ⚠️
-            </div>
+              </div>
           </div>
           <div className="flex items-baseline gap-2">
             <span
@@ -331,8 +328,7 @@ export default function Dashboard() {
               Barang Masuk (Hari Ini)
             </span>
             <div className="w-10 h-10 rounded-xl bg-teal-50 text-teal-600 flex items-center justify-center font-bold text-lg">
-              📥
-            </div>
+              </div>
           </div>
           <div className="flex items-baseline gap-2">
             <span className="text-2xl font-bold text-gray-900 tracking-tight">
@@ -354,8 +350,7 @@ export default function Dashboard() {
               Barang Keluar (Hari Ini)
             </span>
             <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold text-lg">
-              📤
-            </div>
+              </div>
           </div>
           <div className="flex items-baseline gap-2">
             <span className="text-2xl font-bold text-gray-900 tracking-tight">
@@ -431,7 +426,7 @@ export default function Dashboard() {
                 </ResponsiveContainer>
               ) : (
                 <div className="h-full flex flex-col items-center justify-center text-gray-400">
-                  <span className="text-3xl mb-2">📊</span>
+                  <span className="text-3xl mb-2"></span>
                   <p className="text-sm">Belum ada data barang untuk ditampilkan di grafik</p>
                 </div>
               )}
@@ -479,7 +474,7 @@ export default function Dashboard() {
               </div>
             ) : kritisItems.length === 0 ? (
               <div className="py-12 text-center text-gray-400">
-                <span className="text-4xl">🎉</span>
+                <span className="text-4xl"></span>
                 <p className="text-sm font-medium text-gray-700 mt-2">Semua Stok Dalam Kondisi Aman</p>
                 <p className="text-xs text-gray-400 mt-0.5">Tidak ada SKU yang mencapai batas kritis.</p>
               </div>
@@ -532,7 +527,7 @@ export default function Dashboard() {
               href={ROUTES.INVENTORY}
               className="w-full py-2.5 px-4 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-semibold rounded-xl text-xs flex items-center justify-center gap-2 transition"
             >
-              <span>📋 Cek & Pesan Barang di Inventory</span>
+              <span>Cek & Pesan Barang di Inventory</span>
             </Link>
           </div>
         </div>

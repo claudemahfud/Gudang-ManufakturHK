@@ -190,7 +190,7 @@ export default function BarangMasuk() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-800">📥 Barang Masuk</h1>
+          <h1 className="text-2xl font-bold text-gray-800">Barang Masuk</h1>
           <p className="text-sm text-gray-500 mt-1">
             Pencatatan penerimaan stok barang dari supplier atau gudang pusat
           </p>
@@ -310,12 +310,12 @@ export default function BarangMasuk() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden border border-gray-100">
             <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-              <h2 className="font-bold text-gray-800">📥 Catat Barang Masuk</h2>
+              <h2 className="font-bold text-gray-800">Catat Barang Masuk</h2>
               <button
                 onClick={() => setIsModalOpen(false)}
                 className="text-gray-400 hover:text-gray-600 font-bold"
               >
-                ✕
+                
               </button>
             </div>
             <form onSubmit={handleSubmit} className="p-6 space-y-4">

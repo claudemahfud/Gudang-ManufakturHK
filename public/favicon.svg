@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none">
+  <rect width="32" height="32" rx="7" fill="#111827" />
+  <!-- Minimalist Monochrome Warehouse / Cube Symbol -->
+  <path d="M16 6L25 11.2V21.6L16 26.8L7 21.6V11.2L16 6Z" stroke="#FFFFFF" stroke-width="1.8" stroke-linejoin="round" />
+  <path d="M16 6V26.8" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round" />
+  <path d="M7 11.2L16 16.4L25 11.2" stroke="#FFFFFF" stroke-width="1.8" stroke-linejoin="round" />
+</svg>

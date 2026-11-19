@@ -135,7 +135,7 @@ export default function Expedisi() {
 
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-800">🚛 Expedisi & Armada Pengiriman</h1>
+          <h1 className="text-2xl font-bold text-gray-800">Expedisi & Armada Pengiriman</h1>
           <p className="text-sm text-gray-500 mt-1">
             Data kendaraan logistik pengangkut barang, truk box, pickup, dan jadwal pemeliharaan
           </p>
@@ -197,7 +197,7 @@ export default function Expedisi() {
                       >
                         <option value="aktif">● AKTIF</option>
                         <option value="servis">▲ SERVIS</option>
-                        <option value="nonaktif">✕ NON-AKTIF</option>
+                        <option value="nonaktif"> NON-AKTIF</option>
                       </select>
                     </td>
                     <td className="py-3.5 px-4 text-center">
@@ -220,9 +220,9 @@ export default function Expedisi() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden border border-gray-100">
             <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-              <h2 className="font-bold text-gray-800">🚛 Daftarkan Armada Baru</h2>
+              <h2 className="font-bold text-gray-800">Daftarkan Armada Baru</h2>
               <button onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-gray-600 font-bold">
-                ✕
+                
               </button>
             </div>
             <form onSubmit={handleSubmit} className="p-6 space-y-4">
