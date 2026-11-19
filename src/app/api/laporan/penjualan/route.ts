@@ -1,0 +1,118 @@
+import { NextResponse } from 'next/server';
+import { db } from '@/shared/lib/db';
+import { barangKeluar, inventory } from '@/shared/lib/db/schema';
+import { auth } from '@/shared/lib/auth/config';
+import { desc, and, gte, lte, eq, sql } from 'drizzle-orm';
+
+// ============================================================
+// API: /api/laporan/penjualan
+// Laporan Penjualan Detail: Omset, HPP, Laba/Profit, Diskon
+// ============================================================
+
+export async function GET(req: Request) {
+  try {
+    const session = await auth();
+    if (!session) {
+      return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { searchParams } = new URL(req.url);
+    const startDate = searchParams.get('startDate');
+    const endDate = searchParams.get('endDate');
+    const salesman = searchParams.get('salesman');
+
+    // Query data barang keluar join inventory untuk mendapatkan harga_beli (HPP)
+    const rows = await db
+      .select({
+        id: barangKeluar.id,
+        trxId: barangKeluar.trxId,
+        tanggal: barangKeluar.tanggal,
+        sku: barangKeluar.sku,
+        namaBarang: barangKeluar.namaBarang,
+        qty: barangKeluar.qty,
+        satuan: barangKeluar.satuan,
+        hargaJual: barangKeluar.hargaJual,
+        total: barangKeluar.total,
+        diskon: barangKeluar.diskon,
+        pelanggan: barangKeluar.pelanggan,
+        salesman: barangKeluar.salesman,
+        keterangan: barangKeluar.keterangan,
+        hargaBeli: inventory.hargaBeli,
+      })
+      .from(barangKeluar)
+      .leftJoin(inventory, eq(barangKeluar.sku, inventory.sku))
+      .orderBy(desc(barangKeluar.tanggal))
+      .limit(500);
+
+    // Filter tanggal & salesman in-memory jika ada
+    let filtered = rows;
+
+    if (startDate) {
+      const s = new Date(startDate);
+      s.setHours(0, 0, 0, 0);
+      filtered = filtered.filter((r) => new Date(r.tanggal) >= s);
+    }
+
+    if (endDate) {
+      const e = new Date(endDate);
+      e.setHours(23, 59, 59, 999);
+      filtered = filtered.filter((r) => new Date(r.tanggal) <= e);
+    }
+
+    if (salesman && salesman !== 'all') {
+      filtered = filtered.filter((r) => r.salesman === salesman);
+    }
+
+    // Hitung Laba/Profit per baris & Total agregat
+    let totalOmset = 0;
+    let totalHpp = 0;
+    let totalLaba = 0;
+    let totalDiskonNominal = 0;
+
+    const data = filtered.map((row) => {
+      const qty = Number(row.qty || 0);
+      const hj = Number(row.hargaJual || 0);
+      const hb = Number(row.hargaBeli || 0);
+      const totalNetto = Number(row.total || (hj * qty));
+      const diskonPct = Number(row.diskon || 0);
+
+      const subtotalKotor = hj * qty;
+      const nominalDiskon = (subtotalKotor * diskonPct) / 100;
+      const hppTotal = hb * qty;
+      const laba = totalNetto - hppTotal;
+      const marginPct = totalNetto > 0 ? (laba / totalNetto) * 100 : 0;
+
+      totalOmset += totalNetto;
+      totalHpp += hppTotal;
+      totalLaba += laba;
+      totalDiskonNominal += nominalDiskon;
+
+      return {
+        ...row,
+        subtotalKotor,
+        nominalDiskon,
+        hppTotal,
+        laba,
+        marginPct: Number(marginPct.toFixed(1)),
+      };
+    });
+
+    const marginRataRata = totalOmset > 0 ? (totalLaba / totalOmset) * 100 : 0;
+
+    return NextResponse.json({
+      success: true,
+      summary: {
+        totalOmset,
+        totalHpp,
+        totalLaba,
+        totalDiskonNominal,
+        marginRataRata: Number(marginRataRata.toFixed(1)),
+        totalTransaksi: new Set(data.map((d) => d.trxId)).size,
+        totalQtyTerjual: data.reduce((acc, c) => acc + c.qty, 0),
+      },
+      data,
+    });
+  } catch (err: any) {
+    return NextResponse.json({ success: false, message: err.message }, { status: 500 });
+  }
+}
