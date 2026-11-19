@@ -18,8 +18,11 @@ import {
   ArrowUpRight,
   RefreshCw,
   ShoppingBag,
+  Factory,
+  Coffee,
 } from 'lucide-react';
 import { formatRupiah, formatTanggal } from '@/shared/lib/utils';
+import { useDivision } from '@/shared/context/DivisionContext';
 
 interface PenjualanRow {
   id: string;
@@ -53,6 +56,7 @@ interface LaporanSummary {
 }
 
 export default function LaporanPenjualanView() {
+  const { division, isManufaktur, isFnb } = useDivision();
   const [data, setData] = useState<PenjualanRow[]>([]);
   const [summary, setSummary] = useState<LaporanSummary | null>(null);
   const [loading, setLoading] = useState(true);
@@ -68,6 +72,7 @@ export default function LaporanPenjualanView() {
     setLoading(true);
     try {
       const params = new URLSearchParams();
+      params.set('divisi', division);
       if (startDate) params.set('startDate', startDate);
       if (endDate) params.set('endDate', endDate);
       if (selectedSales && selectedSales !== 'all') params.set('salesman', selectedSales);
@@ -107,7 +112,7 @@ export default function LaporanPenjualanView() {
 
   useEffect(() => {
     fetchData();
-  }, [startDate, endDate, selectedSales]);
+  }, [startDate, endDate, selectedSales, division]);
 
   const salesmenList = useMemo(() => {
     return Array.from(new Set(data.map((d) => d.salesman).filter(Boolean)));

@@ -20,6 +20,7 @@ import {
 import { formatRupiah, formatStok, formatTanggal } from '@/shared/lib/utils';
 import { ROUTES } from '@/router/routes';
 import type { InventoryItem } from '@/shared/types';
+import { useDivision } from '@/shared/context/DivisionContext';
 
 // ============================================================
 // SECTION: Interfaces & Types
@@ -109,12 +110,14 @@ export default function Dashboard() {
   // SECTION: Data Fetching
   // ============================================================
 
+  const { division, isManufaktur, isFnb } = useDivision();
+
   useEffect(() => {
     let isCancelled = false;
 
     async function loadData() {
       try {
-        const res = await fetch('/api/dashboard', {
+        const res = await fetch(`/api/dashboard?divisi=${division}`, {
           method: 'GET',
           headers: { 'Content-Type': 'application/json' },
         });
@@ -150,7 +153,7 @@ export default function Dashboard() {
     return () => {
       isCancelled = true;
     };
-  }, [refreshKey]);
+  }, [refreshKey, division]);
 
   const handleRefresh = () => {
     setLoading(true);

@@ -9,16 +9,23 @@ import { desc } from 'drizzle-orm';
 // GET (list arus kas) + POST (catat pemasukan / pengeluaran)
 // ============================================================
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
     const authResult = await requireAuthRole(ROLES_FINANCE);
     if (!authResult.authorized) return authResult.response;
 
-    const items = await db
+    const { searchParams } = new URL(req.url);
+    const divisi = searchParams.get('divisi');
+
+    let items = await db
       .select()
       .from(keuangan)
       .orderBy(desc(keuangan.tanggal))
       .limit(100);
+
+    if (divisi && divisi !== 'SEMUA') {
+      items = items.filter((item) => item.divisi === divisi);
+    }
 
     return NextResponse.json({ success: true, data: items });
   } catch (err: any) {
@@ -32,7 +39,7 @@ export async function POST(req: Request) {
     if (!authResult.authorized) return authResult.response;
 
     const body = await req.json();
-    const { tanggal, jenis, kategori, jumlah, keterangan } = body;
+    const { tanggal, jenis, kategori, jumlah, keterangan, divisi = 'MANUFAKTUR' } = body;
 
     if (!jenis || !kategori || !jumlah) {
       return NextResponse.json(
@@ -50,6 +57,7 @@ export async function POST(req: Request) {
         jenis, // masuk | keluar
         kategori,
         jumlah: String(jumlah),
+        divisi,
         keterangan: keterangan || null,
         createdBy: user,
       })

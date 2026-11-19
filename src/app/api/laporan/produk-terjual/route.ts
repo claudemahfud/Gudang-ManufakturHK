@@ -23,18 +23,31 @@ export async function GET(req: Request) {
     const startHour = searchParams.get('startHour'); // 0 - 23
     const endHour = searchParams.get('endHour');     // 0 - 23
     const brand = searchParams.get('brand');
+    const divisi = searchParams.get('divisi');
 
-    // 1. Ambil seluruh master inventory
-    const masterItems = await db.select().from(inventory).orderBy(inventory.namaBarang);
+    // 1. Ambil seluruh master inventory (filter divisi jika ada)
+    let masterItems = await db.select().from(inventory).orderBy(inventory.namaBarang);
+    if (divisi && divisi !== 'SEMUA') {
+      masterItems = masterItems.filter((m) => m.divisi === divisi);
+    }
 
     // 2. Ambil data penjualan (Barang Keluar)
-    const keluarList = await db.select().from(barangKeluar);
+    let keluarList = await db.select().from(barangKeluar);
+    if (divisi && divisi !== 'SEMUA') {
+      keluarList = keluarList.filter((k) => k.divisi === divisi);
+    }
 
     // 3. Ambil data barang rusak
-    const rusakList = await db.select().from(barangRusak);
+    let rusakList = await db.select().from(barangRusak);
+    if (divisi && divisi !== 'SEMUA') {
+      rusakList = rusakList.filter((r: any) => !r.divisi || r.divisi === divisi);
+    }
 
     // 4. Ambil data retur barang
-    const returList = await db.select().from(returBarang);
+    let returList = await db.select().from(returBarang);
+    if (divisi && divisi !== 'SEMUA') {
+      returList = returList.filter((rt: any) => !rt.divisi || rt.divisi === divisi);
+    }
 
     // Filter tanggal & jam
     const isWithinFilter = (dateObj: Date | string | null) => {

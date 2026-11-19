@@ -9,18 +9,25 @@ import { eq, desc, sql } from 'drizzle-orm';
 // GET (list barang rusak) + POST (catat barang rusak & potong stok)
 // ============================================================
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
     const session = await auth();
     if (!session) {
       return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
     }
 
-    const items = await db
+    const { searchParams } = new URL(req.url);
+    const divisi = searchParams.get('divisi');
+
+    let items = await db
       .select()
       .from(barangRusak)
       .orderBy(desc(barangRusak.tanggal))
       .limit(100);
+
+    if (divisi && divisi !== 'SEMUA') {
+      items = items.filter((item: any) => !item.divisi || item.divisi === divisi);
+    }
 
     return NextResponse.json({ success: true, data: items });
   } catch (err: any) {
@@ -36,7 +43,7 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json();
-    const { tanggal, sku, namaBarang, qty, keterangan } = body;
+    const { tanggal, sku, namaBarang, qty, keterangan, divisi = 'MANUFAKTUR' } = body;
 
     if (!sku || !qty) {
       return NextResponse.json(
@@ -55,6 +62,7 @@ export async function POST(req: Request) {
         sku,
         namaBarang,
         qty: parsedQty,
+        divisi,
         keterangan: keterangan || null,
         createdBy: user,
       })

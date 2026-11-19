@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import { Poppins } from 'next/font/google';
 import './globals.css';
+import ClientProviders from '@/shared/components/providers/ClientProviders';
 
 const poppins = Poppins({
   subsets: ['latin'],
@@ -9,8 +10,8 @@ const poppins = Poppins({
 });
 
 export const metadata: Metadata = {
-  title: 'Gudang Manufaktur',
-  description: 'Sistem Inventory & Manajemen Pergudangan Manufaktur',
+  title: 'Gudang Manufaktur & F&B Hub',
+  description: 'Sistem Inventory, Pergudangan Manufaktur & F&B Terpadu',
   icons: {
     icon: '/favicon.svg',
   },
@@ -31,7 +32,9 @@ export default function RootLayout({
         <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
       </head>
       <body className="bg-gray-50 font-sans antialiased text-gray-900">
-        {children}
+        <ClientProviders>
+          {children}
+        </ClientProviders>
       </body>
     </html>
   );

@@ -1,15 +1,15 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/shared/lib/db';
 import { inventory, barangMasuk, barangKeluar } from '@/shared/lib/db/schema';
-import { sql, and, gte, lte, asc, desc } from 'drizzle-orm';
+import { sql, and, gte, lte, asc, desc, eq } from 'drizzle-orm';
 import { auth } from '@/shared/lib/auth/config';
 
 // ============================================================
-// API ROUTE: Dashboard Stats & Summary
-// Endpoint: GET /api/dashboard
+// API ROUTE: Dashboard Stats & Summary (Multi-Domain Filtered)
+// Endpoint: GET /api/dashboard?divisi=MANUFAKTUR|FNB
 // ============================================================
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
     // 1. Cek Autentikasi
     const session = await auth();
@@ -20,10 +20,18 @@ export async function GET() {
       );
     }
 
+    const { searchParams } = new URL(req.url);
+    const divisiParam = searchParams.get('divisi') || req.cookies.get('app_active_division')?.value || 'MANUFAKTUR';
+
     // 2. Rentang Waktu Hari Ini (WIB / Local)
     const now = new Date();
     const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
     const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+
+    const isFiltered = divisiParam && divisiParam !== 'SEMUA';
+    const invDivisiCond = isFiltered ? eq(inventory.divisi, divisiParam) : undefined;
+    const bmDivisiCond = isFiltered ? eq(barangMasuk.divisi, divisiParam) : undefined;
+    const bkDivisiCond = isFiltered ? eq(barangKeluar.divisi, divisiParam) : undefined;
 
     // 3. Query Statistik Inventory
     const [invStats] = await db
@@ -32,82 +40,81 @@ export async function GET() {
         totalInventory: sql<number>`COALESCE(SUM(${inventory.stok} * CAST(${inventory.hargaJual} AS NUMERIC)), 0)::FLOAT`,
         stokKritis: sql<number>`CAST(COUNT(CASE WHEN ${inventory.stok} <= COALESCE(${inventory.stokMinimum}, 10) THEN 1 END) AS INTEGER)`,
       })
-      .from(inventory);
+      .from(inventory)
+      .where(invDivisiCond);
 
     // 4. Query Barang Masuk Hari Ini
+    const bmConditions = [
+      gte(barangMasuk.tanggal, startOfDay),
+      lte(barangMasuk.tanggal, endOfDay),
+    ];
+    if (bmDivisiCond) bmConditions.push(bmDivisiCond);
+
     const [masukStats] = await db
       .select({
         count: sql<number>`CAST(COUNT(*) AS INTEGER)`,
       })
       .from(barangMasuk)
-      .where(
-        and(
-          gte(barangMasuk.tanggal, startOfDay),
-          lte(barangMasuk.tanggal, endOfDay)
-        )
-      );
+      .where(and(...bmConditions));
 
     // 5. Query Barang Keluar Hari Ini
+    const bkConditions = [
+      gte(barangKeluar.tanggal, startOfDay),
+      lte(barangKeluar.tanggal, endOfDay),
+    ];
+    if (bkDivisiCond) bkConditions.push(bkDivisiCond);
+
     const [keluarStats] = await db
       .select({
         count: sql<number>`CAST(COUNT(*) AS INTEGER)`,
       })
       .from(barangKeluar)
-      .where(
-        and(
-          gte(barangKeluar.tanggal, startOfDay),
-          lte(barangKeluar.tanggal, endOfDay)
-        )
-      );
+      .where(and(...bkConditions));
 
-    // 6. Query Stok per Brand (untuk Recharts Bar Chart)
-    const brandStats = await db
+    // 6. Query Data Grafik Stok per Brand (Top 10)
+    const chartData = await db
       .select({
-        brand: sql<string>`COALESCE(NULLIF(TRIM(${inventory.brand}), ''), 'Lainnya')`,
-        stok: sql<number>`CAST(COALESCE(SUM(${inventory.stok}), 0) AS INTEGER)`,
+        brand: sql<string>`COALESCE(${inventory.brand}, 'Lainnya')`,
+        stok: sql<number>`CAST(SUM(${inventory.stok}) AS INTEGER)`,
       })
       .from(inventory)
-      .groupBy(sql`COALESCE(NULLIF(TRIM(${inventory.brand}), ''), 'Lainnya')`)
+      .where(invDivisiCond)
+      .groupBy(inventory.brand)
       .orderBy(desc(sql`SUM(${inventory.stok})`))
-      .limit(8);
+      .limit(10);
 
-    // 7. Query 5 Barang Stok Kritis Terbaru
+    // 7. Query Barang Stok Kritis
+    const kritisCond = sql`${inventory.stok} <= COALESCE(${inventory.stokMinimum}, 10)`;
+    const kritisWhere = invDivisiCond ? and(kritisCond, invDivisiCond) : kritisCond;
+
     const kritisItems = await db
-      .select({
-        id: inventory.id,
-        sku: inventory.sku,
-        namaBarang: inventory.namaBarang,
-        brand: inventory.brand,
-        gramasi: inventory.gramasi,
-        varian: inventory.varian,
-        stok: inventory.stok,
-        stokMinimum: inventory.stokMinimum,
-        settingPcs: inventory.settingPcs,
-        pakaiKarton: inventory.pakaiKarton,
-        hargaJual: inventory.hargaJual,
-        updatedAt: inventory.updatedAt,
-      })
+      .select()
       .from(inventory)
-      .where(sql`${inventory.stok} <= COALESCE(${inventory.stokMinimum}, 10)`)
-      .orderBy(asc(inventory.stok), desc(inventory.updatedAt))
+      .where(kritisWhere)
+      .orderBy(asc(inventory.stok))
       .limit(5);
 
+    // Response Data
     return NextResponse.json({
       success: true,
       data: {
+        divisi: divisiParam,
         stats: {
-          totalInventory: Number(invStats?.totalInventory) || 0,
           totalSKU: Number(invStats?.totalSKU) || 0,
+          totalInventory: Number(invStats?.totalInventory) || 0,
           stokKritis: Number(invStats?.stokKritis) || 0,
           barangMasukHariIni: Number(masukStats?.count) || 0,
           barangKeluarHariIni: Number(keluarStats?.count) || 0,
         },
-        chartData: brandStats || [],
-        kritisItems: kritisItems || [],
+        chartData: chartData.map((item) => ({
+          brand: item.brand,
+          stok: Number(item.stok) || 0,
+        })),
+        kritisItems,
       },
     });
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : 'Terjadi kesalahan internal server';
+    const message = error instanceof Error ? error.message : 'Terjadi kesalahan sistem';
     console.error('Error in GET /api/dashboard:', error);
     return NextResponse.json(
       { success: false, error: message },

@@ -1,0 +1,308 @@
+'use client';
+
+import React, { useState, useEffect } from 'react';
+import {
+  Scale,
+  Wallet,
+  Package,
+  Layers,
+  ArrowUpRight,
+  ShieldCheck,
+  Building2,
+  Coffee,
+  CheckCircle2,
+  RefreshCw,
+  Printer,
+  ChevronRight,
+} from 'lucide-react';
+
+export default function NeracaView() {
+  const [divisi, setDivisi] = useState<'SEMUA' | 'MANUFAKTUR' | 'FNB'>('SEMUA');
+  const [loading, setLoading] = useState(true);
+  const [data, setData] = useState<any>(null);
+
+  const fetchNeraca = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/keuangan/neraca?divisi=${divisi}`);
+      const json = await res.json();
+      if (json.success) {
+        setData(json.data);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchNeraca();
+  }, [divisi]);
+
+  const formatRp = (val: number) => {
+    return 'Rp ' + Number(val || 0).toLocaleString('id-ID');
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Top Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-gray-200">
+        <div>
+          <div className="flex items-center gap-2">
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-900 text-white">
+              <Scale className="w-3.5 h-3.5 text-emerald-400" />
+              Plafon Terpadu
+            </span>
+            <span className="text-xs text-gray-400">Pernyataan Posisi Keuangan</span>
+          </div>
+          <h1 className="text-2xl font-bold text-gray-900 mt-1">Neraca Keuangan & Persediaan</h1>
+          <p className="text-xs text-gray-500">
+            Harmonisasi aset lancar (kas & stok persediaan), kewajiban supplier, dan ekuitas konsolidasi Manufaktur & F&B.
+          </p>
+        </div>
+
+        <div className="flex items-center gap-2.5">
+          <button
+            onClick={fetchNeraca}
+            disabled={loading}
+            className="inline-flex items-center gap-2 px-3.5 py-2 border border-gray-300 rounded-xl text-xs font-semibold text-gray-700 bg-white hover:bg-gray-50 shadow-sm transition-all"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+            Segarkan
+          </button>
+          <button
+            onClick={() => window.print()}
+            className="inline-flex items-center gap-2 px-3.5 py-2 bg-gray-900 text-white rounded-xl text-xs font-semibold hover:bg-gray-800 shadow-sm transition-all"
+          >
+            <Printer className="w-3.5 h-3.5" />
+            Cetak Neraca
+          </button>
+        </div>
+      </div>
+
+      {/* Filter Plafon Divisi */}
+      <div className="flex items-center gap-2 bg-gray-100 p-1 rounded-xl w-fit">
+        <button
+          onClick={() => setDivisi('SEMUA')}
+          className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+            divisi === 'SEMUA'
+              ? 'bg-white text-gray-900 shadow-sm'
+              : 'text-gray-600 hover:text-gray-900'
+          }`}
+        >
+          <Layers className="w-3.5 h-3.5" />
+          Konsolidasi (Holding)
+        </button>
+        <button
+          onClick={() => setDivisi('MANUFAKTUR')}
+          className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+            divisi === 'MANUFAKTUR'
+              ? 'bg-white text-gray-900 shadow-sm'
+              : 'text-gray-600 hover:text-gray-900'
+          }`}
+        >
+          <Building2 className="w-3.5 h-3.5" />
+          Divisi Manufaktur
+        </button>
+        <button
+          onClick={() => setDivisi('FNB')}
+          className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+            divisi === 'FNB'
+              ? 'bg-white text-gray-900 shadow-sm'
+              : 'text-gray-600 hover:text-gray-900'
+          }`}
+        >
+          <Coffee className="w-3.5 h-3.5" />
+          Divisi F&B
+        </button>
+      </div>
+
+      {/* KPI Cards Ringkasan */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {/* Total Aset */}
+        <div className="bg-white rounded-2xl p-5 border border-gray-200 shadow-sm">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-medium text-gray-500">Total Aset (Aktiva)</span>
+            <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+              <Wallet className="w-4 h-4" />
+            </div>
+          </div>
+          <div className="text-2xl font-bold text-gray-900 mt-2">
+            {formatRp(data?.aset?.totalAset || 0)}
+          </div>
+          <p className="text-[11px] text-gray-400 mt-1">Kas & bank + valuasi total stok gudang</p>
+        </div>
+
+        {/* Total Kewajiban */}
+        <div className="bg-white rounded-2xl p-5 border border-gray-200 shadow-sm">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-medium text-gray-500">Total Kewajiban (Hutang)</span>
+            <div className="w-8 h-8 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
+              <Scale className="w-4 h-4" />
+            </div>
+          </div>
+          <div className="text-2xl font-bold text-gray-900 mt-2">
+            {formatRp(data?.kewajiban?.totalKewajiban || 0)}
+          </div>
+          <p className="text-[11px] text-gray-400 mt-1">Hutang supplier & tempo pengadaan</p>
+        </div>
+
+        {/* Total Ekuitas */}
+        <div className="bg-white rounded-2xl p-5 border border-gray-200 shadow-sm">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-medium text-gray-500">Ekuitas Bersih (Modal & Laba)</span>
+            <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+              <CheckCircle2 className="w-4 h-4" />
+            </div>
+          </div>
+          <div className="text-2xl font-bold text-emerald-700 mt-2">
+            {formatRp(data?.ekuitas?.totalEkuitas || 0)}
+          </div>
+          <p className="text-[11px] text-gray-400 mt-1">Nilai bersih setelah dipotong kewajiban</p>
+        </div>
+      </div>
+
+      {/* Grid Detail Neraca: Aset vs Kewajiban & Ekuitas */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Kolom Kiri: ASET */}
+        <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm space-y-4">
+          <div className="flex items-center justify-between pb-3 border-b border-gray-100">
+            <div className="flex items-center gap-2">
+              <div className="w-2.5 h-2.5 rounded-full bg-blue-600" />
+              <h2 className="font-bold text-gray-900 text-sm">ASET (AKTIVA)</h2>
+            </div>
+            <span className="text-xs font-mono font-bold text-gray-900">
+              {formatRp(data?.aset?.totalAset || 0)}
+            </span>
+          </div>
+
+          <div className="space-y-3">
+            <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
+              Aset Lancar
+            </div>
+
+            {/* Saldo Kas & Bank */}
+            <div className="flex items-center justify-between p-3 rounded-xl bg-gray-50 border border-gray-100">
+              <div className="flex items-center gap-3">
+                <Wallet className="w-4 h-4 text-gray-500" />
+                <div>
+                  <div className="text-xs font-bold text-gray-800">Kas & Setara Kas (Bank)</div>
+                  <div className="text-[11px] text-gray-400">Total likuiditas di kasir & rekening operasional</div>
+                </div>
+              </div>
+              <span className="text-xs font-mono font-bold text-gray-900">
+                {formatRp(data?.aset?.kasBank || 0)}
+              </span>
+            </div>
+
+            {/* Persediaan Stok Gudang */}
+            <div className="p-3 rounded-xl bg-gray-50 border border-gray-100 space-y-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <Package className="w-4 h-4 text-gray-500" />
+                  <div>
+                    <div className="text-xs font-bold text-gray-800">Persediaan Barang Dagang & Bahan Baku</div>
+                    <div className="text-[11px] text-gray-400">Nilai modal HPP barang aktif di gudang</div>
+                  </div>
+                </div>
+                <span className="text-xs font-mono font-bold text-gray-900">
+                  {formatRp(data?.aset?.persediaan || 0)}
+                </span>
+              </div>
+
+              {divisi === 'SEMUA' && data?.aset?.persediaanBreakdown && (
+                <div className="mt-2 pt-2 border-t border-gray-200/60 grid grid-cols-2 gap-2 text-[11px]">
+                  <div className="flex justify-between px-2 py-1 bg-white rounded-lg border border-gray-200/60">
+                    <span className="text-gray-500">Stok Manufaktur:</span>
+                    <span className="font-mono font-semibold text-gray-800">
+                      {formatRp(data.aset.persediaanBreakdown.manufaktur)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between px-2 py-1 bg-white rounded-lg border border-gray-200/60">
+                    <span className="text-gray-500">Stok Bahan F&B:</span>
+                    <span className="font-mono font-semibold text-gray-800">
+                      {formatRp(data.aset.persediaanBreakdown.fnb)}
+                    </span>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="pt-2 border-t border-gray-100 flex justify-between items-center text-xs font-bold text-gray-900">
+              <span>Total Aset Lancar</span>
+              <span className="font-mono">{formatRp(data?.aset?.totalAsetLancar || 0)}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Kolom Kanan: KEWAJIBAN & EKUITAS */}
+        <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm space-y-6">
+          {/* KEWAJIBAN */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-gray-100">
+              <div className="flex items-center gap-2">
+                <div className="w-2.5 h-2.5 rounded-full bg-amber-500" />
+                <h2 className="font-bold text-gray-900 text-sm">KEWAJIBAN (LIABILITAS)</h2>
+              </div>
+              <span className="text-xs font-mono font-bold text-gray-900">
+                {formatRp(data?.kewajiban?.totalKewajiban || 0)}
+              </span>
+            </div>
+
+            <div className="flex items-center justify-between p-3 rounded-xl bg-gray-50 border border-gray-100">
+              <div>
+                <div className="text-xs font-bold text-gray-800">Hutang Usaha & Supplier</div>
+                <div className="text-[11px] text-gray-400">Kewajiban tempo pengadaan bahan mentah & logistik</div>
+              </div>
+              <span className="text-xs font-mono font-bold text-amber-700">
+                {formatRp(data?.kewajiban?.hutangUsaha || 0)}
+              </span>
+            </div>
+          </div>
+
+          {/* EKUITAS */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-gray-100">
+              <div className="flex items-center gap-2">
+                <div className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
+                <h2 className="font-bold text-gray-900 text-sm">EKUITAS BERSIH</h2>
+              </div>
+              <span className="text-xs font-mono font-bold text-emerald-700">
+                {formatRp(data?.ekuitas?.totalEkuitas || 0)}
+              </span>
+            </div>
+
+            <div className="flex items-center justify-between p-3 rounded-xl bg-emerald-50/50 border border-emerald-100">
+              <div>
+                <div className="text-xs font-bold text-emerald-950">Modal Disetor & Laba Ditahan</div>
+                <div className="text-[11px] text-emerald-700">Kekayaan bersih konsolidasi perusahaan</div>
+              </div>
+              <span className="text-xs font-mono font-bold text-emerald-800">
+                {formatRp(data?.ekuitas?.modalDanLaba || 0)}
+              </span>
+            </div>
+
+            <div className="pt-2 border-t border-gray-100 flex justify-between items-center text-xs font-bold text-gray-900">
+              <span>Total Kewajiban + Ekuitas</span>
+              <span className="font-mono">
+                {formatRp((data?.kewajiban?.totalKewajiban || 0) + (data?.ekuitas?.totalEkuitas || 0))}
+              </span>
+            </div>
+          </div>
+
+          {/* Balance Indicator */}
+          <div className="p-3 bg-slate-900 text-white rounded-xl flex items-center justify-between">
+            <div className="flex items-center gap-2 text-xs">
+              <ShieldCheck className="w-4 h-4 text-emerald-400" />
+              <span>Keseimbangan Neraca (Balance Check)</span>
+            </div>
+            <span className="text-xs font-bold text-emerald-400">
+              {data?.balanceCheck ? 'SEIMBANG (100% MATCH)' : 'SEDANG DISINKRONISASI'}
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

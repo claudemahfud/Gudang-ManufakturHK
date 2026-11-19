@@ -8,6 +8,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { formatRupiah, formatStok } from '@/shared/lib/utils';
 import type { InventoryItem } from '@/shared/types';
+import { useDivision } from '@/shared/context/DivisionContext';
+import { Factory, Coffee } from 'lucide-react';
 
 // ============================================================
 // SECTION: Interfaces & Initial State
@@ -53,6 +55,8 @@ interface ToastNotification {
 // ============================================================
 
 export default function Inventory() {
+  const { division, isManufaktur, isFnb } = useDivision();
+
   // State Data & Query
   const [items, setItems] = useState<InventoryItem[]>([]);
   const [total, setTotal] = useState<number>(0);
@@ -104,6 +108,7 @@ export default function Inventory() {
         const params = new URLSearchParams({
           page: page.toString(),
           limit: limit.toString(),
+          divisi: division,
           ...(searchQuery && { search: searchQuery }),
         });
 
@@ -137,7 +142,7 @@ export default function Inventory() {
     return () => {
       isCancelled = true;
     };
-  }, [page, limit, searchQuery, refreshKey]);
+  }, [page, limit, searchQuery, refreshKey, division]);
 
   // Handle Search Input dengan Debounce Timer Ref
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -236,6 +241,7 @@ export default function Inventory() {
         settingPcs: Math.max(1, Number(form.settingPcs) || 1),
         pakaiKarton: Boolean(form.pakaiKarton),
         stokMinimum: Number(form.stokMinimum) || 0,
+        divisi: division,
         keterangan: form.keterangan.trim() || null,
       };
 
@@ -360,16 +366,27 @@ export default function Inventory() {
       {/* Header Halaman & Action Button */}
       <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <div className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-emerald-600 mb-1">
-            <span>Manajemen Pergudangan</span>
-            <span>&bull;</span>
-            <span>Master Data</span>
+          <div className="inline-flex items-center gap-2 text-xs font-medium mb-1">
+            <span
+              className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full font-semibold ${
+                isManufaktur
+                  ? 'bg-blue-100 text-blue-800'
+                  : 'bg-emerald-100 text-emerald-800'
+              }`}
+            >
+              {isManufaktur ? <Factory className="w-3 h-3" /> : <Coffee className="w-3 h-3" />}
+              {isManufaktur ? 'Divisi Manufaktur' : 'Divisi Food & Beverages'}
+            </span>
+            <span className="text-gray-400">&bull;</span>
+            <span className="text-gray-500">Warehouse Terisolasi</span>
           </div>
           <h1 className="text-2xl font-extrabold text-gray-900 tracking-tight">
-            Katalog Inventory & Stok
+            {isManufaktur ? 'Katalog Inventory & Stok Pabrik' : 'Bahan Baku & Menu F&B'}
           </h1>
           <p className="text-xs sm:text-sm text-gray-500 mt-0.5">
-            Kelola master SKU, stok fisik, konversi karton, serta harga jual/beli barang.
+            {isManufaktur
+              ? 'Kelola master SKU barang manufaktur, stok fisik karton/bal, dan konversi packing.'
+              : 'Kelola stok bahan mentah cafe/resto (gram, ml, pcs, cup) dan menu siap jual.'}
           </p>
         </div>
 

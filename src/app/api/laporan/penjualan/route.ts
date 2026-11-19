@@ -20,6 +20,7 @@ export async function GET(req: Request) {
     const startDate = searchParams.get('startDate');
     const endDate = searchParams.get('endDate');
     const salesman = searchParams.get('salesman');
+    const divisi = searchParams.get('divisi');
 
     // Query data barang keluar join inventory untuk mendapatkan harga_beli (HPP)
     const rows = await db
@@ -36,6 +37,7 @@ export async function GET(req: Request) {
         diskon: barangKeluar.diskon,
         pelanggan: barangKeluar.pelanggan,
         salesman: barangKeluar.salesman,
+        divisi: barangKeluar.divisi,
         keterangan: barangKeluar.keterangan,
         hargaBeli: inventory.hargaBeli,
       })
@@ -44,8 +46,12 @@ export async function GET(req: Request) {
       .orderBy(desc(barangKeluar.tanggal))
       .limit(500);
 
-    // Filter tanggal & salesman in-memory jika ada
+    // Filter tanggal, salesman & divisi in-memory
     let filtered = rows;
+
+    if (divisi && divisi !== 'SEMUA') {
+      filtered = filtered.filter((r) => r.divisi === divisi);
+    }
 
     if (startDate) {
       const s = new Date(startDate);

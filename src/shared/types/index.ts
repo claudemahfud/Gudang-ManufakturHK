@@ -42,6 +42,8 @@ export interface InventoryItem {
   pakaiKarton: boolean;
   stokMinimum?: number | null;
   keterangan?: string | null;
+  divisi?: 'MANUFAKTUR' | 'FNB';
+  tipeItem?: 'barang_jadi' | 'bahan_baku' | 'kemasan' | 'menu_olahan';
   createdAt?: Date | null;
   updatedAt?: Date | null;
 }

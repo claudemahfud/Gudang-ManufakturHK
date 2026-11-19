@@ -20,8 +20,13 @@ export async function GET(req: Request) {
     const startDate = searchParams.get('startDate');
     const endDate = searchParams.get('endDate');
     const search = searchParams.get('search');
+    const divisi = searchParams.get('divisi');
 
     let conditions: any[] = [];
+
+    if (divisi && divisi !== 'SEMUA') {
+      conditions.push(eq(barangMasuk.divisi, divisi));
+    }
 
     if (startDate) {
       conditions.push(gte(barangMasuk.tanggal, new Date(startDate)));
@@ -91,6 +96,7 @@ export async function POST(req: Request) {
         hargaBeli: hargaBeli ? String(hargaBeli) : '0',
         supplier: supplier || null,
         noFaktur: noFaktur || null,
+        divisi: body.divisi || 'MANUFAKTUR',
         keterangan: keterangan || null,
         createdBy: user,
       })

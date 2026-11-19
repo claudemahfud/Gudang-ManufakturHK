@@ -31,6 +31,7 @@ import {
   CartesianGrid,
 } from 'recharts';
 import { formatRupiah } from '@/shared/lib/utils';
+import { useDivision } from '@/shared/context/DivisionContext';
 
 interface ProductRow {
   sku: string;
@@ -50,6 +51,7 @@ interface HourlyItem {
 }
 
 export default function ProdukTerjualView() {
+  const { division, isManufaktur, isFnb } = useDivision();
   const [data, setData] = useState<ProductRow[]>([]);
   const [hourlyData, setHourlyData] = useState<HourlyItem[]>([]);
   const [summary, setSummary] = useState<any>(null);
@@ -68,6 +70,7 @@ export default function ProdukTerjualView() {
     setLoading(true);
     try {
       const params = new URLSearchParams();
+      params.set('divisi', division);
       if (startDate) params.set('startDate', startDate);
       if (endDate) params.set('endDate', endDate);
       if (startHour !== '') params.set('startHour', startHour);
@@ -110,7 +113,7 @@ export default function ProdukTerjualView() {
 
   useEffect(() => {
     fetchData();
-  }, [startDate, endDate, startHour, endHour, selectedBrand]);
+  }, [startDate, endDate, startHour, endHour, selectedBrand, division]);
 
   const brands = useMemo(() => {
     return Array.from(new Set(data.map((d) => d.brand).filter(Boolean)));

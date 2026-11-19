@@ -37,10 +37,14 @@ import {
   Receipt,
   Maximize2,
   Minimize2,
+  Factory,
+  Coffee,
+  ArrowLeftRight,
 } from 'lucide-react';
 import { formatRupiah } from '@/shared/lib/utils';
 import { ROUTES } from '@/router/routes';
 import type { InventoryItem } from '@/shared/types';
+import { useDivision, DivisionMode } from '@/shared/context/DivisionContext';
 
 // ============================================================
 // SECTION: Interfaces & Default Settings
@@ -123,6 +127,7 @@ function playBeep(type: 'add' | 'success' | 'error') {
 
 export default function PosView() {
   const { data: session } = useSession();
+  const { division, setDivision, isManufaktur, isFnb } = useDivision();
   const user = session?.user as any;
 
   // Master Data
@@ -174,13 +179,21 @@ export default function PosView() {
     setIsSettingsModalOpen(false);
   };
 
-  // Fetch Inventory items
+  const handleSwitchDivision = (newMode: DivisionMode) => {
+    if (newMode === division) return;
+    setDivision(newMode);
+    setCart([]); // Reset keranjang agar tidak tercampur barang beda mode
+    setSelectedBrand('Semua');
+    setSearchQuery('');
+  };
+
+  // Fetch Inventory items khusus mode aktif (MANUFAKTUR vs FNB)
   useEffect(() => {
     let isCancelled = false;
     async function fetchInventory() {
       setLoadingItems(true);
       try {
-        const res = await fetch('/api/inventory');
+        const res = await fetch(`/api/inventory?divisi=${division}&limit=200`);
         const json = await res.json();
         if (json.success && !isCancelled) {
           setInventoryList(json.data || []);
@@ -195,7 +208,7 @@ export default function PosView() {
     return () => {
       isCancelled = true;
     };
-  }, []);
+  }, [division]);
 
   // Filtered Inventory
   const brands = useMemo(() => {
@@ -330,6 +343,7 @@ export default function PosView() {
           diskonPct,
           uangDiterima: metodePembayaran === 'Tunai' ? uangDiterima : grandTotal,
           catatan,
+          divisi: division,
         }),
       });
 
@@ -407,6 +421,37 @@ export default function PosView() {
               Kasir: <strong className="text-slate-200">{user?.name || 'Administrator'}</strong> ({user?.role || 'Staff'})
             </p>
           </div>
+        </div>
+
+        {/* Middle Mode Switcher (Manufaktur <-> F&B) */}
+        <div className="flex items-center gap-1.5 bg-slate-900 border border-slate-800 p-1 rounded-xl">
+          <button
+            type="button"
+            onClick={() => handleSwitchDivision('MANUFAKTUR')}
+            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold transition ${
+              isManufaktur
+                ? 'bg-blue-600 text-white shadow-sm'
+                : 'text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            <Factory className="w-3.5 h-3.5" />
+            <span className="hidden md:inline">POS Manufaktur</span>
+            <span className="md:hidden">Pabrik</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => handleSwitchDivision('FNB')}
+            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold transition ${
+              isFnb
+                ? 'bg-emerald-600 text-white shadow-sm'
+                : 'text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            <Coffee className="w-3.5 h-3.5" />
+            <span className="hidden md:inline">POS F&B (Cafe)</span>
+            <span className="md:hidden">F&B</span>
+          </button>
         </div>
 
         {/* Right Action Icons */}

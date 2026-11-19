@@ -21,8 +21,13 @@ export async function GET(req: Request) {
     const startDate = searchParams.get('startDate');
     const endDate = searchParams.get('endDate');
     const search = searchParams.get('search');
+    const divisi = searchParams.get('divisi');
 
     let conditions: any[] = [];
+
+    if (divisi && divisi !== 'SEMUA') {
+      conditions.push(eq(barangKeluar.divisi, divisi));
+    }
 
     if (startDate) {
       conditions.push(gte(barangKeluar.tanggal, new Date(startDate)));
