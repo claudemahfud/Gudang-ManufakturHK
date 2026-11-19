@@ -252,6 +252,12 @@ export const MENU_HIERARCHY: ParentMenuItem[] = [
         roles: ['Administrator'],
       },
       {
+        label: 'Manajemen Cabang',
+        icon: Building2,
+        href: ROUTES.CABANG,
+        roles: ['Administrator', 'Manager', 'Direktur Utama'],
+      },
+      {
         label: 'Log Audit Aktivitas',
         icon: History,
         href: ROUTES.LOGS,
@@ -275,6 +281,7 @@ export default function Sidebar({ userRole, onClose }: SidebarProps) {
     isFnb,
     cabang,
     canSwitchDivision,
+    isCabangLocked,
     isBawahan,
     logoutAndSwitchMode,
   } = useDivision();
@@ -386,9 +393,16 @@ export default function Sidebar({ userRole, onClose }: SidebarProps) {
         </div>
 
         {/* Cabang Aktif Info */}
-        <div className="flex items-center gap-1.5 px-2 py-1 bg-white rounded-lg border border-gray-200/70 text-[11px] text-gray-600">
-          <Building2 className="w-3 h-3 text-gray-400 flex-shrink-0" />
-          <span className="truncate font-medium">{cabang}</span>
+        <div className="flex items-center justify-between px-2.5 py-1.5 bg-white rounded-lg border border-gray-200/70 text-[11px] text-gray-700 shadow-2xs">
+          <div className="flex items-center gap-1.5 truncate">
+            <Building2 className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+            <span className="truncate font-semibold">{cabang}</span>
+          </div>
+          {isCabangLocked && (
+            <span className="text-[9px] font-semibold text-amber-800 bg-amber-50 border border-amber-200 px-1.5 py-0.2 rounded flex-shrink-0 ml-1">
+              Terkunci
+            </span>
+          )}
         </div>
       </div>
 

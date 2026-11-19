@@ -37,6 +37,7 @@ export async function GET(req: Request) {
         pelanggan: barangKeluar.pelanggan,
         salesman: barangKeluar.salesman,
         divisi: barangKeluar.divisi,
+        cabang: barangKeluar.cabang,
         keterangan: barangKeluar.keterangan,
         hargaBeli: inventory.hargaBeli,
       })
@@ -66,6 +67,23 @@ export async function GET(req: Request) {
 
     if (salesman && salesman !== 'all') {
       filtered = filtered.filter((r) => r.salesman === salesman);
+    }
+
+    // Isolasi Cabang: Karyawan cabang hanya dapat melihat transaksi di cabangnya
+    const userCabang = (authResult.user as any)?.cabang || 'Pusat';
+    const isExecutive = ['Administrator', 'Direktur Utama', 'Manager'].includes(authResult.userRole);
+    let effectiveCabang: string | null = null;
+    if (!isExecutive && userCabang !== 'ALL' && userCabang !== 'Pusat') {
+      effectiveCabang = userCabang;
+    } else {
+      const cabangParam = searchParams.get('cabang');
+      if (cabangParam && cabangParam !== 'SEMUA') {
+        effectiveCabang = cabangParam;
+      }
+    }
+
+    if (effectiveCabang) {
+      filtered = filtered.filter((r) => r.cabang === effectiveCabang);
     }
 
     // Hitung Laba/Profit per baris & Total agregat

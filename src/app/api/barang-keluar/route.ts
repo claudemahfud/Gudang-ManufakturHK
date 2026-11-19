@@ -23,10 +23,30 @@ export async function GET(req: Request) {
     const search = searchParams.get('search');
     const divisi = searchParams.get('divisi');
 
+    const user = session.user as any;
+    const userRole = user?.role;
+    const userCabang = user?.cabang || 'Pusat';
+    const isExecutive = ['Administrator', 'Direktur Utama', 'Manager'].includes(userRole);
+
     let conditions: any[] = [];
 
     if (divisi && divisi !== 'SEMUA') {
       conditions.push(eq(barangKeluar.divisi, divisi));
+    }
+
+    // Filter Cabang: Karyawan cabang HANYA BISA akses data di cabang tempat mereka ditempatkan
+    let effectiveCabang: string | null = null;
+    if (!isExecutive && userCabang !== 'ALL' && userCabang !== 'Pusat') {
+      effectiveCabang = userCabang;
+    } else {
+      const cabangParam = searchParams.get('cabang');
+      if (cabangParam && cabangParam !== 'SEMUA') {
+        effectiveCabang = cabangParam;
+      }
+    }
+
+    if (effectiveCabang) {
+      conditions.push(eq(barangKeluar.cabang, effectiveCabang));
     }
 
     if (startDate) {
@@ -85,7 +105,13 @@ export async function POST(req: Request) {
     }
 
     const trxId = generateTrxId('OUT');
-    const user = (session.user as any)?.name || (session.user as any)?.username || 'System';
+    const sessionUser = session.user as any;
+    const user = sessionUser?.name || sessionUser?.username || 'System';
+    const isExecutive = ['Administrator', 'Direktur Utama', 'Manager'].includes(sessionUser?.role);
+    const userCabang = sessionUser?.cabang || 'Pusat';
+    const cabangToSave = (!isExecutive && userCabang !== 'ALL' && userCabang !== 'Pusat')
+      ? userCabang
+      : (body.cabang || 'Pusat');
     const trxDate = tanggal ? new Date(tanggal) : new Date();
 
     const insertedRows = [];
@@ -110,6 +136,8 @@ export async function POST(req: Request) {
           pelanggan: pelanggan || null,
           salesman: salesman || null,
           diskon: String(diskon),
+          divisi: body.divisi || 'MANUFAKTUR',
+          cabang: cabangToSave,
           keterangan: keterangan || null,
           createdBy: user,
         })

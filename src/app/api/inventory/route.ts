@@ -28,6 +28,11 @@ export async function GET(req: NextRequest) {
     const search = searchParams.get('search')?.trim() || '';
     const divisiParam = searchParams.get('divisi') || req.cookies.get('app_active_division')?.value || 'MANUFAKTUR';
 
+    const user = session?.user as any;
+    const userRole = user?.role;
+    const userCabang = user?.cabang || 'Pusat';
+    const isExecutive = ['Administrator', 'Direktur Utama', 'Manager'].includes(userRole);
+
     const offset = (page - 1) * limit;
 
     // Filter pencarian: SKU, Nama Barang, atau Brand
@@ -44,9 +49,23 @@ export async function GET(req: NextRequest) {
       ? eq(inventory.divisi, divisiParam)
       : undefined;
 
-    const whereClause = searchCondition && divisiCondition
-      ? and(searchCondition, divisiCondition)
-      : searchCondition || divisiCondition;
+    // Filter Cabang: Karyawan cabang HANYA BISA akses data di cabang tempat mereka ditempatkan
+    let effectiveCabang: string | undefined = undefined;
+    if (!isExecutive && userCabang !== 'ALL' && userCabang !== 'Pusat') {
+      effectiveCabang = userCabang;
+    } else {
+      const cabangParam = searchParams.get('cabang') || req.cookies.get('app_active_cabang')?.value;
+      if (cabangParam && cabangParam !== 'SEMUA') {
+        effectiveCabang = decodeURIComponent(cabangParam);
+      }
+    }
+
+    const cabangCondition = effectiveCabang
+      ? eq(inventory.cabang, effectiveCabang)
+      : undefined;
+
+    const conditions = [searchCondition, divisiCondition, cabangCondition].filter(Boolean) as any[];
+    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
     // Hitung total data
     const [countResult] = await db
@@ -67,7 +86,6 @@ export async function GET(req: NextRequest) {
       .offset(offset);
 
     // Sanitasi data: Akun bawahan (Petugas Gudang, Kasir, Salesman) tidak boleh melihat Harga Beli / HPP
-    const userRole = (session?.user as any)?.role;
     const allowHpp = canViewCostPrice(userRole);
 
     const sanitizedItems = items.map((item) => {
@@ -107,6 +125,11 @@ export async function POST(req: NextRequest) {
         { status: 401 }
       );
     }
+
+    const user = session?.user as any;
+    const userRole = user?.role;
+    const userCabang = user?.cabang || 'Pusat';
+    const isExecutive = ['Administrator', 'Direktur Utama', 'Manager'].includes(userRole);
 
     const body = await req.json();
     const {
@@ -165,6 +188,9 @@ export async function POST(req: NextRequest) {
         stokMinimum: stokMinimum !== undefined && stokMinimum !== '' ? Number(stokMinimum) : 10,
         keterangan: keterangan?.trim() || null,
         divisi: body.divisi || req.cookies.get('app_active_division')?.value || 'MANUFAKTUR',
+        cabang: (!isExecutive && userCabang !== 'ALL' && userCabang !== 'Pusat')
+          ? userCabang
+          : (body.cabang || req.cookies.get('app_active_cabang')?.value || 'Pusat'),
         tipeItem: body.tipeItem || (body.divisi === 'FNB' ? 'bahan_mentah' : 'barang_jadi'),
         createdAt: new Date(),
         updatedAt: new Date(),

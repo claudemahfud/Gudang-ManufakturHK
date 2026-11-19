@@ -27,6 +27,23 @@ export async function GET(req: Request) {
       items = items.filter((item) => item.divisi === divisi);
     }
 
+    // Isolasi Cabang
+    const userCabang = (authResult.user as any)?.cabang || 'Pusat';
+    const isExecutive = ['Administrator', 'Direktur Utama', 'Manager'].includes(authResult.userRole);
+    let effectiveCabang: string | null = null;
+    if (!isExecutive && userCabang !== 'ALL' && userCabang !== 'Pusat') {
+      effectiveCabang = userCabang;
+    } else {
+      const cabangParam = searchParams.get('cabang');
+      if (cabangParam && cabangParam !== 'SEMUA') {
+        effectiveCabang = cabangParam;
+      }
+    }
+
+    if (effectiveCabang) {
+      items = items.filter((item) => item.cabang === effectiveCabang);
+    }
+
     return NextResponse.json({ success: true, data: items });
   } catch (err: any) {
     return NextResponse.json({ success: false, message: err.message }, { status: 500 });
@@ -58,6 +75,7 @@ export async function POST(req: Request) {
         kategori,
         jumlah: String(jumlah),
         divisi,
+        cabang: body.cabang || 'Pusat',
         keterangan: keterangan || null,
         createdBy: user,
       })

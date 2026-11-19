@@ -46,6 +46,13 @@ export async function POST(req: Request) {
       cabang?: string;
     };
 
+    // Isolasi Cabang: Karyawan cabang otomatis dikunci ke cabang penempatannya
+    const isExecutive = ['Administrator', 'Direktur Utama', 'Manager'].includes(userRole as any);
+    const userCabang = (user as any)?.cabang;
+    const finalCabang = (!isExecutive && userCabang && userCabang !== 'ALL' && userCabang !== 'Pusat')
+      ? userCabang
+      : (cabang || 'Pusat');
+
     if (!items || !Array.isArray(items) || items.length === 0) {
       return NextResponse.json(
         { success: false, message: 'Keranjang belanja kosong' },
@@ -143,8 +150,8 @@ export async function POST(req: Request) {
           salesman: cashierName,
           diskon: String(diskonPct || 0),
           divisi,
-          cabang,
-          keterangan: `POS Checkout (${metodePembayaran}) [${divisi} - ${cabang}]${catatan ? ` - ${catatan}` : ''}`,
+          cabang: finalCabang,
+          keterangan: `POS Checkout (${metodePembayaran}) [${divisi} - ${finalCabang}]${catatan ? ` - ${catatan}` : ''}`,
           createdBy: user.username,
         })
         .returning();
@@ -159,8 +166,8 @@ export async function POST(req: Request) {
       kategori: 'Penjualan POS',
       jumlah: String(grandTotal),
       divisi,
-      cabang,
-      keterangan: `Penjualan POS [${divisi} - ${cabang}] #${trxId} (${metodePembayaran}) oleh ${cashierName} (${userRole})`,
+      cabang: finalCabang,
+      keterangan: `Penjualan POS [${divisi} - ${finalCabang}] #${trxId} (${metodePembayaran}) oleh ${cashierName} (${userRole})`,
       createdBy: user.username,
     });
 
