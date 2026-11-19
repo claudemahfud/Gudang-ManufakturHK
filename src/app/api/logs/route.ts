@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/shared/lib/db';
 import { logs } from '@/shared/lib/db/schema';
-import { auth } from '@/shared/lib/auth/config';
+import { requireAuthRole, ROLES_ADMIN, ROLES_EXECUTIVE } from '@/shared/lib/auth/rbac';
 import { desc } from 'drizzle-orm';
 
 // ============================================================
@@ -11,10 +11,8 @@ import { desc } from 'drizzle-orm';
 
 export async function GET() {
   try {
-    const session = await auth();
-    if (!session) {
-      return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
-    }
+    const authResult = await requireAuthRole(ROLES_EXECUTIVE);
+    if (!authResult.authorized) return authResult.response;
 
     const items = await db
       .select()
@@ -30,10 +28,8 @@ export async function GET() {
 
 export async function DELETE() {
   try {
-    const session = await auth();
-    if (!session || (session.user as any)?.role !== 'Administrator') {
-      return NextResponse.json({ success: false, message: 'Hanya Administrator yang dapat membersihkan log' }, { status: 403 });
-    }
+    const authResult = await requireAuthRole(ROLES_ADMIN);
+    if (!authResult.authorized) return authResult.response;
 
     await db.delete(logs);
 
