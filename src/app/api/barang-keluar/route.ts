@@ -22,6 +22,7 @@ export async function GET(req: Request) {
     const endDate = searchParams.get('endDate');
     const search = searchParams.get('search');
     const divisi = searchParams.get('divisi');
+    const channel = searchParams.get('channel');
 
     const user = session.user as any;
     const userRole = user?.role;
@@ -32,6 +33,10 @@ export async function GET(req: Request) {
 
     if (divisi && divisi !== 'SEMUA') {
       conditions.push(eq(barangKeluar.divisi, divisi));
+    }
+
+    if (channel && channel !== 'ALL' && channel !== 'SEMUA') {
+      conditions.push(eq(barangKeluar.channel, channel));
     }
 
     // Filter Cabang: Karyawan cabang HANYA BISA akses data di cabang tempat mereka ditempatkan
@@ -138,6 +143,7 @@ export async function POST(req: Request) {
           diskon: String(diskon),
           divisi: body.divisi || 'MANUFAKTUR',
           cabang: cabangToSave,
+          channel: body.channel || 'GROSIR',
           keterangan: keterangan || null,
           createdBy: user,
         })

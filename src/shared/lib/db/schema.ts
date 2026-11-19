@@ -80,6 +80,7 @@ export const barangKeluar = pgTable('barang_keluar', {
   diskon: decimal('diskon', { precision: 5, scale: 2 }).default('0'),
   divisi: varchar('divisi', { length: 30 }).notNull().default('MANUFAKTUR'),
   cabang: varchar('cabang', { length: 50 }).notNull().default('Pusat'),
+  channel: varchar('channel', { length: 30 }).notNull().default('GROSIR'), // GROSIR | POS | INTERNAL
   keterangan: text('keterangan'),
   createdBy: varchar('created_by', { length: 50 }),
   createdAt: timestamp('created_at').defaultNow(),

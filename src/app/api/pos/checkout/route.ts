@@ -151,6 +151,7 @@ export async function POST(req: Request) {
           diskon: String(diskonPct || 0),
           divisi,
           cabang: finalCabang,
+          channel: 'POS',
           keterangan: `POS Checkout (${metodePembayaran}) [${divisi} - ${finalCabang}]${catatan ? ` - ${catatan}` : ''}`,
           createdBy: user.username,
         })
