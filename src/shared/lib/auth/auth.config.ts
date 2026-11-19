@@ -6,6 +6,7 @@ import type { NextAuthConfig } from 'next-auth';
 // ============================================================
 
 export const authConfig = {
+  secret: process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET || 'gudang-manufaktur-hk-secret-2026-change-in-production',
   pages: {
     signIn: '/login',
     error: '/login',
