@@ -130,8 +130,8 @@ export default function LaporanPenjualanView() {
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto pb-12">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      {/* 1. Header (F-Pattern Top Row) */}
+      <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="inline-flex items-center gap-2 px-3 py-1 bg-emerald-50 text-emerald-700 rounded-full text-xs font-semibold mb-1 border border-emerald-100">
             <TrendingUp className="w-3.5 h-3.5" />
@@ -161,12 +161,12 @@ export default function LaporanPenjualanView() {
             <span>Cetak Laporan</span>
           </button>
         </div>
-      </div>
+      </header>
 
-      {/* 5 Stat Cards Metric */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3.5">
+      {/* 2. Stat Cards Metric (Grid Layout Archetype) */}
+      <section aria-label="Ringkasan Metrik Laba" className="grid grid-cols-2 lg:grid-cols-5 gap-3.5">
         {/* Omset */}
-        <div className="bg-white p-4 rounded-2xl border border-gray-200/80 shadow-sm">
+        <article className="bg-white p-4 rounded-2xl border border-gray-200/80 shadow-sm">
           <div className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-1">
             Total Penjualan (Netto)
           </div>
@@ -176,10 +176,10 @@ export default function LaporanPenjualanView() {
           <div className="text-[10px] text-gray-400 mt-1">
             {summary?.totalTransaksi || 0} transaksi &bull; {summary?.totalQtyTerjual || 0} pcs
           </div>
-        </div>
+        </article>
 
         {/* HPP */}
-        <div className="bg-white p-4 rounded-2xl border border-gray-200/80 shadow-sm">
+        <article className="bg-white p-4 rounded-2xl border border-gray-200/80 shadow-sm">
           <div className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-1">
             Total HPP Modal
           </div>
@@ -187,10 +187,10 @@ export default function LaporanPenjualanView() {
             {formatRupiah(summary?.totalHpp || 0)}
           </div>
           <div className="text-[10px] text-gray-400 mt-1">Modal beli barang terjual</div>
-        </div>
+        </article>
 
         {/* Laba Bersih */}
-        <div className="bg-emerald-50/70 p-4 rounded-2xl border border-emerald-200 shadow-sm">
+        <article className="bg-emerald-50/70 p-4 rounded-2xl border border-emerald-200 shadow-sm">
           <div className="text-[11px] font-bold text-emerald-800 uppercase tracking-wider mb-1 flex items-center justify-between">
             <span>Total Laba Kotor</span>
             <ArrowUpRight className="w-4 h-4 text-emerald-600" />
@@ -201,10 +201,10 @@ export default function LaporanPenjualanView() {
           <div className="text-[10px] text-emerald-700/80 mt-1 font-medium">
             Profit penjualan produk
           </div>
-        </div>
+        </article>
 
         {/* Diskon */}
-        <div className="bg-white p-4 rounded-2xl border border-gray-200/80 shadow-sm">
+        <article className="bg-white p-4 rounded-2xl border border-gray-200/80 shadow-sm">
           <div className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-1">
             Total Potongan Diskon
           </div>
@@ -212,10 +212,10 @@ export default function LaporanPenjualanView() {
             {formatRupiah(summary?.totalDiskonNominal || 0)}
           </div>
           <div className="text-[10px] text-gray-400 mt-1">Akumulasi diskon diberikan</div>
-        </div>
+        </article>
 
         {/* Margin */}
-        <div className="bg-white p-4 rounded-2xl border border-gray-200/80 shadow-sm col-span-2 lg:col-span-1">
+        <article className="bg-white p-4 rounded-2xl border border-gray-200/80 shadow-sm col-span-2 lg:col-span-1">
           <div className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-1">
             Rata-rata Margin
           </div>
@@ -223,11 +223,11 @@ export default function LaporanPenjualanView() {
             {summary?.marginRataRata || 0}%
           </div>
           <div className="text-[10px] text-gray-400 mt-1">Rasio profit terhadap omset</div>
-        </div>
-      </div>
+        </article>
+      </section>
 
-      {/* Filter Controls Bar */}
-      <div className="bg-white p-4 rounded-2xl border border-gray-200/80 shadow-sm space-y-3">
+      {/* 3. Filter Controls Bar (F-Pattern Second Row) */}
+      <section aria-label="Filter Periode Penjualan" className="bg-white p-4 rounded-2xl border border-gray-200/80 shadow-sm space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
           {/* Preset Buttons */}
           <div className="flex items-center gap-1.5 text-xs">
@@ -304,10 +304,10 @@ export default function LaporanPenjualanView() {
             className="w-full bg-gray-50/70 border border-gray-200 rounded-xl pl-9 pr-4 py-2 text-xs text-gray-800 placeholder:text-gray-400 focus:outline-none focus:border-gray-400"
           />
         </div>
-      </div>
+      </section>
 
-      {/* Data Table */}
-      <div className="bg-white rounded-2xl border border-gray-200/80 shadow-sm overflow-hidden">
+      {/* 4. Data Table (F-Pattern Reading Grid) */}
+      <section aria-label="Tabel Laporan Penjualan" className="bg-white rounded-2xl border border-gray-200/80 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
             <thead className="bg-gray-50 border-b border-gray-200 text-gray-500 font-semibold uppercase tracking-wider">
@@ -393,7 +393,13 @@ export default function LaporanPenjualanView() {
             </tbody>
           </table>
         </div>
-      </div>
+
+        {/* Semantic Table Footer */}
+        <footer className="px-5 py-3.5 bg-gray-50/50 border-t border-gray-100 flex items-center justify-between text-xs text-gray-500">
+          <span>Menampilkan <strong>{filteredData.length}</strong> baris transaksi penjualan</span>
+          <span className="text-[11px] text-gray-400">Nilai HPP dan laba otomatis disanitasi dari akun bawahan</span>
+        </footer>
+      </section>
     </div>
   );
 }

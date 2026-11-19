@@ -320,23 +320,24 @@ export default function Sidebar({ userRole, onClose }: SidebarProps) {
 
   return (
     <aside className="flex flex-col h-full bg-white border-r border-gray-200 w-[280px] select-none">
-      {/* Brand Header */}
+      {/* Brand Header (Dual Line: Title + Subtitle) */}
       <div className="flex items-center gap-3 px-5 py-4 border-b border-gray-100">
         <div className="w-9 h-9 rounded-xl bg-gray-900 flex items-center justify-center text-white shadow-sm flex-shrink-0">
-          <Boxes className="w-5 h-5" />
+          <Boxes className="w-5 h-5 text-emerald-400" />
         </div>
         <div className="truncate">
-          <div className="font-bold text-gray-900 text-sm tracking-tight leading-tight truncate">
+          <div className="font-bold text-slate-900 text-sm tracking-tight leading-tight truncate">
             {isManufaktur ? 'Gudang Manufaktur' : 'SRasa F&B Hub'}
           </div>
-          <div className="text-[11px] font-medium text-gray-400 truncate">
+          <div className="text-xs font-medium text-slate-600 truncate mt-0.5">
             {isManufaktur ? 'Sistem Inventory & Distribusi' : 'Sistem Cafe, Resto & Resep'}
           </div>
         </div>
         {onClose && (
           <button
             onClick={onClose}
-            className="ml-auto text-gray-400 hover:text-gray-600 lg:hidden p-1 rounded-lg"
+            className="ml-auto text-slate-400 hover:text-slate-700 lg:hidden p-1 rounded-lg"
+            aria-label="Tutup Sidebar"
           >
             <X className="w-4 h-4" />
           </button>
@@ -346,7 +347,7 @@ export default function Sidebar({ userRole, onClose }: SidebarProps) {
       {/* Mode Status & Cabang Info Card */}
       <div className="p-3 border-b border-gray-100 bg-gray-50/70 space-y-2">
         <div className="flex items-center justify-between">
-          <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+          <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
             Domain Operasional
           </span>
           {canSwitchDivision ? (
@@ -359,7 +360,7 @@ export default function Sidebar({ userRole, onClose }: SidebarProps) {
               <span>Ganti Mode</span>
             </button>
           ) : (
-            <span className="text-[9px] font-medium text-gray-400 bg-gray-200/70 px-1.5 py-0.5 rounded">
+            <span className="text-[9px] font-medium text-slate-500 bg-gray-200/70 px-1.5 py-0.5 rounded">
               Terkunci
             </span>
           )}
@@ -380,11 +381,12 @@ export default function Sidebar({ userRole, onClose }: SidebarProps) {
             >
               {isManufaktur ? <Factory className="w-4 h-4" /> : <Coffee className="w-4 h-4" />}
             </div>
+            {/* Dual Line in Badge */}
             <div>
               <div className="text-xs font-bold leading-tight">
                 {isManufaktur ? 'Divisi Manufaktur' : 'Divisi F&B'}
               </div>
-              <div className="text-[10px] text-gray-500 font-medium">
+              <div className="text-[10px] text-slate-600 font-medium">
                 {isManufaktur ? 'Pabrik & Distribusi' : 'Cafe, Resto & Bakery'}
               </div>
             </div>

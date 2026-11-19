@@ -132,8 +132,8 @@ export default function CabangView() {
         </div>
       )}
 
-      {/* Header Halaman */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 bg-white p-6 rounded-3xl border border-gray-200/80 shadow-xs">
+      {/* 1. Header (F-Pattern Top Row) */}
+      <header className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 bg-white p-6 rounded-3xl border border-gray-200/80 shadow-xs">
         <div>
           <div className="flex items-center gap-2.5">
             <div className="w-10 h-10 rounded-2xl bg-gray-900 flex items-center justify-center text-white shadow-sm">
@@ -159,11 +159,11 @@ export default function CabangView() {
             <span>Tambah Cabang Baru</span>
           </button>
         )}
-      </div>
+      </header>
 
-      {/* Info Card: Aturan Isolasi Cabang */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-blue-50/70 border border-blue-200/80 rounded-2xl p-4 flex items-start gap-3.5">
+      {/* 2. Info Cards (Grid Layout Archetype) */}
+      <section aria-label="Kebijakan Isolasi Multi-Cabang" className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <article className="bg-blue-50/70 border border-blue-200/80 rounded-2xl p-4 flex items-start gap-3.5">
           <div className="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center flex-shrink-0 mt-0.5">
             <Building2 className="w-4 h-4" />
           </div>
@@ -173,9 +173,9 @@ export default function CabangView() {
               Jika belum ada penambahan cabang, seluruh aktivitas pergudangan, kasir, dan keuangan berpusat di lokasi PUSAT.
             </div>
           </div>
-        </div>
+        </article>
 
-        <div className="bg-emerald-50/70 border border-emerald-200/80 rounded-2xl p-4 flex items-start gap-3.5">
+        <article className="bg-emerald-50/70 border border-emerald-200/80 rounded-2xl p-4 flex items-start gap-3.5">
           <div className="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center flex-shrink-0 mt-0.5">
             <Lock className="w-4 h-4" />
           </div>
@@ -185,9 +185,9 @@ export default function CabangView() {
               Karyawan yang ditempatkan di cabang terkunci 100%. Mereka tidak bisa melihat stok, kasir, atau laporan cabang lain.
             </div>
           </div>
-        </div>
+        </article>
 
-        <div className="bg-purple-50/70 border border-purple-200/80 rounded-2xl p-4 flex items-start gap-3.5">
+        <article className="bg-purple-50/70 border border-purple-200/80 rounded-2xl p-4 flex items-start gap-3.5">
           <div className="w-8 h-8 rounded-xl bg-purple-600 text-white flex items-center justify-center flex-shrink-0 mt-0.5">
             <ShieldCheck className="w-4 h-4" />
           </div>
@@ -197,11 +197,11 @@ export default function CabangView() {
               Pimpinan (Admin/Direktur/Manager) dapat memilih dan berpindah cabang operasional langsung di Header tanpa logout.
             </div>
           </div>
-        </div>
-      </div>
+        </article>
+      </section>
 
-      {/* Filter & Daftar Cabang */}
-      <div className="bg-white rounded-3xl border border-gray-200/80 shadow-xs overflow-hidden">
+      {/* 3. Filter & Daftar Cabang (F-Pattern Table Section) */}
+      <section aria-label="Tabel Cabang Operasional" className="bg-white rounded-3xl border border-gray-200/80 shadow-xs overflow-hidden">
         <div className="p-4 sm:p-5 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div className="flex items-center gap-2">
             <span className="text-xs font-bold text-gray-900">Daftar Lokasi Operasional</span>
@@ -321,7 +321,13 @@ export default function CabangView() {
             </tbody>
           </table>
         </div>
-      </div>
+
+        {/* Semantic Table Footer */}
+        <footer className="px-5 py-3.5 bg-gray-50/50 border-t border-gray-100 flex items-center justify-between text-xs text-gray-500">
+          <span>Menampilkan <strong>{filteredBranches.length}</strong> unit cabang operasional</span>
+          <span className="text-[11px] text-gray-400">Proteksi RLS otomatis aktif per cabang</span>
+        </footer>
+      </section>
 
       {/* Modal Tambah Cabang Baru */}
       {isModalOpen && (

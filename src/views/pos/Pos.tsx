@@ -612,7 +612,8 @@ export default function PosView() {
                 <p>Tidak ada produk ditemukan</p>
               </div>
             ) : (
-              <div
+              <section
+                aria-label="Katalog Produk POS"
                 className={`grid gap-2.5 sm:gap-3 ${
                   posSettings.gridMode === 'compact'
                     ? 'grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5'
@@ -624,54 +625,55 @@ export default function PosView() {
                   const isOutOfStock = item.stok <= 0;
 
                   return (
-                    <button
-                      key={item.sku}
-                      onClick={() => addToCart(item)}
-                      disabled={isOutOfStock}
-                      className={`relative flex flex-col text-left p-3 rounded-2xl border transition-all duration-150 active:scale-95 group ${
-                        isOutOfStock
-                          ? 'bg-slate-950/40 border-slate-800/40 opacity-50 cursor-not-allowed'
-                          : inCart
-                          ? 'bg-slate-800 border-emerald-500/70 shadow-lg shadow-emerald-500/10'
-                          : 'bg-slate-950/80 hover:bg-slate-800/90 border-slate-800 hover:border-slate-700'
-                      }`}
-                    >
-                      {/* In-Cart Badge */}
-                      {inCart && (
-                        <span className="absolute top-2 right-2 flex items-center justify-center w-6 h-6 rounded-full bg-emerald-500 text-slate-950 font-black text-xs shadow-md">
-                          {inCart.qty}
-                        </span>
-                      )}
+                    <article key={item.sku}>
+                      <button
+                        onClick={() => addToCart(item)}
+                        disabled={isOutOfStock}
+                        className={`w-full h-full relative flex flex-col text-left p-3 rounded-2xl border transition-all duration-150 active:scale-95 group ${
+                          isOutOfStock
+                            ? 'bg-slate-950/40 border-slate-800/40 opacity-50 cursor-not-allowed'
+                            : inCart
+                            ? 'bg-slate-800 border-emerald-500/70 shadow-lg shadow-emerald-500/10'
+                            : 'bg-slate-950/80 hover:bg-slate-800/90 border-slate-800 hover:border-slate-700'
+                        }`}
+                      >
+                        {/* In-Cart Badge */}
+                        {inCart && (
+                          <span className="absolute top-2 right-2 flex items-center justify-center w-6 h-6 rounded-full bg-emerald-500 text-slate-950 font-black text-xs shadow-md">
+                            {inCart.qty}
+                          </span>
+                        )}
 
-                      {/* Brand & SKU */}
-                      <div className="flex items-center justify-between text-[10px] text-slate-400 mb-1">
-                        <span className="font-semibold uppercase truncate">{item.brand || 'Duta Pangan'}</span>
-                        <span className="font-mono text-slate-500">{item.sku}</span>
-                      </div>
-
-                      {/* Name */}
-                      <h3 className="font-semibold text-slate-100 text-xs sm:text-sm line-clamp-2 leading-snug mb-2 group-hover:text-emerald-300 transition">
-                        {item.namaBarang}
-                      </h3>
-
-                      <div className="mt-auto pt-2 border-t border-slate-800/80 flex items-center justify-between">
-                        <div>
-                          <div className="text-[11px] font-bold text-emerald-400 sm:text-xs">
-                            {formatRupiah(Number(item.hargaJual || 0))}
-                          </div>
-                          <div className="text-[10px] text-slate-500">
-                            Stok: <strong className={item.stok <= 5 ? 'text-amber-400' : 'text-slate-300'}>{item.stok}</strong>
-                          </div>
+                        {/* Brand & SKU */}
+                        <div className="flex items-center justify-between text-[10px] text-slate-400 mb-1">
+                          <span className="font-semibold uppercase truncate">{item.brand || 'Duta Pangan'}</span>
+                          <span className="font-mono text-slate-500">{item.sku}</span>
                         </div>
 
-                        <div className="w-7 h-7 rounded-xl bg-slate-800 group-hover:bg-emerald-500 group-hover:text-slate-950 flex items-center justify-center text-slate-400 transition">
-                          <Plus className="w-4 h-4" />
+                        {/* Name */}
+                        <h3 className="font-semibold text-slate-100 text-xs sm:text-sm line-clamp-2 leading-snug mb-2 group-hover:text-emerald-300 transition">
+                          {item.namaBarang}
+                        </h3>
+
+                        <div className="mt-auto pt-2 border-t border-slate-800/80 flex items-center justify-between">
+                          <div>
+                            <div className="text-[11px] font-bold text-emerald-400 sm:text-xs">
+                              {formatRupiah(Number(item.hargaJual || 0))}
+                            </div>
+                            <div className="text-[10px] text-slate-500">
+                              Stok: <strong className={item.stok <= 5 ? 'text-amber-400' : 'text-slate-300'}>{item.stok}</strong>
+                            </div>
+                          </div>
+
+                          <div className="w-7 h-7 rounded-xl bg-slate-800 group-hover:bg-emerald-500 group-hover:text-slate-950 flex items-center justify-center text-slate-400 transition">
+                            <Plus className="w-4 h-4" />
+                          </div>
                         </div>
-                      </div>
-                    </button>
+                      </button>
+                    </article>
                   );
                 })}
-              </div>
+              </section>
             )}
           </div>
         </main>

@@ -74,9 +74,62 @@ Aplikasi ini sudah memiliki **25+ modul lengkap** yang siap pakai:
 * **Expedisi / Armada** (`/expedisi`): Manajemen armada mobil/truk dan status servis.
 * **Kontak Mitra** (`/kontak`): Buku alamat pelanggan dan supplier.
 * **Pengguna** (`/users`): Manajemen akun user dan penugasan role (Admin only).
+* **Setting Profil Akun & Ganti Mode** (`/profile`):
+  * Pengaturan data diri pengguna (Nama Lengkap, Email, Username, Role, Cabang).
+  * Pembaruan kata sandi akun aman dengan verifikasi password lama.
+  * **Pusat Ganti Mode Operasional**: Menampung pemilihan domain (Manufaktur vs F&B) dengan aturan wajib logout terlebih dahulu untuk menjaga isolasi data.
+  * Trigger cepat melalui dropdown avatar/nama akun di pojok kanan atas Header.
 * **Log Aktivitas** (`/logs`): Audit trail jejak aksi pengguna di seluruh sistem.
 * **Autentikasi & Reset Password** (`/login`, `/forgot-password`, OTP verification).
 * **Floating AssistiveTouch Button**: Tombol mengambang elegan di kanan bawah dashboard untuk shortcut instan ke POS kasir.
+* **Creative Mega Menu (`Header.tsx` / `CreativeMegaMenu.tsx`)**: Navigasi multi-kolom expanded di Header atas untuk akses kilat seluruh modul dalam 1-2 klik.
+
+---
+
+## 📐 Standar Desain Layout, Tipografi & Aksesibilitas (WCAG Compliant)
+
+### 1. Struktur Layout Semantik (HTML5)
+* Dilarang menggunakan generic `div` soup tanpa struktur. Gunakan tag semantik standar:
+  * `<header>`: Topbar branding, title halaman, breadcrumb, atau header modal.
+  * `<nav>`: Navigasi menu utama, tab switcher filter, mega menu dropdown.
+  * `<main>`: Container konten utama halaman.
+  * `<section>`: Kelompok blok konten terkait (misal: filter bar, data grid, form container).
+  * `<article>`: Komponen independen yang dapat berdiri sendiri (kartu metrik KPI, kartu katalog produk POS, baris kartu aksi).
+  * `<aside>`: Sidebar navigasi desktop/mobile, filter panel samping, atau drawer keranjang belanja POS.
+  * `<footer>`: Informasi copyright, rangkuman hitungan tabel, audit trail, atau versi sistem.
+
+### 2. Pedoman Tipografi Anti-Desak-Desakan (Title, Sub-Title, Sub-Sub-Title)
+Teks tidak boleh bertumpuk padat tanpa napas (*kruntelan*). Setiap teks wajib mengikuti salah satu dari 5 pola penulisan:
+
+1. **Single Line**:
+   * Digunakan untuk: Chip badge, status transaksi, metric satu angka, action button label.
+   * Format: `text-xs font-semibold text-slate-700 truncate`.
+2. **Dual Line**:
+   * Digunakan untuk: Header form sederhana, profil user ringkas, list item standar.
+   * Line 1 (Title): `text-sm font-bold text-slate-900 leading-tight`.
+   * Line 2 (Sub-title): `text-xs text-slate-600 mt-0.5 leading-normal`.
+3. **Triple Line**:
+   * Digunakan untuk: Header halaman utama, hero banner, card spotlight unggulan.
+   * Line 1 (Overline / Eyebrow): `text-[10px] font-bold uppercase tracking-wider text-emerald-800 bg-emerald-100/90 px-2 py-0.5 rounded`.
+   * Line 2 (Title): `text-xl sm:text-2xl font-extrabold text-slate-950 tracking-tight leading-tight mt-1`.
+   * Line 3 (Sub-title): `text-xs sm:text-sm text-slate-600 mt-1 leading-relaxed max-w-2xl`.
+4. **List Dual-Line**:
+   * Digunakan untuk: Baris tabel data, menu list navigasi, dropdown option.
+   * Top Line: `text-xs sm:text-sm font-bold text-slate-900 leading-tight`.
+   * Bottom Line: `text-[11px] text-slate-600 font-medium leading-normal mt-0.5`.
+5. **List Triple-Line**:
+   * Digunakan untuk: Item keranjang POS, card barang kritis, audit log row.
+   * Line 1 (Context): `text-[10px] font-semibold text-slate-500 uppercase tracking-wider`.
+   * Line 2 (Entity): `text-xs sm:text-sm font-bold text-slate-900 leading-tight`.
+   * Line 3 (Specs / Values): `text-[11px] text-slate-600 font-mono mt-0.5 flex items-center gap-2`.
+
+### 3. Pedoman Aksesibilitas WCAG (Level AA Compliant)
+* **Contrast Ratio**: Minimal rasio 4.5:1 untuk teks normal dan 3:1 untuk teks tebal/besar.
+  * Teks utama: `text-slate-950` / `text-slate-900` (kontras 14:1+).
+  * Teks sekunder/sub-title: `text-slate-600` / `text-slate-700` (kontras 7:1+). Dilarang memakai `text-gray-400` untuk teks deskripsi penting.
+  * Background gelap (dark mode / header POS): teks utama `text-white`, teks sekunder `text-slate-200` / `text-slate-300`.
+* **Line Height**: Gunakan `leading-tight` pada heading/title dan `leading-normal` atau `leading-relaxed` pada body copy untuk memastikan kenyamanan mata saat membaca (*breathing space*).
+* **Keyboard & Screen Reader**: Berikan atribut `aria-label`, `aria-labelledby`, dan support tombol `Esc` untuk menutup popup/drawer/mega menu.
 
 ---
 
