@@ -51,6 +51,21 @@ export const ROLES_EXPEDISI: UserRole[] = [
   'Staff Expedisi',
 ];
 
+export const ROLES_POS: UserRole[] = [
+  'Administrator',
+  'Direktur Utama',
+  'Manager',
+  'Kepala Gudang',
+  'Wakil Gudang',
+  'Staff Gudang',
+  'Salesman',
+  'Admin Salesman',
+  'Staff Admin Salesman',
+  'Agen',
+  'Admin Agen',
+  'Staff Admin Agen',
+];
+
 /**
  * Validasi otorisasi sesi dan role pada API Route Handler.
  * Mengembalikan objek Session atau NextResponse (401/403) jika tidak berhak.

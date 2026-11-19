@@ -11,6 +11,12 @@ export const ROUTES = {
   // Core
   DASHBOARD: '/dashboard',
   INVENTORY: '/inventory',
+  POS: '/pos',
+
+  // Penjualan & Laporan POS / Gudang
+  LAPORAN_PENJUALAN: '/laporan-penjualan',
+  PRODUK_TERJUAL: '/produk-terjual',
+  LAPORAN_RUSAK_RETUR: '/laporan-rusak-retur',
 
   // Gudang
   BARANG_MASUK: '/barang-masuk',

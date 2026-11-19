@@ -6,6 +6,7 @@ import Sidebar from '@/shared/components/layout/Sidebar';
 import Header from '@/shared/components/layout/Header';
 import { useSession } from 'next-auth/react';
 import type { UserRole } from '@/shared/types';
+import AssistivePosButton from '@/shared/components/pos/AssistivePosButton';
 
 // ============================================================
 // LAYOUT: Dashboard (semua halaman authenticated)
@@ -17,7 +18,7 @@ function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
   const userRole = (session?.user as any)?.role as UserRole | undefined;
 
   return (
-    <div className="flex h-screen overflow-hidden bg-gray-50">
+    <div className="flex h-screen overflow-hidden bg-gray-50 relative">
       {/* Sidebar Desktop */}
       <div className="hidden lg:flex flex-shrink-0">
         <Sidebar userRole={userRole} />
@@ -43,6 +44,9 @@ function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
           {children}
         </main>
       </div>
+
+      {/* Floating Assistive Touch Button for POS */}
+      <AssistivePosButton />
     </div>
   );
 }

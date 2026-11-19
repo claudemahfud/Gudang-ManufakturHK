@@ -25,6 +25,10 @@ import {
   Users,
   History,
   Boxes,
+  ShoppingBag,
+  TrendingUp,
+  BarChart3,
+  ShieldAlert,
   X,
 } from 'lucide-react';
 
@@ -37,6 +41,7 @@ interface NavItem {
   icon: React.ComponentType<{ className?: string }>;
   href: string;
   roles?: UserRole[];
+  newTab?: boolean;
 }
 
 interface NavGroup {
@@ -50,6 +55,15 @@ export const NAV_GROUPS: NavGroup[] = [
     items: [
       { label: 'Dashboard', icon: LayoutDashboard, href: ROUTES.DASHBOARD },
       { label: 'Inventory', icon: Package, href: ROUTES.INVENTORY },
+    ],
+  },
+  {
+    group: 'Penjualan',
+    items: [
+      { label: 'Kasir POS (Fullscreen)', icon: ShoppingBag, href: ROUTES.POS, newTab: true },
+      { label: 'Laporan Penjualan', icon: TrendingUp, href: ROUTES.LAPORAN_PENJUALAN },
+      { label: 'Produk Detile Terjual', icon: BarChart3, href: ROUTES.PRODUK_TERJUAL },
+      { label: 'Laporan Rusak & Retur', icon: ShieldAlert, href: ROUTES.LAPORAN_RUSAK_RETUR },
     ],
   },
   {
@@ -147,6 +161,8 @@ export default function Sidebar({ userRole, onClose }: SidebarProps) {
                   <Link
                     key={item.href}
                     href={item.href}
+                    target={item.newTab ? '_blank' : undefined}
+                    rel={item.newTab ? 'noopener noreferrer' : undefined}
                     onClick={onClose}
                     className={`flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium transition-all mb-0.5 ${
                       isActive

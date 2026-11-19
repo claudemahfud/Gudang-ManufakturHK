@@ -20,6 +20,7 @@ const ROUTE_ROLES: Record<string, string[]> = {
   [ROUTES.TARGET_KOMISI]: ['Administrator', 'Manager', 'Direktur Utama', 'Admin Salesman'],
   [ROUTES.MONITOR_SALESMAN]: ['Administrator', 'Manager', 'Direktur Utama', 'Admin Salesman'],
   [ROUTES.PENGAJUAN_DISKON]: ['Administrator', 'Manager', 'Direktur Utama', 'Admin Salesman', 'Salesman', 'Staff Admin Salesman'],
+  [ROUTES.LAPORAN_PENJUALAN]: ['Administrator', 'Manager', 'Direktur Utama', 'Kepala Gudang', 'Admin Salesman'],
 
   // API endpoints RBAC
   '/api/users': ['Administrator'],
@@ -27,6 +28,7 @@ const ROUTE_ROLES: Record<string, string[]> = {
   '/api/keuangan': ['Administrator', 'Manager', 'Direktur Utama', 'Kepala Gudang'],
   '/api/biaya-operasional': ['Administrator', 'Manager', 'Direktur Utama'],
   '/api/target-komisi': ['Administrator', 'Manager', 'Direktur Utama', 'Admin Salesman'],
+  '/api/laporan/penjualan': ['Administrator', 'Manager', 'Direktur Utama', 'Kepala Gudang', 'Admin Salesman'],
 };
 
 export default auth((req: any) => {
