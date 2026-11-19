@@ -3,7 +3,8 @@ import { auth } from './config';
 import { NextResponse } from 'next/server';
 
 // ============================================================
-// RBAC: Role-Based Access Control Definitions & Helpers
+// RBAC: Role-Based Access Control Definitions & Privacy Bounds
+// Menjamin privasi data keuangan, laba, dan HPP dari akun bawahan
 // ============================================================
 
 export const ROLES_ADMIN: UserRole[] = ['Administrator'];
@@ -14,7 +15,31 @@ export const ROLES_EXECUTIVE: UserRole[] = [
   'Manager',
 ];
 
+// Keuangan, Neraca & Arus Kas: Khusus pimpinan (Akun bawahan tidak boleh akses)
 export const ROLES_FINANCE: UserRole[] = [
+  'Administrator',
+  'Direktur Utama',
+  'Manager',
+];
+
+// Laporan Laba Bersih, Margin Profit & HPP: Khusus pimpinan
+export const ROLES_PROFIT_MARGIN: UserRole[] = [
+  'Administrator',
+  'Direktur Utama',
+  'Manager',
+];
+
+// Manajemen Pengguna & Hak Akses
+export const ROLES_USER_MANAGEMENT: UserRole[] = ['Administrator'];
+
+// Log Audit Aktivitas
+export const ROLES_AUDIT_LOGS: UserRole[] = [
+  'Administrator',
+  'Direktur Utama',
+];
+
+// Resep & Kalkulator HPP Bahan Baku
+export const ROLES_RECIPE_BOM: UserRole[] = [
   'Administrator',
   'Direktur Utama',
   'Manager',
@@ -67,6 +92,14 @@ export const ROLES_POS: UserRole[] = [
 ];
 
 /**
+ * Cek apakah sebuah role berhak melihat Harga Beli / HPP Modal rahasia perusahaan
+ */
+export function canViewCostPrice(role?: UserRole | string | null): boolean {
+  if (!role) return false;
+  return ROLES_PROFIT_MARGIN.includes(role as UserRole);
+}
+
+/**
  * Validasi otorisasi sesi dan role pada API Route Handler.
  * Mengembalikan objek Session atau NextResponse (401/403) jika tidak berhak.
  */
@@ -76,6 +109,8 @@ export async function requireAuthRole(allowedRoles?: UserRole[]) {
   if (!session || !session.user) {
     return {
       authorized: false as const,
+      user: null,
+      userRole: null,
       response: NextResponse.json(
         { success: false, message: 'Autentikasi diperlukan. Silakan login kembali.' },
         { status: 401 }
@@ -90,10 +125,12 @@ export async function requireAuthRole(allowedRoles?: UserRole[]) {
     if (!allowedRoles.includes(userRole)) {
       return {
         authorized: false as const,
+        user,
+        userRole,
         response: NextResponse.json(
           {
             success: false,
-            message: `Akses ditolak. Role '${userRole}' tidak memiliki izin untuk tindakan ini.`,
+            message: `Akses ditolak. Role '${userRole}' tidak memiliki izin untuk melihat informasi ini (Privasi Dibatasi).`,
           },
           { status: 403 }
         ),
@@ -103,8 +140,8 @@ export async function requireAuthRole(allowedRoles?: UserRole[]) {
 
   return {
     authorized: true as const,
-    session,
     user,
     userRole,
+    response: null,
   };
 }

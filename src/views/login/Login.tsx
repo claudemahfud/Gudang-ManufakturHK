@@ -35,8 +35,21 @@ export default function Login() {
       if (result?.error) {
         setError('Username atau password salah. Silakan coba lagi.');
       } else {
-        // Alur: Login Berhasil > Pilih Mode (Manufaktur / F&B) > Dashboard
-        router.push(ROUTES.SELECT_MODE);
+        // Ambil info session untuk mendeteksi apakah akun Bawahan (mode sudah ditentukan) atau Pimpinan
+        const sessionRes = await fetch('/api/auth/session');
+        const sessionData = await sessionRes.json();
+        const loggedUser = sessionData?.user;
+
+        if (loggedUser?.divisiAssigned && loggedUser.divisiAssigned !== 'ALL') {
+          // Akun Bawahan: Langsung masuk Dashboard mode divisinya tanpa perlu halaman Pilih Mode
+          const assignedMode = loggedUser.divisiAssigned;
+          localStorage.setItem('app_active_division', assignedMode);
+          document.cookie = `app_active_division=${assignedMode}; path=/; max-age=31536000`;
+          router.push(ROUTES.DASHBOARD);
+        } else {
+          // Akun Pimpinan (Admin, Direktur Utama, Manager): Masuk halaman Pilih Mode
+          router.push(ROUTES.SELECT_MODE);
+        }
         router.refresh();
       }
     } catch {

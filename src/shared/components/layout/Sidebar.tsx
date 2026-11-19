@@ -44,6 +44,8 @@ import {
   ExternalLink,
   Factory,
   Coffee,
+  Building2,
+  LogOut,
 } from 'lucide-react';
 
 interface SubMenuItem {
@@ -93,7 +95,7 @@ export const MENU_HIERARCHY: ParentMenuItem[] = [
         label: 'Laporan Penjualan & Laba',
         icon: TrendingUp,
         href: ROUTES.LAPORAN_PENJUALAN,
-        roles: ['Administrator', 'Manager', 'Direktur Utama', 'Kepala Gudang', 'Admin Salesman'],
+        roles: ['Administrator', 'Manager', 'Direktur Utama'],
       },
       {
         label: 'Produk Detile Terjual',
@@ -172,19 +174,19 @@ export const MENU_HIERARCHY: ParentMenuItem[] = [
     id: 'keuangan',
     title: 'Keuangan & Neraca',
     icon: Wallet,
-    roles: ['Administrator', 'Manager', 'Direktur Utama', 'Kepala Gudang'],
+    roles: ['Administrator', 'Manager', 'Direktur Utama'],
     items: [
       {
         label: 'Arus Kas Keuangan',
         icon: Wallet,
         href: ROUTES.KEUANGAN,
-        roles: ['Administrator', 'Manager', 'Direktur Utama', 'Kepala Gudang'],
+        roles: ['Administrator', 'Manager', 'Direktur Utama'],
       },
       {
         label: 'Neraca Posisi Keuangan',
         icon: Scale,
         href: ROUTES.NERACA,
-        roles: ['Administrator', 'Manager', 'Direktur Utama', 'Kepala Gudang'],
+        roles: ['Administrator', 'Manager', 'Direktur Utama'],
       },
       {
         label: 'Biaya Operasional',
@@ -267,7 +269,15 @@ interface SidebarProps {
 export default function Sidebar({ userRole, onClose }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
-  const { division, setDivision, isManufaktur, isFnb } = useDivision();
+  const {
+    division,
+    isManufaktur,
+    isFnb,
+    cabang,
+    canSwitchDivision,
+    isBawahan,
+    logoutAndSwitchMode,
+  } = useDivision();
 
   // State dropdown terbuka (id menu -> boolean)
   const [openMenus, setOpenMenus] = useState<Record<string, boolean>>({
@@ -301,12 +311,6 @@ export default function Sidebar({ userRole, onClose }: SidebarProps) {
     }));
   };
 
-  const switchDivision = () => {
-    const next = isManufaktur ? 'FNB' : 'MANUFAKTUR';
-    setDivision(next);
-    router.refresh();
-  };
-
   return (
     <aside className="flex flex-col h-full bg-white border-r border-gray-200 w-[280px] select-none">
       {/* Brand Header */}
@@ -332,27 +336,33 @@ export default function Sidebar({ userRole, onClose }: SidebarProps) {
         )}
       </div>
 
-      {/* Mode Status & Quick Switcher Card */}
-      <div className="p-3 border-b border-gray-100 bg-gray-50/70">
-        <div className="flex items-center justify-between mb-1.5">
-          <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">
-            Mode Aktif:
+      {/* Mode Status & Cabang Info Card */}
+      <div className="p-3 border-b border-gray-100 bg-gray-50/70 space-y-2">
+        <div className="flex items-center justify-between">
+          <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+            Domain Operasional
           </span>
-          <button
-            onClick={switchDivision}
-            className="text-[10px] font-bold text-blue-600 hover:text-blue-800 transition flex items-center gap-1"
-          >
-            <ArrowLeftRight className="w-2.5 h-2.5" />
-            <span>Ganti Mode</span>
-          </button>
+          {canSwitchDivision ? (
+            <button
+              onClick={logoutAndSwitchMode}
+              className="text-[10px] font-semibold text-blue-600 hover:text-blue-800 transition flex items-center gap-1"
+              title="Ganti mode operasional wajib logout terlebih dahulu"
+            >
+              <LogOut className="w-2.5 h-2.5" />
+              <span>Ganti Mode</span>
+            </button>
+          ) : (
+            <span className="text-[9px] font-medium text-gray-400 bg-gray-200/70 px-1.5 py-0.5 rounded">
+              Terkunci
+            </span>
+          )}
         </div>
 
         <div
-          onClick={switchDivision}
-          className={`cursor-pointer flex items-center justify-between p-2.5 rounded-xl border transition-all ${
+          className={`flex items-center justify-between p-2.5 rounded-xl border ${
             isManufaktur
-              ? 'bg-blue-50/80 border-blue-200 text-blue-900 hover:bg-blue-100/70'
-              : 'bg-emerald-50/80 border-emerald-200 text-emerald-950 hover:bg-emerald-100/70'
+              ? 'bg-blue-50/80 border-blue-200 text-blue-900'
+              : 'bg-emerald-50/80 border-emerald-200 text-emerald-950'
           }`}
         >
           <div className="flex items-center gap-2.5">
@@ -368,11 +378,17 @@ export default function Sidebar({ userRole, onClose }: SidebarProps) {
                 {isManufaktur ? 'Divisi Manufaktur' : 'Divisi F&B'}
               </div>
               <div className="text-[10px] text-gray-500 font-medium">
-                {isManufaktur ? 'Pabrik & Grosir' : 'Cafe & Resto'}
+                {isManufaktur ? 'Pabrik & Distribusi' : 'Cafe, Resto & Bakery'}
               </div>
             </div>
           </div>
-          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+          <span className="w-2 h-2 rounded-full bg-emerald-500" />
+        </div>
+
+        {/* Cabang Aktif Info */}
+        <div className="flex items-center gap-1.5 px-2 py-1 bg-white rounded-lg border border-gray-200/70 text-[11px] text-gray-600">
+          <Building2 className="w-3 h-3 text-gray-400 flex-shrink-0" />
+          <span className="truncate font-medium">{cabang}</span>
         </div>
       </div>
 

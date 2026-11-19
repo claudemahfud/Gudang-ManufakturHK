@@ -2,19 +2,18 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/shared/lib/db';
 import { inventory, keuangan } from '@/shared/lib/db/schema';
 import { eq, sql } from 'drizzle-orm';
-import { auth } from '@/shared/lib/auth/config';
+import { requireAuthRole, ROLES_FINANCE } from '@/shared/lib/auth/rbac';
 
 // ============================================================
 // API: NERACA POSISI KEUANGAN KONSOLIDASI & PER DIVISI
 // Plafon Keuangan Bersama: Manufaktur + F&B + Konsolidasi
+// Hak Akses: Khusus Eksekutif (Administrator, Direktur Utama, Manager)
 // ============================================================
 
 export async function GET(req: NextRequest) {
   try {
-    const session = await auth();
-    if (!session) {
-      return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
-    }
+    const authResult = await requireAuthRole(ROLES_FINANCE);
+    if (!authResult.authorized) return authResult.response;
 
     const { searchParams } = new URL(req.url);
     const divisiParam = searchParams.get('divisi'); // 'MANUFAKTUR' | 'FNB' | undefined (semua)

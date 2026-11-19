@@ -1,20 +1,19 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/shared/lib/db';
 import { inventory, resepItems } from '@/shared/lib/db/schema';
-import { auth } from '@/shared/lib/auth/config';
+import { requireAuthRole, ROLES_RECIPE_BOM } from '@/shared/lib/auth/rbac';
 import { eq } from 'drizzle-orm';
 
 // ============================================================
 // API: /api/fnb/hpp
 // Kalkulator HPP & Resep (BOM) — F&B & Manufaktur Terpadu
+// Hak Akses: Administrator, Direktur Utama, Manager, Kepala Gudang
 // ============================================================
 
 export async function GET() {
   try {
-    const session = await auth();
-    if (!session) {
-      return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
-    }
+    const authResult = await requireAuthRole(ROLES_RECIPE_BOM);
+    if (!authResult.authorized) return authResult.response;
 
     // Ambil semua menu olahan atau produk yang memiliki resep
     const items = await db.select().from(inventory);
@@ -105,10 +104,8 @@ export async function GET() {
 
 export async function POST(req: Request) {
   try {
-    const session = await auth();
-    if (!session) {
-      return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
-    }
+    const authResult = await requireAuthRole(ROLES_RECIPE_BOM);
+    if (!authResult.authorized) return authResult.response;
 
     const body = await req.json();
     const { menuSku, bahanSku, namaBahan, takaran, satuan, jenis } = body;

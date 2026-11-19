@@ -44,6 +44,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           email: user.email ?? '',
           username: user.username,
           role: user.role,
+          divisiAssigned: user.divisiAssigned || 'ALL',
+          cabang: user.cabang || 'Pusat',
         };
       },
     }),

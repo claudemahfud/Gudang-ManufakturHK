@@ -3,6 +3,7 @@ import { db } from '@/shared/lib/db';
 import { inventory } from '@/shared/lib/db/schema';
 import { sql, or, and, ilike, desc, eq } from 'drizzle-orm';
 import { auth } from '@/shared/lib/auth/config';
+import { canViewCostPrice } from '@/shared/lib/auth/rbac';
 
 // ============================================================
 // API ROUTE: Master Inventory List & Create
@@ -65,9 +66,23 @@ export async function GET(req: NextRequest) {
       .limit(limit)
       .offset(offset);
 
+    // Sanitasi data: Akun bawahan (Petugas Gudang, Kasir, Salesman) tidak boleh melihat Harga Beli / HPP
+    const userRole = (session?.user as any)?.role;
+    const allowHpp = canViewCostPrice(userRole);
+
+    const sanitizedItems = items.map((item) => {
+      if (!allowHpp) {
+        return {
+          ...item,
+          hargaBeli: '0',
+        };
+      }
+      return item;
+    });
+
     return NextResponse.json({
       success: true,
-      data: items,
+      data: sanitizedItems,
       total,
       page,
       limit,

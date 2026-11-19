@@ -1,20 +1,19 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/shared/lib/db';
 import { barangKeluar, inventory } from '@/shared/lib/db/schema';
-import { auth } from '@/shared/lib/auth/config';
+import { requireAuthRole, ROLES_PROFIT_MARGIN } from '@/shared/lib/auth/rbac';
 import { desc, and, gte, lte, eq, sql } from 'drizzle-orm';
 
 // ============================================================
 // API: /api/laporan/penjualan
 // Laporan Penjualan Detail: Omset, HPP, Laba/Profit, Diskon
+// Hak Akses: Khusus Eksekutif (Administrator, Direktur Utama, Manager)
 // ============================================================
 
 export async function GET(req: Request) {
   try {
-    const session = await auth();
-    if (!session) {
-      return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
-    }
+    const authResult = await requireAuthRole(ROLES_PROFIT_MARGIN);
+    if (!authResult.authorized) return authResult.response;
 
     const { searchParams } = new URL(req.url);
     const startDate = searchParams.get('startDate');

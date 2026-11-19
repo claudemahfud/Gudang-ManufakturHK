@@ -16,7 +16,18 @@ export async function GET() {
       return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
     }
 
-    const list = await db.select().from(cashOpname).orderBy(desc(cashOpname.tanggal)).limit(100);
+    const user = session.user as any;
+    const userRole = user?.role;
+    const isExecutive = ['Administrator', 'Direktur Utama', 'Manager'].includes(userRole);
+
+    let list = await db.select().from(cashOpname).orderBy(desc(cashOpname.tanggal)).limit(100);
+
+    // Privasi: Kasir bawahan hanya boleh melihat riwayat cash opname miliknya sendiri
+    if (!isExecutive) {
+      list = list.filter(
+        (i) => i.kasir === user.name || i.kasir === user.username || i.createdBy === user.username
+      );
+    }
 
     // Hitung ringkasan hari ini
     const today = new Date();
