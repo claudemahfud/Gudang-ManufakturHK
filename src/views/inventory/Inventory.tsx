@@ -9,7 +9,8 @@ import { useState, useEffect, useRef } from 'react';
 import { formatRupiah, formatStok } from '@/shared/lib/utils';
 import type { InventoryItem } from '@/shared/types';
 import { useDivision } from '@/shared/context/DivisionContext';
-import { Factory, Coffee } from 'lucide-react';
+import { Factory, Coffee, Download } from 'lucide-react';
+import { exportToCsv } from '@/shared/lib/export';
 
 // ============================================================
 // SECTION: Interfaces & Initial State
@@ -339,6 +340,34 @@ export default function Inventory() {
   // SECTION: Render View
   // ============================================================
 
+  const handleExportExcel = () => {
+    exportToCsv({
+      filename: `Master_Inventory_${division}`,
+      data: items,
+      columns: [
+        { header: 'SKU', accessor: (i) => i.sku },
+        { header: 'Nama Barang', accessor: (i) => i.namaBarang },
+        { header: 'Brand / Merk', accessor: (i) => i.brand || '-' },
+        { header: 'Gramasi', accessor: (i) => i.gramasi || '-' },
+        { header: 'Varian', accessor: (i) => i.varian || '-' },
+        { header: 'Stok Fisik (Pcs)', accessor: (i) => i.stok },
+        {
+          header: 'Kemasan / Konversi',
+          accessor: (i) =>
+            i.pakaiKarton
+              ? formatStok(i.stok, Boolean(i.pakaiKarton), Number(i.settingPcs || 1))
+              : `${i.stok} pcs`,
+        },
+        { header: 'Harga Beli Modal (Rp)', accessor: (i) => Number(i.hargaBeli || 0) },
+        { header: 'Harga Jual (Rp)', accessor: (i) => Number(i.hargaJual || 0) },
+        { header: 'Stok Minimum Alert', accessor: (i) => i.stokMinimum || 10 },
+        { header: 'Tipe Item', accessor: (i) => i.tipeItem || 'barang_jadi' },
+        { header: 'Divisi', accessor: (i) => i.divisi || 'MANUFAKTUR' },
+        { header: 'Cabang', accessor: (i) => (i as any).cabang || 'Pusat' },
+      ],
+    });
+  };
+
   return (
     <div className="space-y-6 max-w-7xl mx-auto pb-12">
       {/* Toast Alert Floater */}
@@ -390,13 +419,23 @@ export default function Inventory() {
           </p>
         </div>
 
-        <button
-          onClick={openCreateModal}
-          className="inline-flex items-center justify-center gap-2 px-5 py-3 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-semibold text-sm rounded-xl shadow-md transition"
-        >
-          <span className="text-lg leading-none">+</span>
-          <span>Tambah Barang Baru</span>
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleExportExcel}
+            className="inline-flex items-center justify-center gap-2 px-4 py-3 bg-white hover:bg-gray-50 border border-gray-200 text-gray-700 font-semibold text-sm rounded-xl shadow-sm transition"
+            title="Ekspor daftar master inventory ke file Excel"
+          >
+            <Download className="w-4 h-4 text-emerald-700" />
+            <span>Ekspor Excel</span>
+          </button>
+          <button
+            onClick={openCreateModal}
+            className="inline-flex items-center justify-center gap-2 px-5 py-3 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-semibold text-sm rounded-xl shadow-md transition"
+          >
+            <span className="text-lg leading-none">+</span>
+            <span>Tambah Barang Baru</span>
+          </button>
+        </div>
       </header>
 
       {/* 2. Filter & Search Bar (F-Pattern Second Row) */}

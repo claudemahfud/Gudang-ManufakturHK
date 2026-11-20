@@ -48,11 +48,14 @@ import {
   Lock,
   KeyRound,
   ShieldCheck,
+  Camera,
 } from 'lucide-react';
 import { formatRupiah } from '@/shared/lib/utils';
 import { ROUTES } from '@/router/routes';
 import type { InventoryItem } from '@/shared/types';
 import { useDivision, DivisionMode } from '@/shared/context/DivisionContext';
+import { useBarcodeScanner } from '@/shared/hooks/useBarcodeScanner';
+import CameraBarcodeScanner from '@/shared/components/ui/CameraBarcodeScanner';
 
 // ============================================================
 // SECTION: Interfaces & Default Settings
@@ -166,12 +169,41 @@ export default function PosView() {
   const [isCheckoutModalOpen, setIsCheckoutModalOpen] = useState(false);
   const [isReceiptModalOpen, setIsReceiptModalOpen] = useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
+  const [isCameraOpen, setIsCameraOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
   const [lastReceipt, setLastReceipt] = useState<any>(null);
   const [mobileCartOpen, setMobileCartOpen] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [waPhone, setWaPhone] = useState('');
+
+  // Cart Persistence: Pulihkan keranjang belanja jika browser ter-refresh / koneksi putus
+  useEffect(() => {
+    try {
+      const savedCart = localStorage.getItem('pos_active_cart');
+      if (savedCart) {
+        const parsed = JSON.parse(savedCart);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setCart(parsed);
+        }
+      }
+    } catch {
+      // Ignore
+    }
+  }, []);
+
+  // Simpan otomatis isi keranjang setiap ada perubahan
+  useEffect(() => {
+    try {
+      if (cart.length > 0) {
+        localStorage.setItem('pos_active_cart', JSON.stringify(cart));
+      } else {
+        localStorage.removeItem('pos_active_cart');
+      }
+    } catch {
+      // Ignore
+    }
+  }, [cart]);
 
   // Supervisor PIN Protection States (Anti-Fraud)
   const [isSupervisorModalOpen, setIsSupervisorModalOpen] = useState(false);
@@ -288,6 +320,34 @@ export default function PosView() {
       }
     });
   };
+
+  const handleBarcodeScanned = (scannedCode: string) => {
+    const cleanCode = scannedCode.trim().toLowerCase();
+    const matched = inventoryList.find(
+      (i: InventoryItem) =>
+        i.sku.toLowerCase() === cleanCode ||
+        i.sku.toLowerCase().replace(/[^a-z0-9]/g, '') === cleanCode.replace(/[^a-z0-9]/g, '')
+    );
+
+    if (matched) {
+      addToCart(matched);
+    } else {
+      const matchedByName = inventoryList.find((i: InventoryItem) =>
+        i.namaBarang.toLowerCase().includes(cleanCode)
+      );
+      if (matchedByName) {
+        addToCart(matchedByName);
+      } else {
+        if (posSettings.enableSound) playBeep('error');
+        alert(`Produk dengan Barcode/SKU "${scannedCode}" tidak ditemukan di master inventaris`);
+      }
+    }
+  };
+
+  useBarcodeScanner({
+    onScan: handleBarcodeScanned,
+    enabled: true,
+  });
 
   const updateCartQty = (sku: string, delta: number) => {
     setCart((prev) =>
@@ -636,23 +696,34 @@ export default function PosView() {
         <main className="flex-1 flex flex-col overflow-hidden bg-slate-900/60 p-3 sm:p-4 md:p-6">
           {/* Search & Brand Filter Bar */}
           <div className="space-y-3 mb-4">
-            <div className="relative">
-              <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Cari SKU, nama barang, atau scan barcode..."
-                className="w-full bg-slate-950/70 border border-slate-800 rounded-xl pl-10 pr-4 py-2.5 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition shadow-inner"
-              />
-              {searchQuery && (
-                <button
-                  onClick={() => setSearchQuery('')}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              )}
+            <div className="relative flex items-center gap-2">
+              <div className="relative flex-1">
+                <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Cari SKU, nama barang, atau scan barcode..."
+                  className="w-full bg-slate-950/70 border border-slate-800 rounded-xl pl-10 pr-10 py-2.5 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition shadow-inner"
+                />
+                {searchQuery && (
+                  <button
+                    onClick={() => setSearchQuery('')}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsCameraOpen(true)}
+                className="inline-flex items-center gap-1.5 px-3 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-semibold shadow-md transition shrink-0"
+                title="Pindai Barcode / QR dengan Kamera HP"
+              >
+                <Camera className="w-4 h-4" />
+                <span className="hidden sm:inline">Scan Kamera</span>
+              </button>
             </div>
 
             {/* Brand Filter Pills */}
@@ -1687,6 +1758,14 @@ export default function PosView() {
           }
         }
       `}</style>
+
+      {/* Camera Barcode Scanner Modal */}
+      <CameraBarcodeScanner
+        isOpen={isCameraOpen}
+        onClose={() => setIsCameraOpen(false)}
+        onScan={handleBarcodeScanned}
+        title="Pindai Barcode / QR Produk Kasir"
+      />
     </div>
   );
 }

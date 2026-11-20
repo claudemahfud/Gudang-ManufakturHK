@@ -19,9 +19,11 @@ import {
   Plus,
   X,
   AlertCircle,
+  Download,
 } from 'lucide-react';
 import { formatRupiah, formatTanggal } from '@/shared/lib/utils';
 import { useDivision } from '@/shared/context/DivisionContext';
+import { exportToCsv } from '@/shared/lib/export';
 
 export default function LaporanRusakReturView() {
   const { division, isManufaktur, isFnb } = useDivision();
@@ -178,6 +180,39 @@ export default function LaporanRusakReturView() {
     );
   }, [data.returList, search]);
 
+  const handleExportExcel = () => {
+    if (activeTab === 'rusak') {
+      exportToCsv({
+        filename: `Laporan_Barang_Rusak_${division}`,
+        data: filteredRusak,
+        columns: [
+          { header: 'Tanggal', accessor: (r) => formatTanggal(r.tanggal) },
+          { header: 'SKU', accessor: (r) => r.sku },
+          { header: 'Nama Produk', accessor: (r) => r.namaBarang },
+          { header: 'Jumlah Rusak (Qty)', accessor: (r) => r.qty },
+          { header: 'Estimasi Modal Rugi (Rp)', accessor: (r) => Number(r.rugiModal || 0) },
+          { header: 'Penyebab / Keterangan', accessor: (r) => r.keterangan || '-' },
+          { header: 'Dicatat Oleh', accessor: (r) => r.createdBy || '-' },
+        ],
+      });
+    } else {
+      exportToCsv({
+        filename: `Laporan_Barang_Retur_${division}`,
+        data: filteredRetur,
+        columns: [
+          { header: 'Tanggal', accessor: (r) => formatTanggal(r.tanggal) },
+          { header: 'Pelanggan', accessor: (r) => r.pelanggan || '-' },
+          { header: 'SKU', accessor: (r) => r.sku },
+          { header: 'Nama Produk', accessor: (r) => r.namaBarang },
+          { header: 'Jumlah Retur (Qty)', accessor: (r) => r.qty },
+          { header: 'Alasan Retur', accessor: (r) => r.alasan || '-' },
+          { header: 'Status Persetujuan', accessor: (r) => r.status || '-' },
+          { header: 'Dicatat Oleh', accessor: (r) => r.createdBy || '-' },
+        ],
+      });
+    }
+  };
+
   return (
     <div className="space-y-6 max-w-7xl mx-auto pb-12">
       {/* Header */}
@@ -202,6 +237,14 @@ export default function LaporanRusakReturView() {
           >
             <Plus className="w-3.5 h-3.5" />
             <span>Catat Barang Rusak</span>
+          </button>
+          <button
+            onClick={handleExportExcel}
+            className="inline-flex items-center gap-2 px-3.5 py-2 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-xs font-semibold transition shadow-sm"
+            title="Ekspor laporan aktif ke file Excel"
+          >
+            <Download className="w-3.5 h-3.5" />
+            <span>Ekspor Excel</span>
           </button>
           <button
             onClick={fetchData}

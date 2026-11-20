@@ -1,7 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { Download } from 'lucide-react';
 import { formatTanggal, formatRupiah } from '@/shared/lib/utils';
+import { exportToCsv } from '@/shared/lib/export';
 
 // ============================================================
 // PAGE: Arus Kas & Keuangan
@@ -117,6 +119,21 @@ export default function Keuangan() {
     }
   };
 
+  const handleExportExcel = () => {
+    exportToCsv({
+      filename: 'Buku_Kas_Keuangan',
+      data,
+      columns: [
+        { header: 'Tanggal', accessor: (r) => formatTanggal(r.tanggal) },
+        { header: 'Jenis', accessor: (r) => r.jenis === 'masuk' ? 'Pemasukan (Masuk)' : 'Pengeluaran (Keluar)' },
+        { header: 'Kategori', accessor: (r) => r.kategori },
+        { header: 'Nominal (Rp)', accessor: (r) => Number(r.jumlah || 0) },
+        { header: 'Keterangan', accessor: (r) => r.keterangan || '-' },
+        { header: 'Dicatat Oleh', accessor: (r) => r.createdBy || '-' },
+      ],
+    });
+  };
+
   return (
     <div className="space-y-6">
       {toast && (
@@ -138,12 +155,22 @@ export default function Keuangan() {
             Monitoring pemasukan penjualan distributor, pembayaran supplier, dan arus kas harian
           </p>
         </div>
-        <button
-          onClick={() => setIsModalOpen(true)}
-          className="inline-flex items-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-semibold shadow-sm transition"
-        >
-          <span>＋</span> Catat Transaksi Kas
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleExportExcel}
+            className="inline-flex items-center gap-2 px-3.5 py-2.5 bg-white hover:bg-gray-50 border border-gray-200 text-gray-700 rounded-xl text-sm font-semibold shadow-sm transition"
+            title="Ekspor buku kas ke Excel"
+          >
+            <Download className="w-4 h-4 text-emerald-700" />
+            <span>Ekspor Excel</span>
+          </button>
+          <button
+            onClick={() => setIsModalOpen(true)}
+            className="inline-flex items-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-semibold shadow-sm transition"
+          >
+            <span>＋</span> Catat Transaksi Kas
+          </button>
+        </div>
       </div>
 
       {/* Summary Cards */}

@@ -184,5 +184,14 @@ Berdasarkan audit komprehensif sistem (20 November 2026), seluruh modul dan API 
    * Seluruh mutasi multi-tabel atau proses yang melibatkan pengurangan stok bersamaan dengan pencatatan jurnal (seperti Kasir POS `/api/pos/checkout`, pengeluaran multi-item `/api/barang-keluar`, penerbitan Surat Jalan `/api/surat-jalan`, PO Loading `/api/po-loading`, dan rollback stok pada pembatalan barang) dibungkus dalam `await db.transaction(async (tx) => { ... })` sehingga jika salah satu query gagal, seluruh operasi di-rollback secara otomatis tanpa meninggalkan inkonsistensi data.
 8. **Validasi Finansial & Input Numerik Positif**:
    * Seluruh input uang pada arus kas (`/api/keuangan`), biaya operasional (`/api/biaya-operasional`), dan kas opname (`/api/fnb/cash-opname`) divalidasi `Number(val) > 0` (non-negatif dan non-NaN) di tingkat server sebelum dicatat ke ledger.
+9. **Ekspor Data Universal (Excel / CSV dengan UTF-8 BOM)**:
+   * Fitur ekspor di [src/shared/lib/export.ts](file:///d:/SourceCode/Gudang-ManufakturHK/src/shared/lib/export.ts) menggunakan standar RFC 4180 dan prepend prefix `\uFEFF` (Byte Order Mark) agar format angka, tanggal Indonesia, dan karakter khusus langsung dikenali otomatis oleh Microsoft Excel, LibreOffice, dan Google Sheets tanpa encoding yang rusak.
+10. **Integrasi Barcode Scanner Ganda (Hardware & Kamera)**:
+    * Dukungan perangkat barcode scanner hardware (USB / Bluetooth HID) melalui hook [src/shared/hooks/useBarcodeScanner.ts](file:///d:/SourceCode/Gudang-ManufakturHK/src/shared/hooks/useBarcodeScanner.ts) yang mendeteksi keystroke burst cepat (< 50ms per key) berakhiran Enter.
+    * Dukungan kamera smartphone/tablet melalui komponen [src/shared/components/ui/CameraBarcodeScanner.tsx](file:///d:/SourceCode/Gudang-ManufakturHK/src/shared/components/ui/CameraBarcodeScanner.tsx) memanfaatkan native browser `BarcodeDetector` API tanpa dependensi library eksternal, dilengkapi animasi reticle laser, saklar senter (torch), dan respon audio-haptic.
+11. **PWA & Ketahanan Offline Kasir (Offline Resilience)**:
+    * Web App Manifest terdaftar di [public/manifest.json](file:///d:/SourceCode/Gudang-ManufakturHK/public/manifest.json) untuk kemampuan "Add to Home Screen" standalone pada layar tablet/smartphone kasir.
+    * Keranjang belanja kasir POS otomatis dicadangkan ke `localStorage` (`pos_active_cart`) dan dipulihkan kembali saat browser dimuat ulang, mencegah hilangnya antrean belanjaan jika terjadi gangguan jaringan atau ketidaksengajaan reload.
+
 
 
