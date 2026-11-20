@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { db } from '@/shared/lib/db';
 import { kontak, logs } from '@/shared/lib/db/schema';
 import { auth } from '@/shared/lib/auth/config';
+import { requireAuthRole, ROLES_EXECUTIVE } from '@/shared/lib/auth/rbac';
 import { desc } from 'drizzle-orm';
 
 // ============================================================
@@ -29,10 +30,8 @@ export async function GET() {
 
 export async function POST(req: Request) {
   try {
-    const session = await auth();
-    if (!session) {
-      return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
-    }
+    const authResult = await requireAuthRole(ROLES_EXECUTIVE);
+    if (!authResult.authorized) return authResult.response;
 
     const body = await req.json();
     const { nama, tipe, telepon, alamat, email, keterangan } = body;
@@ -41,7 +40,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: false, message: 'Nama kontak wajib diisi' }, { status: 400 });
     }
 
-    const user = (session.user as any)?.name || (session.user as any)?.username || 'System';
+    const user = authResult.user?.name || authResult.user?.username || 'System';
 
     const [row] = await db
       .insert(kontak)

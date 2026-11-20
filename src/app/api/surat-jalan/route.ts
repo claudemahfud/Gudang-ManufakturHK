@@ -48,41 +48,46 @@ export async function POST(req: Request) {
 
     const user = (session.user as any)?.name || (session.user as any)?.username || 'System';
     const noSj = generateTrxId('SJ');
+    let headerResult: any;
 
-    const [header] = await db
-      .insert(suratJalan)
-      .values({
-        noSj,
-        tanggal: tanggal ? new Date(tanggal) : new Date(),
-        pelanggan,
-        alamat: alamat || null,
-        ekspedisi: ekspedisi || null,
-        armada: armada || null,
-        status: 'dikirim',
-        catatan: catatan || null,
-        createdBy: user,
-      })
-      .returning();
+    await db.transaction(async (tx) => {
+      const [header] = await tx
+        .insert(suratJalan)
+        .values({
+          noSj,
+          tanggal: tanggal ? new Date(tanggal) : new Date(),
+          pelanggan,
+          alamat: alamat || null,
+          ekspedisi: ekspedisi || null,
+          armada: armada || null,
+          status: 'dikirim',
+          catatan: catatan || null,
+          createdBy: user,
+        })
+        .returning();
 
-    for (const it of items) {
-      await db.insert(suratJalanItems).values({
-        suratJalanId: header.id,
-        sku: it.sku,
-        namaBarang: it.namaBarang,
-        qty: parseInt(it.qty, 10) || 1,
-        satuan: it.satuan || 'pcs',
-        keterangan: it.keterangan || null,
+      headerResult = header;
+
+      for (const it of items) {
+        await tx.insert(suratJalanItems).values({
+          suratJalanId: header.id,
+          sku: it.sku,
+          namaBarang: it.namaBarang,
+          qty: parseInt(it.qty, 10) || 1,
+          satuan: it.satuan || 'pcs',
+          keterangan: it.keterangan || null,
+        });
+      }
+
+      await tx.insert(logs).values({
+        user,
+        aksi: 'BUAT_SURAT_JALAN',
+        detail: `Membuat Surat Jalan ${noSj} untuk ${pelanggan} (${items.length} item)`,
       });
-    }
-
-    await db.insert(logs).values({
-      user,
-      aksi: 'BUAT_SURAT_JALAN',
-      detail: `Membuat Surat Jalan ${noSj} untuk ${pelanggan} (${items.length} item)`,
     });
 
     return NextResponse.json(
-      { success: true, data: header, message: 'Surat jalan berhasil dibuat' },
+      { success: true, data: headerResult, message: 'Surat jalan berhasil dibuat' },
       { status: 201 }
     );
   } catch (err: any) {

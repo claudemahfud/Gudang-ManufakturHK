@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { db } from '@/shared/lib/db';
 import { masterCabang, logs } from '@/shared/lib/db/schema';
 import { auth } from '@/shared/lib/auth/config';
+import { requireAuthRole, ROLES_EXECUTIVE } from '@/shared/lib/auth/rbac';
 import { desc, eq, and, or } from 'drizzle-orm';
 
 // ============================================================
@@ -73,16 +74,10 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   try {
-    const session = await auth();
-    const user = session?.user as any;
-    const isAllowed = ['Administrator', 'Direktur Utama', 'Manager'].includes(user?.role);
+    const authResult = await requireAuthRole(ROLES_EXECUTIVE);
+    if (!authResult.authorized) return authResult.response;
 
-    if (!isAllowed) {
-      return NextResponse.json(
-        { success: false, message: 'Hanya Administrator/Pimpinan yang berhak menambah cabang' },
-        { status: 403 }
-      );
-    }
+    const user = authResult.user;
 
     const body = await req.json();
     const { kodeCabang, namaCabang, divisi = 'ALL', alamat, telepon } = body;

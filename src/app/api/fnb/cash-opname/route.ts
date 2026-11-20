@@ -1,23 +1,21 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/shared/lib/db';
-import { cashOpname, barangKeluar, logs } from '@/shared/lib/db/schema';
-import { auth } from '@/shared/lib/auth/config';
-import { desc, sql } from 'drizzle-orm';
+import { cashOpname, logs } from '@/shared/lib/db/schema';
+import { requireAuthRole, ROLES_POS } from '@/shared/lib/auth/rbac';
+import { desc } from 'drizzle-orm';
 
 // ============================================================
 // API: /api/fnb/cash-opname
 // Rekonsiliasi Kas Laci Kasir Harian (Kas Seharusnya vs Fisik)
+// Hak Akses: Multi-Role POS (Kasir, Supervisor, Admin, Manager)
 // ============================================================
 
 export async function GET() {
   try {
-    const session = await auth();
-    if (!session) {
-      return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
-    }
+    const authResult = await requireAuthRole(ROLES_POS);
+    if (!authResult.authorized) return authResult.response;
 
-    const user = session.user as any;
-    const userRole = user?.role;
+    const { user, userRole } = authResult;
     const isExecutive = ['Administrator', 'Direktur Utama', 'Manager'].includes(userRole);
 
     let list = await db.select().from(cashOpname).orderBy(desc(cashOpname.tanggal)).limit(100);
@@ -51,10 +49,8 @@ export async function GET() {
 
 export async function POST(req: Request) {
   try {
-    const session = await auth();
-    if (!session) {
-      return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
-    }
+    const authResult = await requireAuthRole(ROLES_POS);
+    if (!authResult.authorized) return authResult.response;
 
     const body = await req.json();
     const {
@@ -67,14 +63,22 @@ export async function POST(req: Request) {
       catatan = '',
     } = body;
 
+    const parsedKasFisik = Number(kasFisik);
+    if (isNaN(parsedKasFisik) || parsedKasFisik < 0) {
+      return NextResponse.json(
+        { success: false, message: 'Nominal uang fisik kasir tidak boleh kosong atau negatif' },
+        { status: 400 }
+      );
+    }
+
     const kasSeharusnya = Number(kasAwal) + Number(omsetTunai) - Number(kasKeluar);
-    const selisih = Number(kasFisik) - kasSeharusnya;
+    const selisih = parsedKasFisik - kasSeharusnya;
 
     let status = 'pas';
     if (selisih > 0) status = 'lebih';
     if (selisih < 0) status = 'kurang';
 
-    const user = (session.user as any)?.name || (session.user as any)?.username || 'Kasir';
+    const user = authResult.user?.name || authResult.user?.username || 'Kasir';
 
     const [row] = await db
       .insert(cashOpname)
@@ -86,7 +90,7 @@ export async function POST(req: Request) {
         omsetTunai: String(omsetTunai),
         kasKeluar: String(kasKeluar),
         kasSeharusnya: String(kasSeharusnya),
-        kasFisik: String(kasFisik),
+        kasFisik: String(parsedKasFisik),
         selisih: String(selisih),
         status,
         catatan,
@@ -97,7 +101,7 @@ export async function POST(req: Request) {
     await db.insert(logs).values({
       user,
       aksi: 'CASH_OPNAME',
-      detail: `Cash Opname ${shift} oleh ${kasir || user}: Fisik Rp ${Number(kasFisik).toLocaleString('id-ID')} vs Sistem Rp ${kasSeharusnya.toLocaleString('id-ID')} (Selisih: Rp ${selisih.toLocaleString('id-ID')})`,
+      detail: `Cash Opname ${shift} oleh ${kasir || user}: Fisik Rp ${parsedKasFisik.toLocaleString('id-ID')} vs Sistem Rp ${kasSeharusnya.toLocaleString('id-ID')} (Selisih: Rp ${selisih.toLocaleString('id-ID')})`,
     });
 
     return NextResponse.json({ success: true, data: row });

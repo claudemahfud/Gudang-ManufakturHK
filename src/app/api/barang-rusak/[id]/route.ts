@@ -33,22 +33,25 @@ export async function DELETE(
       );
     }
 
-    // Kembalikan stok
-    await db
-      .update(inventory)
-      .set({
-        stok: sql`${inventory.stok} + ${item.qty}`,
-        updatedAt: new Date(),
-      })
-      .where(eq(inventory.sku, item.sku));
-
-    await db.delete(barangRusak).where(eq(barangRusak.id, id));
-
     const user = authResult.user?.name || authResult.user?.username || 'System';
-    await db.insert(logs).values({
-      user,
-      aksi: 'BATAL_BARANG_RUSAK',
-      detail: `Membatalkan pencatatan rusak SKU: ${item.sku} (+${item.qty} pcs)`,
+
+    await db.transaction(async (tx) => {
+      // Kembalikan stok
+      await tx
+        .update(inventory)
+        .set({
+          stok: sql`${inventory.stok} + ${item.qty}`,
+          updatedAt: new Date(),
+        })
+        .where(eq(inventory.sku, item.sku));
+
+      await tx.delete(barangRusak).where(eq(barangRusak.id, id));
+
+      await tx.insert(logs).values({
+        user,
+        aksi: 'BATAL_BARANG_RUSAK',
+        detail: `Membatalkan pencatatan rusak SKU: ${item.sku} (+${item.qty} pcs)`,
+      });
     });
 
     return NextResponse.json({ success: true, message: 'Data berhasil dihapus' });

@@ -117,66 +117,68 @@ export async function POST(req: Request) {
     const tanggalTrx = new Date();
     const cashierName = user.name || user.username || 'Kasir';
 
-    // 4. Proses Transaksi Database (Atomic)
+    // 4. Proses Transaksi Database (Atomic Transaction)
     const insertedItems: any[] = [];
 
-    for (const item of items) {
-      const itemSubtotal = item.hargaJual * item.qty;
-      const itemDiskon = (itemSubtotal * Number(diskonPct || 0)) / 100;
-      const itemNetTotal = itemSubtotal - itemDiskon;
+    await db.transaction(async (tx) => {
+      for (const item of items) {
+        const itemSubtotal = item.hargaJual * item.qty;
+        const itemDiskon = (itemSubtotal * Number(diskonPct || 0)) / 100;
+        const itemNetTotal = itemSubtotal - itemDiskon;
 
-      // Kurangi stok inventory
-      await db
-        .update(inventory)
-        .set({
-          stok: sql`${inventory.stok} - ${item.qty}`,
-          updatedAt: new Date(),
-        })
-        .where(eq(inventory.sku, item.sku));
+        // Kurangi stok inventory
+        await tx
+          .update(inventory)
+          .set({
+            stok: sql`${inventory.stok} - ${item.qty}`,
+            updatedAt: new Date(),
+          })
+          .where(eq(inventory.sku, item.sku));
 
-      // Catat ke barang_keluar
-      const [bk] = await db
-        .insert(barangKeluar)
-        .values({
-          trxId,
-          tanggal: tanggalTrx,
-          sku: item.sku,
-          namaBarang: item.namaBarang,
-          qty: item.qty,
-          satuan: item.satuan || 'pcs',
-          hargaJual: String(item.hargaJual),
-          total: String(itemNetTotal),
-          pelanggan,
-          salesman: cashierName,
-          diskon: String(diskonPct || 0),
-          divisi,
-          cabang: finalCabang,
-          channel: 'POS',
-          keterangan: `POS Checkout (${metodePembayaran}) [${divisi} - ${finalCabang}]${catatan ? ` - ${catatan}` : ''}`,
-          createdBy: user.username,
-        })
-        .returning();
+        // Catat ke barang_keluar
+        const [bk] = await tx
+          .insert(barangKeluar)
+          .values({
+            trxId,
+            tanggal: tanggalTrx,
+            sku: item.sku,
+            namaBarang: item.namaBarang,
+            qty: item.qty,
+            satuan: item.satuan || 'pcs',
+            hargaJual: String(item.hargaJual),
+            total: String(itemNetTotal),
+            pelanggan,
+            salesman: cashierName,
+            diskon: String(diskonPct || 0),
+            divisi,
+            cabang: finalCabang,
+            channel: 'POS',
+            keterangan: `POS Checkout (${metodePembayaran}) [${divisi} - ${finalCabang}]${catatan ? ` - ${catatan}` : ''}`,
+            createdBy: user.username,
+          })
+          .returning();
 
-      insertedItems.push(bk);
-    }
+        insertedItems.push(bk);
+      }
 
-    // Catat arus kas pemasukan ke keuangan
-    await db.insert(keuangan).values({
-      tanggal: tanggalTrx,
-      jenis: 'masuk',
-      kategori: 'Penjualan POS',
-      jumlah: String(grandTotal),
-      divisi,
-      cabang: finalCabang,
-      keterangan: `Penjualan POS [${divisi} - ${finalCabang}] #${trxId} (${metodePembayaran}) oleh ${cashierName} (${userRole})`,
-      createdBy: user.username,
-    });
+      // Catat arus kas pemasukan ke keuangan
+      await tx.insert(keuangan).values({
+        tanggal: tanggalTrx,
+        jenis: 'masuk',
+        kategori: 'Penjualan POS',
+        jumlah: String(grandTotal),
+        divisi,
+        cabang: finalCabang,
+        keterangan: `Penjualan POS [${divisi} - ${finalCabang}] #${trxId} (${metodePembayaran}) oleh ${cashierName} (${userRole})`,
+        createdBy: user.username,
+      });
 
-    // Catat riwayat log aktivitas
-    await db.insert(logs).values({
-      user: cashierName,
-      aksi: 'POS_CHECKOUT',
-      detail: `Transaksi POS #${trxId} berhasil senilai Rp ${grandTotal.toLocaleString('id-ID')} (${items.length} item) ke ${pelanggan}`,
+      // Catat riwayat log aktivitas
+      await tx.insert(logs).values({
+        user: cashierName,
+        aksi: 'POS_CHECKOUT',
+        detail: `Transaksi POS #${trxId} berhasil senilai Rp ${grandTotal.toLocaleString('id-ID')} (${items.length} item) ke ${pelanggan}`,
+      });
     });
 
     // 5. Kembalikan data lengkap untuk cetak nota thermal 58mm

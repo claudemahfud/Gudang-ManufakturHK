@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/shared/lib/db';
-import { inventory, resepItems } from '@/shared/lib/db/schema';
+import { inventory, resepItems, logs } from '@/shared/lib/db/schema';
 import { requireAuthRole, ROLES_RECIPE_BOM } from '@/shared/lib/auth/rbac';
 import { eq } from 'drizzle-orm';
 
@@ -130,6 +130,33 @@ export async function POST(req: Request) {
       .returning();
 
     return NextResponse.json({ success: true, data: row });
+  } catch (err: any) {
+    return NextResponse.json({ success: false, message: err.message }, { status: 500 });
+  }
+}
+
+export async function DELETE(req: Request) {
+  try {
+    const authResult = await requireAuthRole(ROLES_RECIPE_BOM);
+    if (!authResult.authorized) return authResult.response;
+
+    const { searchParams } = new URL(req.url);
+    const id = searchParams.get('id');
+
+    if (!id) {
+      return NextResponse.json({ success: false, message: 'ID komponen resep wajib disertakan' }, { status: 400 });
+    }
+
+    await db.delete(resepItems).where(eq(resepItems.id, id));
+
+    const user = authResult.user?.name || authResult.user?.username || 'System';
+    await db.insert(logs).values({
+      user,
+      aksi: 'HAPUS_KOMPONEN_RESEP',
+      detail: `Menghapus komponen resep ID: ${id}`,
+    });
+
+    return NextResponse.json({ success: true, message: 'Komponen resep berhasil dihapus' });
   } catch (err: any) {
     return NextResponse.json({ success: false, message: err.message }, { status: 500 });
   }

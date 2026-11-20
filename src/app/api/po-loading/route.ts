@@ -48,38 +48,43 @@ export async function POST(req: Request) {
 
     const user = (session.user as any)?.name || (session.user as any)?.username || 'System';
     const noPo = generateTrxId('PO');
+    let headerResult: any;
 
-    const [header] = await db
-      .insert(poLoading)
-      .values({
-        noPo,
-        tanggal: tanggal ? new Date(tanggal) : new Date(),
-        supplier,
-        armada: armada || null,
-        status: 'dipesan',
-        catatan: catatan || null,
-        createdBy: user,
-      })
-      .returning();
+    await db.transaction(async (tx) => {
+      const [header] = await tx
+        .insert(poLoading)
+        .values({
+          noPo,
+          tanggal: tanggal ? new Date(tanggal) : new Date(),
+          supplier,
+          armada: armada || null,
+          status: 'dipesan',
+          catatan: catatan || null,
+          createdBy: user,
+        })
+        .returning();
 
-    for (const it of items) {
-      await db.insert(poLoadingItems).values({
-        poLoadingId: header.id,
-        sku: it.sku,
-        namaBarang: it.namaBarang,
-        qtyOrder: parseInt(it.qtyOrder, 10) || 1,
-        qtyTerima: 0,
-        satuan: it.satuan || 'pcs',
+      headerResult = header;
+
+      for (const it of items) {
+        await tx.insert(poLoadingItems).values({
+          poLoadingId: header.id,
+          sku: it.sku,
+          namaBarang: it.namaBarang,
+          qtyOrder: parseInt(it.qtyOrder, 10) || 1,
+          qtyTerima: 0,
+          satuan: it.satuan || 'pcs',
+        });
+      }
+
+      await tx.insert(logs).values({
+        user,
+        aksi: 'BUAT_PO_LOADING',
+        detail: `Menerbitkan ${noPo} ke supplier ${supplier}`,
       });
-    }
-
-    await db.insert(logs).values({
-      user,
-      aksi: 'BUAT_PO_LOADING',
-      detail: `Menerbitkan ${noPo} ke supplier ${supplier}`,
     });
 
-    return NextResponse.json({ success: true, data: header }, { status: 201 });
+    return NextResponse.json({ success: true, data: headerResult }, { status: 201 });
   } catch (err: any) {
     return NextResponse.json({ success: false, message: err.message }, { status: 500 });
   }
