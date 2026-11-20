@@ -2,6 +2,9 @@
 
 import { useState, useEffect } from 'react';
 import { formatTanggal } from '@/shared/lib/utils';
+import { FileText, Download } from 'lucide-react';
+import DocumentModalViewer, { DocumentData } from '@/shared/components/documents/DocumentModalViewer';
+import { exportToCsv, exportReportToPdfA4Landscape } from '@/shared/lib/exportDoc';
 
 // ============================================================
 // PAGE: PO & Loading Sheet
@@ -47,7 +50,32 @@ export default function PoLoading() {
   ]);
 
   const [selectedDetail, setSelectedDetail] = useState<any | null>(null);
+  const [selectedDocument, setSelectedDocument] = useState<DocumentData | null>(null);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+
+  const handleExportExcel = () => {
+    exportToCsv({
+      filename: 'Rekap_PO_Loading',
+      data,
+      columns: [
+        { header: 'No. PO', accessor: (r) => r.noPo },
+        { header: 'Tanggal', accessor: (r) => formatTanggal(r.tanggal) },
+        { header: 'Suplier', accessor: (r) => r.supplier || '-' },
+        { header: 'Armada', accessor: (r) => r.armada || '-' },
+        { header: 'Status', accessor: (r) => r.status.toUpperCase() },
+        { header: 'Catatan', accessor: (r) => r.catatan || '-' },
+        { header: 'Petugas', accessor: (r) => r.createdBy || '-' },
+      ],
+    });
+  };
+
+  const handleExportPdfA4 = async () => {
+    await exportReportToPdfA4Landscape(
+      'rekap-po-loading-table-container',
+      'Rekap_PO_Loading_A4_Landscape',
+      'Rekapitulasi Purchase Order & Loading Sheet'
+    );
+  };
 
   const fetchData = async () => {
     setLoading(true);
@@ -146,6 +174,26 @@ export default function PoLoading() {
     }
   };
 
+  const openPoDocument = (detail: any) => {
+    setSelectedDocument({
+      type: 'po_loading',
+      nomor: detail.noPo,
+      tanggal: detail.tanggal,
+      pihakTerkaitLabel: 'Suplier / Produsen:',
+      pihakTerkaitNama: detail.supplier || 'Pabrik Produsen',
+      petugasLabel: 'Armada / Ekspedisi:',
+      petugasNama: detail.armada || 'Ekspedisi Pengangkut',
+      items: (detail.items || []).map((it: any) => ({
+        sku: it.sku,
+        namaBarang: it.namaBarang,
+        qty: it.qtyOrder,
+        satuan: it.satuan || 'pcs',
+        keterangan: `Diterima: ${it.qtyTerima || 0} ${it.satuan || 'pcs'}`,
+      })),
+      catatan: detail.catatan || 'Surat Jalan / PO Loading resmi penerimaan barang.',
+    });
+  };
+
   const viewDetail = async (id: string) => {
     try {
       const res = await fetch(`/api/po-loading/${id}`);
@@ -205,20 +253,43 @@ export default function PoLoading() {
 
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-800">PO & Loading Sheet</h1>
+          <h1 className="text-2xl font-bold text-gray-800">PO &amp; Loading Sheet</h1>
           <p className="text-sm text-gray-500 mt-1">
             Purchase Order ke pabrik produsen dan daftar loading muatan masuk
           </p>
         </div>
-        <button
-          onClick={() => setIsModalOpen(true)}
-          className="inline-flex items-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-semibold shadow-sm transition"
-        >
-          <span>＋</span> Buat PO Baru
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={handleExportExcel}
+            className="inline-flex items-center gap-1.5 px-3 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 rounded-xl text-xs font-semibold border border-emerald-200 transition"
+            title="Export Rekapitulasi Data PO ke Excel CSV"
+          >
+            <Download className="w-3.5 h-3.5 text-emerald-600" />
+            <span>Rekap Excel</span>
+          </button>
+          <button
+            type="button"
+            onClick={handleExportPdfA4}
+            className="inline-flex items-center gap-1.5 px-3 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-semibold transition"
+            title="Export Rekapitulasi Laporan PDF Kertas A4 Landscape"
+          >
+            <FileText className="w-3.5 h-3.5 text-slate-300" />
+            <span>PDF (A4 Landscape)</span>
+          </button>
+          <button
+            onClick={() => setIsModalOpen(true)}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs sm:text-sm font-semibold shadow-sm transition"
+          >
+            <span>＋</span> Buat PO Baru
+          </button>
+        </div>
       </div>
 
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+      <div
+        id="rekap-po-loading-table-container"
+        className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden"
+      >
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm text-gray-600">
             <thead className="bg-gray-50/75 border-b border-gray-100 text-xs font-semibold uppercase tracking-wider text-gray-500">
@@ -280,18 +351,46 @@ export default function PoLoading() {
                       </span>
                     </td>
                     <td className="py-3.5 px-4 text-center whitespace-nowrap">
-                      <button
-                        onClick={() => viewDetail(row.id)}
-                        className="text-emerald-600 hover:text-emerald-800 text-xs font-semibold px-2 py-1 rounded hover:bg-emerald-50 transition mr-1"
-                      >
-                        Detail & Muat
-                      </button>
-                      <button
-                        onClick={() => handleDelete(row.id)}
-                        className="text-red-500 hover:text-red-700 text-xs font-semibold px-2 py-1 rounded hover:bg-red-50 transition"
-                      >
-                        Hapus
-                      </button>
+                      <div className="inline-flex items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            openPoDocument({
+                              noPo: row.noPo,
+                              tanggal: row.tanggal,
+                              supplier: row.supplier,
+                              armada: row.armada,
+                              catatan: row.catatan,
+                              items: [
+                                {
+                                  sku: row.noPo,
+                                  namaBarang: `Muatan Pengadaan PO (${row.supplier || 'Pemasok'})`,
+                                  qtyOrder: 1,
+                                  satuan: 'Lot',
+                                  qtyTerima: row.status === 'selesai' ? 1 : 0,
+                                },
+                              ],
+                            });
+                          }}
+                          className="inline-flex items-center gap-1 px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 rounded-lg text-xs font-semibold border border-emerald-200 transition"
+                          title="Buka Formulir PO Loading (Export PDF / PNG A5)"
+                        >
+                          <FileText className="w-3.5 h-3.5 text-emerald-600" />
+                          <span>Cetak A5</span>
+                        </button>
+                        <button
+                          onClick={() => viewDetail(row.id)}
+                          className="text-gray-700 hover:text-emerald-800 text-xs font-semibold px-2 py-1 rounded hover:bg-gray-100 transition"
+                        >
+                          Detail
+                        </button>
+                        <button
+                          onClick={() => handleDelete(row.id)}
+                          className="text-red-500 hover:text-red-700 text-xs font-semibold px-1.5 py-1 rounded hover:bg-red-50 transition"
+                        >
+                          Hapus
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -483,16 +582,25 @@ export default function PoLoading() {
               </table>
             </div>
 
-            <div className="flex justify-between items-center pt-3 border-t">
-              <div>
+            <div className="flex flex-wrap items-center justify-between gap-2 pt-3 border-t">
+              <div className="flex items-center gap-2">
                 {selectedDetail.status !== 'selesai' && (
                   <button
                     onClick={() => receiveAllItems(selectedDetail.id)}
                     className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-xl transition"
                   >
-                     Terima Barang & Tambah Stok
+                     Terima Barang &amp; Tambah Stok
                   </button>
                 )}
+                <button
+                  type="button"
+                  onClick={() => openPoDocument(selectedDetail)}
+                  className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold rounded-xl transition flex items-center gap-1.5 shadow-sm"
+                  title="Buka Formulir PO Loading resmi ukuran A5"
+                >
+                  <FileText className="w-3.5 h-3.5" />
+                  <span>Formulir PO Loading (A5)</span>
+                </button>
               </div>
               <button
                 onClick={() => setSelectedDetail(null)}
@@ -504,6 +612,13 @@ export default function PoLoading() {
           </div>
         </div>
       )}
+
+      {/* Formulir PO Loading Modal Viewer (Export PDF & PNG Kertas A5) */}
+      <DocumentModalViewer
+        data={selectedDocument}
+        isOpen={Boolean(selectedDocument)}
+        onClose={() => setSelectedDocument(null)}
+      />
     </div>
   );
 }
