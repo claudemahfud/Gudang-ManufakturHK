@@ -425,135 +425,154 @@ export default function Users() {
         )}
       </section>
 
-      {/* Modal Tambah Pengguna Baru */}
+      {/* Modal Tambah Pengguna Baru — Desktop Landscape */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/40 backdrop-blur-xs animate-in fade-in duration-150">
-          <div className="bg-white rounded-3xl shadow-2xl border border-gray-200 w-full max-w-lg overflow-hidden animate-in zoom-in-95 duration-150">
-            <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-gray-900/40 backdrop-blur-xs animate-in fade-in duration-150">
+          <div className="bg-white rounded-2xl lg:rounded-3xl shadow-2xl border border-gray-200 w-full max-w-lg lg:max-w-4xl max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-150">
+            <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between shrink-0 bg-white">
               <div className="flex items-center gap-2">
                 <UsersIcon className="w-5 h-5 text-gray-900" />
                 <h3 className="font-bold text-gray-900 text-sm sm:text-base">Tambah Pengguna Baru</h3>
               </div>
               <button
+                type="button"
                 onClick={() => setIsModalOpen(false)}
-                className="text-gray-400 hover:text-gray-600 p-1 rounded-lg"
+                className="text-gray-400 hover:text-gray-600 p-1 rounded-lg hover:bg-gray-100 transition"
+                aria-label="Tutup modal"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            <form onSubmit={handleSubmit} className="p-6 space-y-4">
-              <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1">
-                  Nama Lengkap <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="Nama Lengkap Staf"
-                  value={form.namaLengkap}
-                  onChange={(e) => setForm({ ...form, namaLengkap: e.target.value })}
-                  className="w-full px-3 py-2 rounded-xl border border-gray-200 text-xs bg-gray-50 focus:bg-white focus:ring-2 focus:ring-gray-900/10 focus:border-gray-900 outline-none"
-                />
-              </div>
+            <form onSubmit={handleSubmit} className="flex-1 flex flex-col overflow-hidden">
+              <div className="flex-1 overflow-y-auto p-6">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
+                  {/* Kolom Kiri: Akun & Login */}
+                  <div className="space-y-4">
+                    <div className="text-xs font-bold text-gray-900 uppercase tracking-wider pb-1 border-b border-gray-100">
+                      Informasi Akun
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-700 mb-1">
+                        Nama Lengkap <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="Nama Lengkap Staf"
+                        value={form.namaLengkap}
+                        onChange={(e) => setForm({ ...form, namaLengkap: e.target.value })}
+                        className="w-full px-3 py-2 rounded-xl border border-gray-200 text-xs bg-gray-50 focus:bg-white focus:ring-2 focus:ring-gray-900/10 focus:border-gray-900 outline-none"
+                      />
+                    </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">
-                    Username <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="username"
-                    value={form.username}
-                    onChange={(e) => setForm({ ...form, username: e.target.value.toLowerCase() })}
-                    className="w-full px-3 py-2 rounded-xl border border-gray-200 text-xs bg-gray-50 focus:bg-white focus:ring-2 focus:ring-gray-900/10 focus:border-gray-900 outline-none font-mono"
-                  />
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-700 mb-1">
+                          Username <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          required
+                          placeholder="username"
+                          value={form.username}
+                          onChange={(e) => setForm({ ...form, username: e.target.value.toLowerCase() })}
+                          className="w-full px-3 py-2 rounded-xl border border-gray-200 text-xs bg-gray-50 focus:bg-white focus:ring-2 focus:ring-gray-900/10 focus:border-gray-900 outline-none font-mono"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-700 mb-1">
+                          Password <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          type="password"
+                          required
+                          placeholder="Min 6 karakter"
+                          value={form.password}
+                          onChange={(e) => setForm({ ...form, password: e.target.value })}
+                          className="w-full px-3 py-2 rounded-xl border border-gray-200 text-xs bg-gray-50 focus:bg-white focus:ring-2 focus:ring-gray-900/10 focus:border-gray-900 outline-none"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-700 mb-1">
+                        Alamat Email (opsional untuk OTP)
+                      </label>
+                      <input
+                        type="email"
+                        placeholder="staf@dutapangan.com"
+                        value={form.email}
+                        onChange={(e) => setForm({ ...form, email: e.target.value })}
+                        className="w-full px-3 py-2 rounded-xl border border-gray-200 text-xs bg-gray-50 focus:bg-white focus:ring-2 focus:ring-gray-900/10 focus:border-gray-900 outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Kolom Kanan: Akses & Penempatan */}
+                  <div className="space-y-4">
+                    <div className="text-xs font-bold text-gray-900 uppercase tracking-wider pb-1 border-b border-gray-100">
+                      Wewenang & Penempatan
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-700 mb-1">
+                        Role / Tingkat Akses <span className="text-red-500">*</span>
+                      </label>
+                      <select
+                        value={form.role}
+                        onChange={(e) => handleRoleChange(e.target.value as UserRole)}
+                        className="w-full px-3 py-2 rounded-xl border border-gray-200 text-xs bg-gray-50 focus:bg-white focus:ring-2 focus:ring-gray-900/10 focus:border-gray-900 outline-none font-semibold text-gray-900"
+                      >
+                        {ROLES.map((r) => (
+                          <option key={r} value={r}>
+                            {r}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-700 mb-1">
+                          Divisi Operasional
+                        </label>
+                        <select
+                          value={form.divisiAssigned}
+                          onChange={(e) => setForm({ ...form, divisiAssigned: e.target.value as any })}
+                          className="w-full px-3 py-2 rounded-xl border border-gray-200 text-xs bg-gray-50 focus:bg-white focus:ring-2 focus:ring-gray-900/10 focus:border-gray-900 outline-none"
+                        >
+                          <option value="MANUFAKTUR">Divisi Manufaktur</option>
+                          <option value="FNB">Divisi F&B</option>
+                          <option value="ALL">Pimpinan (Semua Divisi)</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-700 mb-1">
+                          Penempatan Cabang <span className="text-red-500">*</span>
+                        </label>
+                        <select
+                          value={form.cabang}
+                          onChange={(e) => setForm({ ...form, cabang: e.target.value })}
+                          className="w-full px-3 py-2 rounded-xl border border-gray-200 text-xs bg-gray-50 focus:bg-white focus:ring-2 focus:ring-gray-900/10 focus:border-gray-900 outline-none font-semibold"
+                        >
+                          <option value="Pusat">Pusat (Default)</option>
+                          {branches
+                            .filter((b) => b.namaCabang !== 'Pusat')
+                            .map((b) => (
+                              <option key={b.id} value={b.namaCabang}>
+                                {b.namaCabang} ({b.kodeCabang})
+                              </option>
+                            ))}
+                        </select>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">
-                    Password <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="password"
-                    required
-                    placeholder="Min 6 karakter"
-                    value={form.password}
-                    onChange={(e) => setForm({ ...form, password: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl border border-gray-200 text-xs bg-gray-50 focus:bg-white focus:ring-2 focus:ring-gray-900/10 focus:border-gray-900 outline-none"
-                  />
-                </div>
               </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1">
-                  Role / Tingkat Akses <span className="text-red-500">*</span>
-                </label>
-                <select
-                  value={form.role}
-                  onChange={(e) => handleRoleChange(e.target.value as UserRole)}
-                  className="w-full px-3 py-2 rounded-xl border border-gray-200 text-xs bg-gray-50 focus:bg-white focus:ring-2 focus:ring-gray-900/10 focus:border-gray-900 outline-none"
-                >
-                  {ROLES.map((r) => (
-                    <option key={r} value={r}>
-                      {r}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">
-                    Divisi Operasional
-                  </label>
-                  <select
-                    value={form.divisiAssigned}
-                    onChange={(e) => setForm({ ...form, divisiAssigned: e.target.value as any })}
-                    className="w-full px-3 py-2 rounded-xl border border-gray-200 text-xs bg-gray-50 focus:bg-white focus:ring-2 focus:ring-gray-900/10 focus:border-gray-900 outline-none"
-                  >
-                    <option value="MANUFAKTUR">Divisi Manufaktur</option>
-                    <option value="FNB">Divisi F&B</option>
-                    <option value="ALL">Pimpinan (Semua Divisi)</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">
-                    Penempatan Cabang <span className="text-red-500">*</span>
-                  </label>
-                  <select
-                    value={form.cabang}
-                    onChange={(e) => setForm({ ...form, cabang: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl border border-gray-200 text-xs bg-gray-50 focus:bg-white focus:ring-2 focus:ring-gray-900/10 focus:border-gray-900 outline-none font-semibold"
-                  >
-                    <option value="Pusat">Pusat (Default)</option>
-                    {branches
-                      .filter((b) => b.namaCabang !== 'Pusat')
-                      .map((b) => (
-                        <option key={b.id} value={b.namaCabang}>
-                          {b.namaCabang} ({b.kodeCabang})
-                        </option>
-                      ))}
-                  </select>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1">
-                  Alamat Email (opsional untuk OTP)
-                </label>
-                <input
-                  type="email"
-                  placeholder="staf@dutapangan.com"
-                  value={form.email}
-                  onChange={(e) => setForm({ ...form, email: e.target.value })}
-                  className="w-full px-3 py-2 rounded-xl border border-gray-200 text-xs bg-gray-50 focus:bg-white focus:ring-2 focus:ring-gray-900/10 focus:border-gray-900 outline-none"
-                />
-              </div>
-
-              <div className="pt-3 border-t border-gray-100 flex justify-end gap-2">
+              {/* Action Buttons (Fixed Footer) */}
+              <div className="px-6 py-3.5 border-t border-gray-100 bg-gray-50/80 flex justify-end gap-2 shrink-0">
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}

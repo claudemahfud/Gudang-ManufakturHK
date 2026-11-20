@@ -109,7 +109,7 @@ export async function DELETE(req: NextRequest, { params }: RouteParams) {
 
     // Pastikan item ada
     const [existing] = await db
-      .select({ id: inventory.id, sku: inventory.sku, namaBarang: inventory.namaBarang })
+      .select({ id: inventory.id, sku: inventory.sku, namaBarang: inventory.namaBarang, stok: inventory.stok })
       .from(inventory)
       .where(eq(inventory.sku, decodedSku))
       .limit(1);
@@ -118,6 +118,19 @@ export async function DELETE(req: NextRequest, { params }: RouteParams) {
       return NextResponse.json(
         { success: false, error: `Barang dengan SKU "${decodedSku}" tidak ditemukan` },
         { status: 404 }
+      );
+    }
+
+    // Aturan SOP: Stok fisik barang harus 0 / habis sebelum barang dapat dihapus
+    const currentStock = Number(existing.stok) || 0;
+    if (currentStock > 0) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: `Barang "${existing.namaBarang}" (${decodedSku}) tidak dapat dihapus`,
+          penyebab: `Sisa stok fisik masih tercatat ${currentStock} pcs. Stok harus 0 / habis terlebih dahulu (melalui transaksi penjualan POS, barang keluar, atau dicatat sebagai barang rusak / retur) untuk menjaga kesehatan dan audit alur barang.`,
+        },
+        { status: 400 }
       );
     }
 

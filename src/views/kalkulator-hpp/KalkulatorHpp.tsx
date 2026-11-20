@@ -306,11 +306,11 @@ export default function KalkulatorHppView() {
         )}
       </div>
 
-      {/* Modal: Kelola Resep / BOM */}
+      {/* Modal: Kelola Resep / BOM — Desktop Landscape */}
       {isAddRecipeOpen && selectedItem && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl w-full max-w-xl overflow-hidden shadow-2xl border border-gray-100 flex flex-col max-h-[85vh]">
-            <div className="p-5 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-5">
+          <div className="bg-white rounded-2xl lg:rounded-3xl w-full max-w-xl lg:max-w-4xl max-h-[92vh] overflow-hidden shadow-2xl border border-gray-100 flex flex-col animate-in zoom-in-95 duration-150">
+            <div className="p-5 border-b border-gray-100 flex items-center justify-between bg-gray-50/50 shrink-0">
               <div>
                 <h3 className="font-bold text-base text-gray-900">
                   Resep & Bill of Materials (BOM)
@@ -320,124 +320,144 @@ export default function KalkulatorHppView() {
                 </p>
               </div>
               <button
+                type="button"
                 onClick={() => setIsAddRecipeOpen(false)}
-                className="text-gray-400 hover:text-gray-700"
+                className="text-gray-400 hover:text-gray-700 p-1 rounded-lg hover:bg-gray-100 transition"
+                aria-label="Tutup modal"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="p-5 space-y-4 overflow-y-auto">
-              {/* Existing Recipes */}
-              <div>
-                <h4 className="text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">
-                  Komponen Bahan & Kemasan Saat Ini
-                </h4>
-                {selectedItem.recipes?.length === 0 ? (
-                  <div className="p-4 bg-gray-50 rounded-xl text-center text-xs text-gray-400">
-                    Belum ada bahan baku atau kemasan yang dihubungkan ke produk ini.
-                  </div>
-                ) : (
-                  <div className="divide-y divide-gray-100 border border-gray-200 rounded-xl overflow-hidden">
-                    {selectedItem.recipes?.map((r: any) => (
-                      <div
-                        key={r.id}
-                        className="p-3 bg-white flex items-center justify-between text-xs"
-                      >
-                        <div>
-                          <div className="font-semibold text-gray-900">{r.namaBahan}</div>
-                          <div className="text-[10px] text-gray-400 font-mono">
-                            SKU: {r.bahanSku} &bull; Jenis: {r.jenis}
+            <div className="flex-1 overflow-y-auto p-5 sm:p-6">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 lg:gap-6">
+                {/* Kolom Kiri: Existing Recipes */}
+                <div>
+                  <h4 className="text-xs font-bold text-gray-700 uppercase tracking-wider mb-2.5 flex items-center justify-between">
+                    <span>Komponen Bahan Saat Ini</span>
+                    <span className="text-[11px] text-gray-400 font-normal">({selectedItem.recipes?.length || 0} bahan)</span>
+                  </h4>
+                  {selectedItem.recipes?.length === 0 ? (
+                    <div className="p-6 bg-gray-50 rounded-2xl border border-dashed border-gray-200 text-center text-xs text-gray-400">
+                      Belum ada bahan baku atau kemasan yang dihubungkan ke produk ini.
+                    </div>
+                  ) : (
+                    <div className="divide-y divide-gray-100 border border-gray-200 rounded-2xl overflow-hidden max-h-[320px] overflow-y-auto">
+                      {selectedItem.recipes?.map((r: any) => (
+                        <div
+                          key={r.id}
+                          className="p-3 bg-white flex items-center justify-between text-xs hover:bg-gray-50/60 transition"
+                        >
+                          <div>
+                            <div className="font-semibold text-gray-900">{r.namaBahan}</div>
+                            <div className="text-[10px] text-gray-400 font-mono">
+                              SKU: {r.bahanSku} &bull; Jenis: {r.jenis}
+                            </div>
+                          </div>
+                          <div className="font-mono font-bold text-gray-800 bg-gray-100 px-2 py-1 rounded-lg">
+                            {r.takaran} {r.satuan}
                           </div>
                         </div>
-                        <div className="font-mono font-bold text-gray-800">
-                          {r.takaran} {r.satuan}
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Kolom Kanan: Form Tambah Bahan ke Resep */}
+                <div>
+                  <form
+                    onSubmit={handleAddRecipeItem}
+                    className="p-5 rounded-2xl bg-amber-50/60 border border-amber-200 space-y-3.5"
+                  >
+                    <div className="flex items-center gap-1.5 text-xs font-bold text-amber-900 pb-1 border-b border-amber-200/60">
+                      <Plus className="w-4 h-4" />
+                      <span>Tambah Bahan / Kemasan Baru</span>
+                    </div>
+
+                    <div className="space-y-3 text-xs">
+                      <div>
+                        <label className="text-gray-700 block mb-1 font-semibold">Pilih Bahan Baku / Kemasan</label>
+                        <select
+                          value={selectedBahanSku}
+                          onChange={(e) => setSelectedBahanSku(e.target.value)}
+                          className="w-full bg-white border border-gray-200 rounded-xl px-3 py-2 text-xs text-gray-800 focus:outline-none focus:border-amber-500 shadow-sm"
+                          required
+                        >
+                          <option value="">-- Pilih Bahan --</option>
+                          {rawMaterials.map((rm) => (
+                            <option key={rm.sku} value={rm.sku}>
+                              {rm.namaBarang} ({rm.sku})
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2.5">
+                        <div>
+                          <label className="text-gray-700 block mb-1 font-semibold">Jenis Komponen</label>
+                          <select
+                            value={jenisKomponen}
+                            onChange={(e) => setJenisKomponen(e.target.value as any)}
+                            className="w-full bg-white border border-gray-200 rounded-xl px-2.5 py-2 text-xs text-gray-800 focus:outline-none focus:border-amber-500 shadow-sm"
+                          >
+                            <option value="bahan">Bahan Baku</option>
+                            <option value="kemasan">Kemasan</option>
+                          </select>
+                        </div>
+
+                        <div>
+                          <label className="text-gray-700 block mb-1 font-semibold">Satuan</label>
+                          <select
+                            value={satuan}
+                            onChange={(e) => setSatuan(e.target.value)}
+                            className="w-full bg-white border border-gray-200 rounded-xl px-2.5 py-2 text-xs text-gray-800 focus:outline-none focus:border-amber-500 shadow-sm"
+                          >
+                            <option value="gram">gram (g)</option>
+                            <option value="ml">milliliter (ml)</option>
+                            <option value="pcs">pcs / butir</option>
+                            <option value="lembar">lembar</option>
+                          </select>
                         </div>
                       </div>
-                    ))}
-                  </div>
-                )}
+
+                      <div>
+                        <label className="text-gray-700 block mb-1 font-semibold">Takaran (Per 1 Porsi / Produk)</label>
+                        <input
+                          type="number"
+                          step="any"
+                          min="0.01"
+                          value={takaran}
+                          onChange={(e) => setTakaran(e.target.value)}
+                          placeholder="e.g. 15 (gram) / 1 (pcs)"
+                          className="w-full bg-white border border-gray-200 rounded-xl px-3 py-2 text-xs text-gray-800 focus:outline-none focus:border-amber-500 font-mono shadow-sm"
+                          required
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex justify-end pt-2">
+                      <button
+                        type="submit"
+                        disabled={isSavingRecipe}
+                        className="w-full sm:w-auto px-5 py-2.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold transition shadow-sm disabled:opacity-50"
+                      >
+                        {isSavingRecipe ? 'Menyimpan...' : '+ Simpan ke Resep'}
+                      </button>
+                    </div>
+                  </form>
+                </div>
               </div>
+            </div>
 
-              {/* Form Tambah Bahan ke Resep */}
-              <form
-                onSubmit={handleAddRecipeItem}
-                className="p-4 rounded-2xl bg-amber-50/50 border border-amber-200/80 space-y-3"
+            {/* Modal Footer (Fixed) */}
+            <div className="p-4 border-t border-gray-100 flex items-center justify-end bg-gray-50/70 shrink-0">
+              <button
+                type="button"
+                onClick={() => setIsAddRecipeOpen(false)}
+                className="px-5 py-2 rounded-xl text-xs font-semibold bg-gray-900 hover:bg-gray-800 text-white transition"
               >
-                <div className="flex items-center gap-1.5 text-xs font-bold text-amber-900">
-                  <Plus className="w-4 h-4" />
-                  <span>Tambah Bahan / Kemasan Baru ke Resep</span>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-                  <div>
-                    <label className="text-gray-600 block mb-1 font-medium">Pilih Bahan Baku / Kemasan</label>
-                    <select
-                      value={selectedBahanSku}
-                      onChange={(e) => setSelectedBahanSku(e.target.value)}
-                      className="w-full bg-white border border-gray-200 rounded-xl px-2.5 py-2 text-xs text-gray-800 focus:outline-none focus:border-amber-500"
-                      required
-                    >
-                      <option value="">-- Pilih Bahan --</option>
-                      {rawMaterials.map((rm) => (
-                        <option key={rm.sku} value={rm.sku}>
-                          {rm.namaBarang} ({rm.sku})
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="text-gray-600 block mb-1 font-medium">Jenis Komponen</label>
-                    <select
-                      value={jenisKomponen}
-                      onChange={(e) => setJenisKomponen(e.target.value as any)}
-                      className="w-full bg-white border border-gray-200 rounded-xl px-2.5 py-2 text-xs text-gray-800 focus:outline-none focus:border-amber-500"
-                    >
-                      <option value="bahan">Bahan Baku (Makanan/Minuman)</option>
-                      <option value="kemasan">Kemasan (Cup/Plastik/Dus)</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="text-gray-600 block mb-1 font-medium">Takaran (Per 1 Porsi)</label>
-                    <input
-                      type="number"
-                      step="any"
-                      min="0.01"
-                      value={takaran}
-                      onChange={(e) => setTakaran(e.target.value)}
-                      placeholder="e.g. 15 (gram) / 1 (pcs)"
-                      className="w-full bg-white border border-gray-200 rounded-xl px-3 py-2 text-xs text-gray-800 focus:outline-none focus:border-amber-500 font-mono"
-                      required
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-gray-600 block mb-1 font-medium">Satuan</label>
-                    <select
-                      value={satuan}
-                      onChange={(e) => setSatuan(e.target.value)}
-                      className="w-full bg-white border border-gray-200 rounded-xl px-2.5 py-2 text-xs text-gray-800 focus:outline-none focus:border-amber-500"
-                    >
-                      <option value="gram">gram (g)</option>
-                      <option value="ml">milliliter (ml)</option>
-                      <option value="pcs">pcs / butir</option>
-                      <option value="lembar">lembar</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div className="flex justify-end pt-2">
-                  <button
-                    type="submit"
-                    disabled={isSavingRecipe}
-                    className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold transition shadow-sm disabled:opacity-50"
-                  >
-                    {isSavingRecipe ? 'Menyimpan...' : 'Tambahkan ke Resep'}
-                  </button>
-                </div>
-              </form>
+                Selesai / Tutup
+              </button>
             </div>
           </div>
         </div>
