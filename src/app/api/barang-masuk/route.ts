@@ -182,11 +182,24 @@ export async function POST(req: Request) {
         .limit(1);
 
       if (existingInv) {
+        // Strategi Akuntansi Persediaan: Moving Weighted Average Cost (Rata-rata Tertimbang)
+        // Jika muatan baru memiliki harga beli berbeda dari suplier, hitung HPP rata-rata tertimbang
+        const curStock = Number(existingInv.stok) || 0;
+        const curPrice = parseFloat(existingInv.hargaBeli as string) || unitPrice;
+        const newStock = curStock + parsedQty;
+
+        let finalHargaBeli = unitPrice;
+        if (newStock > 0 && curStock > 0 && unitPrice > 0) {
+          finalHargaBeli = Math.round(((curStock * curPrice) + (parsedQty * unitPrice)) / newStock);
+        } else if (unitPrice <= 0) {
+          finalHargaBeli = curPrice;
+        }
+
         await tx
           .update(inventory)
           .set({
             stok: sql`${inventory.stok} + ${parsedQty}`,
-            hargaBeli: String(unitPrice),
+            hargaBeli: String(finalHargaBeli),
             supplier: supplier.trim(),
             updatedAt: new Date(),
           })
