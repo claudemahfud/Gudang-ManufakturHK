@@ -218,69 +218,85 @@ export default function Expedisi() {
       </div>
 
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden border border-gray-100">
-            <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-              <h2 className="font-bold text-gray-800">Daftarkan Armada Baru</h2>
-              <button onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-gray-600 font-bold">
-                
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/40 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md lg:max-w-3xl max-h-[90vh] flex flex-col overflow-hidden border border-gray-100 animate-in zoom-in-95 duration-150">
+            <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between shrink-0 bg-white">
+              <h2 className="font-bold text-gray-800 text-base lg:text-lg">Daftarkan Armada Baru</h2>
+              <button 
+                type="button"
+                onClick={() => setIsModalOpen(false)} 
+                className="text-gray-400 hover:text-gray-600 font-bold p-1 rounded-lg hover:bg-gray-100 transition"
+                aria-label="Tutup modal"
+              >
+                ✕
               </button>
             </div>
-            <form onSubmit={handleSubmit} className="p-6 space-y-4">
-              <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1">Nomor Polisi (Plat) *</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="Contoh: B 1234 XYZ"
-                  value={form.nopol}
-                  onChange={(e) => setForm({ ...form, nopol: e.target.value })}
-                  className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm focus:border-emerald-500 outline-none uppercase font-mono font-bold"
-                />
+            <form onSubmit={handleSubmit} className="flex-1 flex flex-col overflow-hidden">
+              <div className="flex-1 overflow-y-auto p-6">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
+                  {/* Kolom Kiri */}
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-700 mb-1">Nomor Polisi (Plat) *</label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="Contoh: B 1234 XYZ"
+                        value={form.nopol}
+                        onChange={(e) => setForm({ ...form, nopol: e.target.value })}
+                        className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm focus:border-emerald-500 outline-none uppercase font-mono font-bold"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-700 mb-1">Tipe / Jenis Kendaraan *</label>
+                      <select
+                        value={form.jenis}
+                        onChange={(e) => setForm({ ...form, jenis: e.target.value })}
+                        className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm focus:border-emerald-500 outline-none"
+                      >
+                        <option value="Truk Box CDD">Truk Box CDD (Canter 6 Roda)</option>
+                        <option value="Truk Box CDE">Truk Box CDE (Engkel 4 Roda)</option>
+                        <option value="Grand Max Blind Van">Grand Max / Blind Van</option>
+                        <option value="Pickup L300">Pickup L300 / Traga</option>
+                        <option value="Fuso Wingbox">Fuso Wingbox / Tronton</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Kolom Kanan */}
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-700 mb-1">Kapasitas Maksimal</label>
+                      <input
+                        type="text"
+                        placeholder="Contoh: 4 Ton / 250 Karton"
+                        value={form.kapasitas}
+                        onChange={(e) => setForm({ ...form, kapasitas: e.target.value })}
+                        className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm focus:border-emerald-500 outline-none"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-700 mb-1">Driver Utama / Keterangan</label>
+                      <textarea
+                        rows={2}
+                        placeholder="Nama sopir penanggung jawab..."
+                        value={form.keterangan}
+                        onChange={(e) => setForm({ ...form, keterangan: e.target.value })}
+                        className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm focus:border-emerald-500 outline-none resize-none"
+                      />
+                    </div>
+                  </div>
+                </div>
               </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1">Tipe / Jenis Kendaraan *</label>
-                <select
-                  value={form.jenis}
-                  onChange={(e) => setForm({ ...form, jenis: e.target.value })}
-                  className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm focus:border-emerald-500 outline-none"
-                >
-                  <option value="Truk Box CDD">Truk Box CDD (Canter 6 Roda)</option>
-                  <option value="Truk Box CDE">Truk Box CDE (Engkel 4 Roda)</option>
-                  <option value="Grand Max Blind Van">Grand Max / Blind Van</option>
-                  <option value="Pickup L300">Pickup L300 / Traga</option>
-                  <option value="Fuso Wingbox">Fuso Wingbox / Tronton</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1">Kapasitas Maksimal</label>
-                <input
-                  type="text"
-                  placeholder="Contoh: 4 Ton / 250 Karton"
-                  value={form.kapasitas}
-                  onChange={(e) => setForm({ ...form, kapasitas: e.target.value })}
-                  className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm focus:border-emerald-500 outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1">Driver Utama / Keterangan</label>
-                <textarea
-                  rows={2}
-                  placeholder="Nama sopir penanggung jawab..."
-                  value={form.keterangan}
-                  onChange={(e) => setForm({ ...form, keterangan: e.target.value })}
-                  className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm focus:border-emerald-500 outline-none"
-                />
-              </div>
-
-              <div className="pt-3 border-t border-gray-100 flex justify-end gap-2">
+              {/* Action Buttons (Fixed Footer) */}
+              <div className="px-6 py-3.5 border-t border-gray-100 bg-gray-50/80 flex justify-end gap-2 shrink-0">
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2 border border-gray-200 text-gray-600 rounded-xl text-sm font-medium hover:bg-gray-50 transition"
+                  className="px-4 py-2 border border-gray-200 text-gray-600 rounded-xl text-sm font-medium hover:bg-gray-100 transition"
                 >
                   Batal
                 </button>

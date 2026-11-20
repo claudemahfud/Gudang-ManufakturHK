@@ -238,81 +238,97 @@ export default function PengajuanDiskon() {
       </div>
 
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden border border-gray-100">
-            <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-              <h2 className="font-bold text-gray-800">Ajukan Diskon Khusus</h2>
-              <button onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-gray-600 font-bold">
-                
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/40 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md lg:max-w-3xl max-h-[90vh] flex flex-col overflow-hidden border border-gray-100 animate-in zoom-in-95 duration-150">
+            <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between shrink-0 bg-white">
+              <h2 className="font-bold text-gray-800 text-base lg:text-lg">Ajukan Diskon Khusus</h2>
+              <button 
+                type="button"
+                onClick={() => setIsModalOpen(false)} 
+                className="text-gray-400 hover:text-gray-600 font-bold p-1 rounded-lg hover:bg-gray-100 transition"
+                aria-label="Tutup modal"
+              >
+                ✕
               </button>
             </div>
-            <form onSubmit={handleSubmit} className="p-6 space-y-4">
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">Tanggal *</label>
-                  <input
-                    type="date"
-                    required
-                    value={form.tanggal}
-                    onChange={(e) => setForm({ ...form, tanggal: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm focus:border-emerald-500 outline-none"
-                  />
+            <form onSubmit={handleSubmit} className="flex-1 flex flex-col overflow-hidden">
+              <div className="flex-1 overflow-y-auto p-6">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
+                  {/* Kolom Kiri */}
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-700 mb-1">Tanggal *</label>
+                        <input
+                          type="date"
+                          required
+                          value={form.tanggal}
+                          onChange={(e) => setForm({ ...form, tanggal: e.target.value })}
+                          className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm focus:border-emerald-500 outline-none"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-700 mb-1">Nama Salesman</label>
+                        <input
+                          type="text"
+                          placeholder="Nama Sales"
+                          value={form.salesman}
+                          onChange={(e) => setForm({ ...form, salesman: e.target.value })}
+                          className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm focus:border-emerald-500 outline-none"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-700 mb-1">Pelanggan / Toko *</label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="Nama Toko / Agen Tujuan"
+                        value={form.pelanggan}
+                        onChange={(e) => setForm({ ...form, pelanggan: e.target.value })}
+                        className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm focus:border-emerald-500 outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Kolom Kanan */}
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-700 mb-1">Diskon Diajukan (%) *</label>
+                      <input
+                        type="number"
+                        required
+                        min="0.5"
+                        max="50"
+                        step="0.5"
+                        value={form.diskonPct}
+                        onChange={(e) => setForm({ ...form, diskonPct: e.target.value })}
+                        className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm focus:border-emerald-500 outline-none font-semibold text-emerald-800"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-700 mb-1">Alasan Pengajuan</label>
+                      <textarea
+                        rows={2}
+                        required
+                        placeholder="Order volume besar 100 karton, promo kompetitor..."
+                        value={form.alasan}
+                        onChange={(e) => setForm({ ...form, alasan: e.target.value })}
+                        className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm focus:border-emerald-500 outline-none resize-none"
+                      />
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">Nama Salesman</label>
-                  <input
-                    type="text"
-                    placeholder="Nama Sales"
-                    value={form.salesman}
-                    onChange={(e) => setForm({ ...form, salesman: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm focus:border-emerald-500 outline-none"
-                  />
-                </div>
               </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1">Pelanggan / Toko *</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="Nama Toko / Agen Tujuan"
-                  value={form.pelanggan}
-                  onChange={(e) => setForm({ ...form, pelanggan: e.target.value })}
-                  className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm focus:border-emerald-500 outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1">Diskon Diajukan (%) *</label>
-                <input
-                  type="number"
-                  required
-                  min="0.5"
-                  max="50"
-                  step="0.5"
-                  value={form.diskonPct}
-                  onChange={(e) => setForm({ ...form, diskonPct: e.target.value })}
-                  className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm focus:border-emerald-500 outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1">Alasan Pengajuan</label>
-                <textarea
-                  rows={2}
-                  required
-                  placeholder="Order volume besar 100 karton, promo kompetitor..."
-                  value={form.alasan}
-                  onChange={(e) => setForm({ ...form, alasan: e.target.value })}
-                  className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm focus:border-emerald-500 outline-none"
-                />
-              </div>
-
-              <div className="pt-3 border-t border-gray-100 flex justify-end gap-2">
+              {/* Action Buttons (Fixed Footer) */}
+              <div className="px-6 py-3.5 border-t border-gray-100 bg-gray-50/80 flex justify-end gap-2 shrink-0">
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2 border border-gray-200 text-gray-600 rounded-xl text-sm font-medium hover:bg-gray-50 transition"
+                  className="px-4 py-2 border border-gray-200 text-gray-600 rounded-xl text-sm font-medium hover:bg-gray-100 transition"
                 >
                   Batal
                 </button>

@@ -329,101 +329,114 @@ export default function CabangView() {
         </footer>
       </section>
 
-      {/* Modal Tambah Cabang Baru */}
+      {/* Modal Tambah Cabang Baru — Desktop Landscape */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/40 backdrop-blur-xs animate-in fade-in duration-150">
-          <div className="bg-white rounded-3xl shadow-2xl border border-gray-200 w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-150">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-gray-900/40 backdrop-blur-xs animate-in fade-in duration-150">
+          <div className="bg-white rounded-2xl lg:rounded-3xl shadow-2xl border border-gray-200 w-full max-w-md lg:max-w-3xl max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 shrink-0 bg-white">
               <div className="flex items-center gap-2">
                 <Building2 className="w-5 h-5 text-gray-900" />
                 <h3 className="font-bold text-gray-900 text-sm sm:text-base">Tambah Cabang Baru</h3>
               </div>
               <button
+                type="button"
                 onClick={() => setIsModalOpen(false)}
-                className="text-gray-400 hover:text-gray-600 p-1 rounded-lg"
+                className="text-gray-400 hover:text-gray-600 p-1 rounded-lg hover:bg-gray-100 transition"
+                aria-label="Tutup modal"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            <form onSubmit={handleCreateBranch} className="p-6 space-y-4">
-              {errorMsg && (
-                <div className="p-3 bg-red-50 border border-red-200 text-red-700 text-xs rounded-xl flex items-center gap-2">
-                  <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                  <span>{errorMsg}</span>
+            <form onSubmit={handleCreateBranch} className="flex-1 flex flex-col overflow-hidden">
+              <div className="flex-1 overflow-y-auto p-6">
+                {errorMsg && (
+                  <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 text-xs rounded-xl flex items-center gap-2">
+                    <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                    <span>{errorMsg}</span>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
+                  {/* Kolom Kiri */}
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-700 mb-1">
+                        Kode Cabang <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="Misal: BDG, SBY, CKR, BALI"
+                        value={form.kodeCabang}
+                        onChange={(e) => setForm({ ...form, kodeCabang: e.target.value.toUpperCase() })}
+                        className="w-full px-3 py-2 text-xs bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-gray-900/10 focus:border-gray-900 uppercase font-mono"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-700 mb-1">
+                        Nama Cabang / Lokasi <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="Misal: Cabang Bandung, Depo Surabaya"
+                        value={form.namaCabang}
+                        onChange={(e) => setForm({ ...form, namaCabang: e.target.value })}
+                        className="w-full px-3 py-2 text-xs bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-gray-900/10 focus:border-gray-900 font-semibold"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-700 mb-1">
+                        Divisi Operasional
+                      </label>
+                      <select
+                        value={form.divisi}
+                        onChange={(e) => setForm({ ...form, divisi: e.target.value })}
+                        className="w-full px-3 py-2 text-xs bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-gray-900/10 focus:border-gray-900"
+                      >
+                        <option value="ALL">Semua Divisi (Manufaktur & F&B)</option>
+                        <option value="MANUFAKTUR">Khusus Divisi Manufaktur (Pabrik & Grosir)</option>
+                        <option value="FNB">Khusus Divisi Food & Beverages (Resto & Cafe)</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Kolom Kanan */}
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-700 mb-1">
+                        Nomor Telepon / Kontak
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="Misal: (022) 1234567 atau 08123456789"
+                        value={form.telepon}
+                        onChange={(e) => setForm({ ...form, telepon: e.target.value })}
+                        className="w-full px-3 py-2 text-xs bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-gray-900/10 focus:border-gray-900"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-700 mb-1">
+                        Alamat Lengkap Cabang
+                      </label>
+                      <textarea
+                        rows={3}
+                        placeholder="Alamat jalan, kota, dan lokasi gudang/outlet"
+                        value={form.alamat}
+                        onChange={(e) => setForm({ ...form, alamat: e.target.value })}
+                        className="w-full px-3 py-2 text-xs bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-gray-900/10 focus:border-gray-900 resize-none"
+                      />
+                    </div>
+                  </div>
                 </div>
-              )}
-
-              <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1">
-                  Kode Cabang <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="Misal: BDG, SBY, CKR, BALI"
-                  value={form.kodeCabang}
-                  onChange={(e) => setForm({ ...form, kodeCabang: e.target.value.toUpperCase() })}
-                  className="w-full px-3 py-2 text-xs bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-gray-900/10 focus:border-gray-900 uppercase font-mono"
-                />
               </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1">
-                  Nama Cabang / Lokasi <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="Misal: Cabang Bandung, Depo Surabaya"
-                  value={form.namaCabang}
-                  onChange={(e) => setForm({ ...form, namaCabang: e.target.value })}
-                  className="w-full px-3 py-2 text-xs bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-gray-900/10 focus:border-gray-900"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1">
-                  Divisi Operasional
-                </label>
-                <select
-                  value={form.divisi}
-                  onChange={(e) => setForm({ ...form, divisi: e.target.value })}
-                  className="w-full px-3 py-2 text-xs bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-gray-900/10 focus:border-gray-900"
-                >
-                  <option value="ALL">Semua Divisi (Manufaktur & F&B)</option>
-                  <option value="MANUFAKTUR">Khusus Divisi Manufaktur (Pabrik & Grosir)</option>
-                  <option value="FNB">Khusus Divisi Food & Beverages (Resto & Cafe)</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1">
-                  Alamat Lengkap Cabang
-                </label>
-                <textarea
-                  rows={2}
-                  placeholder="Alamat jalan, kota, dan lokasi gudang/outlet"
-                  value={form.alamat}
-                  onChange={(e) => setForm({ ...form, alamat: e.target.value })}
-                  className="w-full px-3 py-2 text-xs bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-gray-900/10 focus:border-gray-900 resize-none"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1">
-                  Nomor Telepon / Kontak
-                </label>
-                <input
-                  type="text"
-                  placeholder="Misal: (022) 1234567 atau 08123456789"
-                  value={form.telepon}
-                  onChange={(e) => setForm({ ...form, telepon: e.target.value })}
-                  className="w-full px-3 py-2 text-xs bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-gray-900/10 focus:border-gray-900"
-                />
-              </div>
-
-              <div className="pt-2 flex items-center justify-end gap-2 border-t border-gray-100">
+              {/* Action Buttons (Fixed Footer) */}
+              <div className="px-6 py-3.5 border-t border-gray-100 bg-gray-50/80 flex items-center justify-end gap-2 shrink-0">
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}

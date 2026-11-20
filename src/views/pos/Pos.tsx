@@ -988,137 +988,166 @@ export default function PosView() {
       </div>
 
       {/* ============================================================ */}
-      {/* 4. MODAL: Checkout & Pembayaran (Tunai / Transfer / QRIS) */}
+      {/* 4. MODAL: Checkout & Pembayaran — Desktop Landscape */}
       {/* ============================================================ */}
       {isCheckoutModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-md overflow-hidden shadow-2xl flex flex-col">
-            <div className="p-5 border-b border-slate-800 flex items-center justify-between">
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-5">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl lg:rounded-3xl w-full max-w-md lg:max-w-4xl max-h-[92vh] overflow-hidden shadow-2xl flex flex-col animate-in zoom-in-95 duration-150">
+            <div className="p-5 border-b border-slate-800 flex items-center justify-between shrink-0 bg-slate-900">
               <div>
-                <h3 className="font-bold text-base text-white">Pembayaran Kasir POS</h3>
-                <p className="text-xs text-slate-400">Pilih metode bayar dan input nominal uang</p>
+                <h3 className="font-bold text-base lg:text-lg text-white">Pembayaran Kasir POS</h3>
+                <p className="text-xs text-slate-400">Pilih metode bayar dan konfirmasi transaksi</p>
               </div>
               <button
+                type="button"
                 onClick={() => setIsCheckoutModalOpen(false)}
-                className="text-slate-400 hover:text-white"
+                className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition"
+                aria-label="Tutup modal"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="p-5 space-y-4 overflow-y-auto">
-              {/* Grand Total Display */}
-              <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 text-center">
-                <span className="text-xs text-slate-400 uppercase tracking-wider font-semibold">
-                  Total Tagihan
-                </span>
-                <div className="text-2xl sm:text-3xl font-black text-emerald-400 font-mono mt-1">
-                  {formatRupiah(grandTotal)}
-                </div>
-              </div>
-
-              {/* Payment Methods */}
-              <div>
-                <label className="text-xs font-semibold text-slate-300 block mb-2">
-                  Metode Pembayaran
-                </label>
-                <div className="grid grid-cols-3 gap-2">
-                  {(['Tunai', 'Transfer', 'QRIS'] as const).map((m) => (
-                    <button
-                      key={m}
-                      type="button"
-                      onClick={() => setMetodePembayaran(m)}
-                      className={`p-2.5 rounded-xl border flex flex-col items-center gap-1 text-xs font-bold transition ${
-                        metodePembayaran === m
-                          ? 'bg-emerald-500/10 border-emerald-500 text-emerald-400'
-                          : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-white'
-                      }`}
-                    >
-                      {m === 'Tunai' && <Banknote className="w-5 h-5" />}
-                      {m === 'Transfer' && <CreditCard className="w-5 h-5" />}
-                      {m === 'QRIS' && <QrCode className="w-5 h-5" />}
-                      <span>{m}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Cash Tendered Input (jika Tunai) */}
-              {metodePembayaran === 'Tunai' && (
-                <div className="space-y-2">
-                  <label className="text-xs font-semibold text-slate-300 block">
-                    Uang Diterima (Rp)
-                  </label>
-                  <input
-                    type="number"
-                    value={uangDiterima || ''}
-                    onChange={(e) => setUangDiterima(Number(e.target.value))}
-                    placeholder="0"
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-lg font-mono font-bold text-white focus:outline-none focus:border-emerald-500"
-                  />
-
-                  {/* Quick Cash Suggestions */}
-                  <div className="flex flex-wrap gap-1.5 pt-1">
-                    <button
-                      type="button"
-                      onClick={() => setUangDiterima(grandTotal)}
-                      className="px-2.5 py-1 rounded-lg bg-slate-800 text-emerald-400 text-xs font-bold hover:bg-slate-700"
-                    >
-                      Uang Pas
-                    </button>
-                    {[10000, 20000, 50000, 100000].map((nominal) => (
-                      <button
-                        key={nominal}
-                        type="button"
-                        onClick={() => setUangDiterima((prev) => (prev || 0) + nominal)}
-                        className="px-2.5 py-1 rounded-lg bg-slate-800 text-slate-300 text-xs font-medium hover:bg-slate-700"
-                      >
-                        +{formatRupiah(nominal)}
-                      </button>
-                    ))}
-                  </div>
-
-                  {/* Kembalian Calculation */}
-                  <div className="p-3 rounded-xl bg-slate-950 border border-slate-800 flex justify-between items-center text-sm">
-                    <span className="text-slate-400">Kembalian:</span>
-                    <span
-                      className={`font-mono font-black ${
-                        kembalian >= 0 ? 'text-emerald-400' : 'text-red-400'
-                      }`}
-                    >
-                      {formatRupiah(kembalian)}
+            <div className="flex-1 overflow-y-auto p-5 sm:p-6">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 lg:gap-6">
+                {/* Kolom Kiri: Tagihan & Metode */}
+                <div className="space-y-4">
+                  {/* Grand Total Display */}
+                  <div className="p-5 rounded-2xl bg-slate-950 border border-slate-800 text-center">
+                    <span className="text-xs text-slate-400 uppercase tracking-wider font-semibold">
+                      Total Tagihan
                     </span>
+                    <div className="text-3xl lg:text-4xl font-black text-emerald-400 font-mono mt-1">
+                      {formatRupiah(grandTotal)}
+                    </div>
+                  </div>
+
+                  {/* Payment Methods */}
+                  <div>
+                    <label className="text-xs font-semibold text-slate-300 block mb-2">
+                      Metode Pembayaran
+                    </label>
+                    <div className="grid grid-cols-3 gap-2">
+                      {(['Tunai', 'Transfer', 'QRIS'] as const).map((m) => (
+                        <button
+                          key={m}
+                          type="button"
+                          onClick={() => setMetodePembayaran(m)}
+                          className={`p-3 rounded-xl border flex flex-col items-center gap-1.5 text-xs font-bold transition ${
+                            metodePembayaran === m
+                              ? 'bg-emerald-500/10 border-emerald-500 text-emerald-400 shadow-md shadow-emerald-500/10'
+                              : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-white'
+                          }`}
+                        >
+                          {m === 'Tunai' && <Banknote className="w-5 h-5" />}
+                          {m === 'Transfer' && <CreditCard className="w-5 h-5" />}
+                          {m === 'QRIS' && <QrCode className="w-5 h-5" />}
+                          <span>{m}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Catatan / Keterangan Optional */}
+                  <div>
+                    <label className="text-xs font-semibold text-slate-400 block mb-1">
+                      Catatan Tambahan (Opsional)
+                    </label>
+                    <input
+                      type="text"
+                      value={catatan}
+                      onChange={(e) => setCatatan(e.target.value)}
+                      placeholder="e.g. Pembelian take away / meja 4..."
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-emerald-500"
+                    />
                   </div>
                 </div>
-              )}
 
-              {/* Catatan / Keterangan Optional */}
-              <div>
-                <label className="text-xs font-semibold text-slate-400 block mb-1">
-                  Catatan Tambahan (Opsional)
-                </label>
-                <input
-                  type="text"
-                  value={catatan}
-                  onChange={(e) => setCatatan(e.target.value)}
-                  placeholder="e.g. Pembelian take away / meja 4..."
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-emerald-500"
-                />
-              </div>
+                {/* Kolom Kanan: Uang Diterima & Kembalian */}
+                <div className="space-y-4">
+                  {/* Cash Tendered Input (jika Tunai) */}
+                  {metodePembayaran === 'Tunai' ? (
+                    <div className="space-y-3">
+                      <div>
+                        <label className="text-xs font-semibold text-slate-300 block mb-1">
+                          Uang Diterima Kasir (Rp)
+                        </label>
+                        <input
+                          type="number"
+                          value={uangDiterima || ''}
+                          onChange={(e) => setUangDiterima(Number(e.target.value))}
+                          placeholder="0"
+                          className="w-full bg-slate-950 border-2 border-slate-800 focus:border-emerald-500 rounded-xl px-4 py-3 text-xl font-mono font-bold text-white focus:outline-none"
+                        />
+                      </div>
 
-              {checkoutError && (
-                <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs flex items-center gap-2">
-                  <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                  <span>{checkoutError}</span>
+                      {/* Quick Cash Suggestions */}
+                      <div>
+                        <span className="text-[11px] text-slate-500 block mb-1.5 font-medium">Uang Cepat / Pas:</span>
+                        <div className="flex flex-wrap gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => setUangDiterima(grandTotal)}
+                            className="px-3 py-1.5 rounded-lg bg-emerald-500/20 text-emerald-400 text-xs font-bold hover:bg-emerald-500/30 border border-emerald-500/30"
+                          >
+                            Uang Pas
+                          </button>
+                          {[10000, 20000, 50000, 100000].map((nominal) => (
+                            <button
+                              key={nominal}
+                              type="button"
+                              onClick={() => setUangDiterima((prev) => (prev || 0) + nominal)}
+                              className="px-2.5 py-1.5 rounded-lg bg-slate-800 text-slate-300 text-xs font-medium hover:bg-slate-700"
+                            >
+                              +{formatRupiah(nominal)}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Kembalian Calculation */}
+                      <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 flex justify-between items-center text-sm">
+                        <span className="text-slate-400 font-medium">Kembalian:</span>
+                        <span
+                          className={`font-mono font-black text-lg ${
+                            kembalian >= 0 ? 'text-emerald-400' : 'text-red-400'
+                          }`}
+                        >
+                          {formatRupiah(kembalian)}
+                        </span>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="p-6 rounded-2xl bg-slate-950 border border-slate-800 text-center space-y-3">
+                      <div className="w-12 h-12 rounded-full bg-emerald-500/10 text-emerald-400 flex items-center justify-center mx-auto">
+                        {metodePembayaran === 'QRIS' ? <QrCode className="w-6 h-6" /> : <CreditCard className="w-6 h-6" />}
+                      </div>
+                      <div className="text-sm font-bold text-white">
+                        Pembayaran Non-Tunai ({metodePembayaran})
+                      </div>
+                      <p className="text-xs text-slate-400 max-w-xs mx-auto">
+                        Pastikan pelanggan telah melakukan transfer/scan barcode QRIS sesuai total tagihan sebesar{' '}
+                        <span className="text-emerald-400 font-mono font-bold">{formatRupiah(grandTotal)}</span>.
+                      </p>
+                    </div>
+                  )}
+
+                  {checkoutError && (
+                    <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs flex items-center gap-2">
+                      <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                      <span>{checkoutError}</span>
+                    </div>
+                  )}
                 </div>
-              )}
+              </div>
             </div>
 
-            <div className="p-4 border-t border-slate-800 flex items-center justify-end gap-2 bg-slate-950">
+            {/* Modal Footer (Fixed Bottom) */}
+            <div className="p-4 border-t border-slate-800 flex items-center justify-end gap-2 bg-slate-950 shrink-0">
               <button
                 type="button"
                 onClick={() => setIsCheckoutModalOpen(false)}
-                className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-white"
+                className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-white transition hover:bg-slate-800"
               >
                 Batal
               </button>
@@ -1126,7 +1155,7 @@ export default function PosView() {
                 type="button"
                 onClick={handleProcessCheckout}
                 disabled={isSubmitting}
-                className="px-5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs transition shadow-lg shadow-emerald-500/20 disabled:opacity-50 flex items-center gap-2"
+                className="px-6 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs transition shadow-lg shadow-emerald-500/20 disabled:opacity-50 flex items-center gap-2"
               >
                 {isSubmitting ? (
                   <>
