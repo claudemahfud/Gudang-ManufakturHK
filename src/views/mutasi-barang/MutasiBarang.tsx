@@ -1,10 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { formatTanggal } from '@/shared/lib/utils';
-import { FileText, Download } from 'lucide-react';
+import { useState, useEffect, useMemo } from 'react';
+import { formatTanggal, formatTanggalWaktu } from '@/shared/lib/utils';
+import { FileText, Download, ArrowLeftRight, Search, RefreshCw } from 'lucide-react';
 import DocumentModalViewer, { DocumentData } from '@/shared/components/documents/DocumentModalViewer';
-import { exportToCsv, exportReportToPdfA4Landscape } from '@/shared/lib/exportDoc';
+import { exportToCsv, exportRekapToPdfA4Landscape } from '@/shared/lib/exportDoc';
+import DateTimeFilterBar from '@/shared/components/ui/DateTimeFilterBar';
 
 // ============================================================
 // PAGE: Mutasi Barang
@@ -33,6 +34,10 @@ export default function MutasiBarang() {
   const [data, setData] = useState<ItemMutasi[]>([]);
   const [inventoryList, setInventoryList] = useState<InventoryOption[]>([]);
   const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [filterLabel, setFilterLabel] = useState('Semua Waktu');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [form, setForm] = useState({
@@ -47,6 +52,29 @@ export default function MutasiBarang() {
 
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [selectedDocument, setSelectedDocument] = useState<DocumentData | null>(null);
+
+  // Client-side precise filter by datetime and search
+  const filteredData = useMemo(() => {
+    return data.filter((item) => {
+      // Datetime precision filter
+      const itemTime = new Date(item.tanggal).getTime();
+      if (startDate && itemTime < new Date(startDate).getTime()) return false;
+      if (endDate && itemTime > new Date(endDate).getTime()) return false;
+
+      // Search
+      if (search) {
+        const q = search.toLowerCase();
+        const matchSku = item.sku.toLowerCase().includes(q);
+        const matchNama = item.namaBarang.toLowerCase().includes(q);
+        const matchDari = (item.dari || '').toLowerCase().includes(q);
+        const matchKe = (item.ke || '').toLowerCase().includes(q);
+        const matchKet = (item.keterangan || '').toLowerCase().includes(q);
+        if (!matchSku && !matchNama && !matchDari && !matchKe && !matchKet) return false;
+      }
+
+      return true;
+    });
+  }, [data, startDate, endDate, search]);
 
   const handleViewFakturMutasi = (row: ItemMutasi) => {
     setSelectedDocument({
@@ -73,10 +101,10 @@ export default function MutasiBarang() {
 
   const handleExportExcel = () => {
     exportToCsv({
-      filename: 'Rekap_Mutasi_Barang',
-      data,
+      filename: `Rekap_Mutasi_Barang_${new Date().toISOString().slice(0, 10)}`,
+      data: filteredData,
       columns: [
-        { header: 'Tanggal', accessor: (r) => formatTanggal(r.tanggal) },
+        { header: 'Tanggal & Jam', accessor: (r) => formatTanggalWaktu(r.tanggal) },
         { header: 'SKU', accessor: (r) => r.sku },
         { header: 'Nama Barang', accessor: (r) => r.namaBarang },
         { header: 'Jumlah (Qty)', accessor: (r) => r.qty },
@@ -89,11 +117,63 @@ export default function MutasiBarang() {
   };
 
   const handleExportPdfA4 = async () => {
-    await exportReportToPdfA4Landscape(
-      'rekap-mutasi-barang-table-container',
-      'Rekap_Mutasi_Barang_A4_Landscape',
-      'Rekapitulasi Mutasi Barang Antar Cabang'
-    );
+    let totalQty = 0;
+
+    const rows = filteredData.map((item, idx) => {
+      totalQty += Number(item.qty || 0);
+      return [
+        String(idx + 1),
+        formatTanggalWaktu(item.tanggal),
+        `${item.namaBarang} (${item.sku})`,
+        `${item.qty} pcs`,
+        item.dari,
+        item.ke,
+        item.keterangan || '-',
+        item.createdBy || 'Staff Gudang',
+      ];
+    });
+
+    const summaryFooter = [
+      'TOTAL MUTASI',
+      '',
+      `${filteredData.length} Mutasi Terpilih`,
+      `${totalQty.toLocaleString('id-ID')} pcs`,
+      '',
+      '',
+      '',
+      '',
+    ];
+
+    await exportRekapToPdfA4Landscape({
+      title: 'Rekapitulasi Mutasi Stok Barang Antar Gudang & Cabang',
+      divisi: 'Divisi Manufaktur & Distribusi',
+      cabang: 'Gudang Pusat',
+      periodeFilter: filterLabel || 'Semua Waktu',
+      operator: 'Super Administrator',
+      columns: [
+        'No',
+        'Tanggal & Jam',
+        'Item Barang (SKU)',
+        'Qty Mutasi',
+        'Dari Lokasi (Asal)',
+        'Ke Lokasi (Tujuan)',
+        'Keterangan / Alasan',
+        'Operator',
+      ],
+      rows,
+      summaryFooter,
+      columnStyles: {
+        0: { halign: 'center', cellWidth: 10 },
+        1: { halign: 'center', cellWidth: 32 },
+        2: { fontStyle: 'bold', cellWidth: 55 },
+        3: { halign: 'center', fontStyle: 'bold', cellWidth: 26 },
+        4: { cellWidth: 32 },
+        5: { cellWidth: 32 },
+        6: { cellWidth: 56 },
+        7: { cellWidth: 30 },
+      },
+      filename: `Rekap_Mutasi_Barang_${new Date().toISOString().slice(0, 10)}_A4_Landscape`,
+    });
   };
 
   const fetchData = async () => {
@@ -238,6 +318,41 @@ export default function MutasiBarang() {
         </div>
       </div>
 
+      <DateTimeFilterBar
+        onFilterChange={(sIso, eIso, lbl) => {
+          setStartDate(sIso);
+          setEndDate(eIso);
+          setFilterLabel(lbl);
+        }}
+      />
+
+      <div className="bg-white p-3.5 rounded-2xl border border-gray-100 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-3">
+        <div className="relative w-full sm:w-96">
+          <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
+          <input
+            type="text"
+            placeholder="Cari SKU, nama produk, lokasi asal/tujuan, keterangan..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full pl-9 pr-3.5 py-2 rounded-xl border border-gray-200 text-xs focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none bg-gray-50/50"
+          />
+        </div>
+        <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end text-xs text-gray-500">
+          <span>
+            Menampilkan <strong className="text-gray-900">{filteredData.length}</strong> data
+          </span>
+          <button
+            type="button"
+            onClick={fetchData}
+            disabled={loading}
+            title="Refresh Data"
+            className="p-2 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-xl transition"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+          </button>
+        </div>
+      </div>
+
       <div
         id="rekap-mutasi-barang-table-container"
         className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden"
@@ -246,7 +361,7 @@ export default function MutasiBarang() {
           <table className="w-full text-left text-sm text-gray-600">
             <thead className="bg-gray-50/75 border-b border-gray-100 text-xs font-semibold uppercase tracking-wider text-gray-500">
               <tr>
-                <th className="py-3.5 px-4">Tanggal</th>
+                <th className="py-3.5 px-4">Tanggal & Jam</th>
                 <th className="py-3.5 px-4">SKU / Nama Barang</th>
                 <th className="py-3.5 px-4">Jumlah</th>
                 <th className="py-3.5 px-4">Dari Lokasi</th>
@@ -263,17 +378,17 @@ export default function MutasiBarang() {
                     Memuat data...
                   </td>
                 </tr>
-              ) : data.length === 0 ? (
+              ) : filteredData.length === 0 ? (
                 <tr>
                   <td colSpan={8} className="py-12 text-center text-gray-400">
-                    Belum ada riwayat mutasi barang
+                    Belum ada riwayat mutasi barang pada periode ini
                   </td>
                 </tr>
               ) : (
-                data.map((row) => (
+                filteredData.map((row) => (
                   <tr key={row.id} className="hover:bg-gray-50/50 transition">
                     <td className="py-3.5 px-4 text-xs font-medium text-gray-700 whitespace-nowrap">
-                      {formatTanggal(row.tanggal)}
+                      {formatTanggalWaktu(row.tanggal)}
                     </td>
                     <td className="py-3.5 px-4">
                       <div className="font-semibold text-gray-800">{row.namaBarang}</div>

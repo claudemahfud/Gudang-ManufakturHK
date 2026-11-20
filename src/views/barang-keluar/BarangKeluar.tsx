@@ -1,10 +1,28 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { formatTanggal, formatRupiah } from '@/shared/lib/utils';
-import { Truck, ShoppingBag, Layers, CheckCircle2, AlertCircle, ShieldAlert, Lock, KeyRound, X, Check, FileText, Download } from 'lucide-react';
+import { useState, useEffect, useMemo } from 'react';
+import { formatTanggal, formatTanggalWaktu, formatRupiah } from '@/shared/lib/utils';
+import {
+  Truck,
+  ShoppingBag,
+  Layers,
+  CheckCircle2,
+  AlertCircle,
+  ShieldAlert,
+  Lock,
+  KeyRound,
+  X,
+  Check,
+  FileText,
+  Download,
+  Search,
+  RefreshCw,
+  Trash2,
+  Plus,
+} from 'lucide-react';
 import DocumentModalViewer, { DocumentData } from '@/shared/components/documents/DocumentModalViewer';
-import { exportToCsv, exportReportToPdfA4Landscape } from '@/shared/lib/exportDoc';
+import { exportToCsv, exportRekapToPdfA4Landscape } from '@/shared/lib/exportDoc';
+import DateTimeFilterBar from '@/shared/components/ui/DateTimeFilterBar';
 
 // ============================================================
 // PAGE: Barang Keluar & Loading Penjualan
@@ -54,6 +72,7 @@ export default function BarangKeluar() {
   const [search, setSearch] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+  const [filterLabel, setFilterLabel] = useState('Semua Waktu');
   const [selectedChannel, setSelectedChannel] = useState<'GROSIR' | 'POS' | 'ALL'>('GROSIR');
 
   // Modal Create
@@ -287,14 +306,41 @@ export default function BarangKeluar() {
     }
   };
 
+  // Precise client-side filter for datetime, channel, and search
+  const filteredData = useMemo(() => {
+    return data.filter((item) => {
+      // Channel filter
+      if (selectedChannel === 'GROSIR' && item.channel && item.channel !== 'GROSIR') return false;
+      if (selectedChannel === 'POS' && item.channel !== 'POS') return false;
+
+      // Datetime precision filter (jam, hari, minggu, bulan, tahun)
+      const itemTime = new Date(item.tanggal).getTime();
+      if (startDate && itemTime < new Date(startDate).getTime()) return false;
+      if (endDate && itemTime > new Date(endDate).getTime()) return false;
+
+      // Search keyword filter
+      if (search) {
+        const q = search.toLowerCase();
+        const matchTrx = item.trxId.toLowerCase().includes(q);
+        const matchSku = item.sku.toLowerCase().includes(q);
+        const matchNama = item.namaBarang.toLowerCase().includes(q);
+        const matchPelanggan = (item.pelanggan || '').toLowerCase().includes(q);
+        const matchSales = (item.salesman || '').toLowerCase().includes(q);
+        if (!matchTrx && !matchSku && !matchNama && !matchPelanggan && !matchSales) return false;
+      }
+
+      return true;
+    });
+  }, [data, selectedChannel, startDate, endDate, search]);
+
   const handleExportExcel = () => {
     exportToCsv({
-      filename: 'Rekap_Barang_Keluar_Grosir',
-      data,
+      filename: `Rekap_Barang_Keluar_${new Date().toISOString().slice(0, 10)}`,
+      data: filteredData,
       columns: [
         { header: 'No. Trx / Faktur', accessor: (r) => r.trxId },
-        { header: 'Tanggal', accessor: (r) => formatTanggal(r.tanggal) },
-        { header: 'Saluran', accessor: (r) => r.channel || 'GROSIR' },
+        { header: 'Tanggal & Jam', accessor: (r) => formatTanggalWaktu(r.tanggal) },
+        { header: 'Saluran Distribusi', accessor: (r) => (r.channel === 'POS' ? 'Kasir POS' : 'Grosir B2B') },
         { header: 'SKU', accessor: (r) => r.sku },
         { header: 'Nama Barang', accessor: (r) => r.namaBarang },
         { header: 'Jumlah (Qty)', accessor: (r) => r.qty },
@@ -309,18 +355,72 @@ export default function BarangKeluar() {
   };
 
   const handleExportPdfA4 = async () => {
-    await exportReportToPdfA4Landscape(
-      'rekap-barang-keluar-table-container',
-      'Rekap_Barang_Keluar_A4_Landscape',
-      'Rekapitulasi Barang Keluar & Faktur Penjualan'
-    );
+    let totalQty = 0;
+    let totalNilai = 0;
+
+    const rows = filteredData.map((item, idx) => {
+      totalQty += Number(item.qty || 0);
+      totalNilai += Number(item.total || 0);
+      return [
+        String(idx + 1),
+        item.trxId,
+        formatTanggalWaktu(item.tanggal),
+        item.channel === 'POS' ? 'Kasir POS' : 'Grosir (B2B)',
+        item.pelanggan ? `${item.pelanggan}${item.salesman ? ` / ${item.salesman}` : ''}` : item.salesman || '-',
+        `${item.namaBarang} (${item.sku})`,
+        `${item.qty} ${item.satuan || 'pcs'}`,
+        formatRupiah(Number(item.total || 0)),
+      ];
+    });
+
+    const summaryFooter = [
+      'TOTAL REKAPITULASI',
+      '',
+      '',
+      '',
+      '',
+      `${filteredData.length} Transaksi Terpilih`,
+      `${totalQty.toLocaleString('id-ID')} pcs`,
+      formatRupiah(totalNilai),
+    ];
+
+    await exportRekapToPdfA4Landscape({
+      title: 'Rekapitulasi Barang Keluar, Faktur Penjualan & Muatan Grosir B2B',
+      divisi: 'Divisi Manufaktur (Pabrik & Distribusi)',
+      cabang: 'Gudang Pusat',
+      periodeFilter: filterLabel || 'Semua Waktu',
+      operator: 'Super Administrator',
+      columns: [
+        'No',
+        'No. Transaksi',
+        'Tanggal & Jam',
+        'Jalur Distribusi',
+        'Pelanggan / Salesman',
+        'Item Barang',
+        'Jumlah (Qty)',
+        'Total Penjualan (Rp)',
+      ],
+      rows,
+      summaryFooter,
+      columnStyles: {
+        0: { halign: 'center', cellWidth: 10 },
+        1: { halign: 'center', fontStyle: 'bold', cellWidth: 32 },
+        2: { halign: 'center', cellWidth: 30 },
+        3: { halign: 'center', cellWidth: 26 },
+        4: { cellWidth: 46 },
+        5: { fontStyle: 'bold', cellWidth: 54 },
+        6: { halign: 'center', fontStyle: 'bold', cellWidth: 25 },
+        7: { halign: 'right', fontStyle: 'bold', cellWidth: 35 },
+      },
+      filename: `Rekap_Barang_Keluar_${new Date().toISOString().slice(0, 10)}_A4_Landscape`,
+    });
   };
 
   // ============================================================
   // SECTION: Render
   // ============================================================
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       {/* Toast Notification */}
       {toast && (
         <div
@@ -334,38 +434,50 @@ export default function BarangKeluar() {
         </div>
       )}
 
-      {/* 1. Header (F-Pattern Top Row) */}
-      <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      {/* 1. Header (F-Pattern Top Row — Tata Letak Proporsional & Rapi) */}
+      <header className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-800">Barang Keluar</h1>
-          <p className="text-sm text-gray-500 mt-1">
-            Surat loading barang penjualan, ekspedisi ke pelanggan & mutasi keluar
+          <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full font-semibold text-xs bg-blue-100 text-blue-800 mb-1">
+            <Truck className="w-3.5 h-3.5" />
+            <span>Distribusi &amp; Pengeluaran Barang</span>
+          </div>
+          <h1 className="text-2xl font-black text-gray-900 tracking-tight">Barang Keluar &amp; Surat Loading</h1>
+          <p className="text-xs sm:text-sm text-gray-500 mt-0.5">
+            Surat loading barang penjualan, ekspedisi ke pelanggan &amp; mutasi keluar
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
+
+        <div className="flex flex-wrap items-center gap-2.5">
+          {/* Tombol Ekspor Berpasangan (Toolbar Pill) */}
+          <div className="inline-flex items-center rounded-xl border border-gray-200 bg-gray-50/80 p-1 shadow-xs">
+            <button
+              type="button"
+              onClick={handleExportExcel}
+              className="inline-flex items-center gap-1.5 px-3 py-2 bg-white hover:bg-emerald-50 text-emerald-800 hover:text-emerald-900 rounded-lg text-xs font-bold border border-gray-100 transition shadow-xs"
+              title="Ekspor Rekapitulasi Data Barang Keluar ke Excel CSV"
+            >
+              <Download className="w-3.5 h-3.5 text-emerald-600" />
+              <span>Rekap Excel</span>
+            </button>
+            <button
+              type="button"
+              onClick={handleExportPdfA4}
+              className="inline-flex items-center gap-1.5 px-3 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs font-bold transition shadow-xs ml-1"
+              title="Ekspor Rekapitulasi Laporan PDF Kertas A4 Landscape dengan KOP Surat Resmi"
+            >
+              <FileText className="w-3.5 h-3.5 text-slate-300" />
+              <span>PDF (A4 Landscape)</span>
+            </button>
+          </div>
+
+          {/* Tombol Aksi Utama */}
           <button
             type="button"
-            onClick={handleExportExcel}
-            className="inline-flex items-center gap-1.5 px-3 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 rounded-xl text-xs font-semibold border border-emerald-200 transition"
-            title="Export Rekapitulasi Data Barang Keluar ke Excel CSV"
-          >
-            <Download className="w-3.5 h-3.5 text-emerald-600" />
-            <span>Rekap Excel</span>
-          </button>
-          <button
-            type="button"
-            onClick={handleExportPdfA4}
-            className="inline-flex items-center gap-1.5 px-3 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-semibold transition"
-            title="Export Rekapitulasi Laporan PDF Kertas A4 Landscape"
-          >
-            <FileText className="w-3.5 h-3.5 text-slate-300" />
-            <span>PDF (A4 Landscape)</span>
-          </button>
-          <button
             onClick={() => setIsModalOpen(true)}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs sm:text-sm font-semibold shadow-sm transition"
+            className="inline-flex items-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white rounded-xl text-xs sm:text-sm font-bold shadow-md shadow-emerald-600/20 transition"
           >
-            <span>＋</span> Buat Surat Loading / Keluar
+            <span className="text-base leading-none">＋</span>
+            <span>Buat Surat Loading / Keluar</span>
           </button>
         </div>
       </header>
@@ -382,7 +494,7 @@ export default function BarangKeluar() {
           }`}
         >
           <Truck className="w-3.5 h-3.5" />
-          <span>Muatan Gudang & Grosir (B2B)</span>
+          <span>Muatan Gudang &amp; Grosir (B2B)</span>
         </button>
         <button
           type="button"
@@ -410,43 +522,47 @@ export default function BarangKeluar() {
         </button>
       </nav>
 
-      {/* 3. Filters (F-Pattern Second Row) */}
-      <section aria-label="Filter dan Pencarian Muatan" className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex flex-col md:flex-row gap-4 items-center justify-between">
-        <div className="w-full md:w-72">
+      {/* 3. Filter Periode Custom Fleksibel: Jam, Hari, Minggu, Bulan, Tahun */}
+      <DateTimeFilterBar
+        initialPreset="ALL"
+        onFilterChange={(sIso, eIso, lbl) => {
+          setStartDate(sIso);
+          setEndDate(eIso);
+          setFilterLabel(lbl);
+        }}
+      />
+
+      {/* 4. Pencarian Cepat & Info Total Data */}
+      <div className="bg-white p-3.5 rounded-2xl border border-gray-100 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-3">
+        <div className="relative w-full sm:w-80">
+          <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
           <input
             type="text"
-            placeholder="Cari No. Trx, Pelanggan, Salesman..."
+            placeholder="Cari No. Trx, SKU, Nama Barang, Pelanggan..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && fetchData()}
-            className="w-full px-3.5 py-2 rounded-xl border border-gray-200 text-sm focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none"
+            className="w-full pl-9 pr-3.5 py-2 rounded-xl border border-gray-200 text-xs focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none bg-gray-50/50"
           />
         </div>
-        <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
-          <span className="text-xs text-gray-500">Tanggal:</span>
-          <input
-            type="date"
-            value={startDate}
-            onChange={(e) => setStartDate(e.target.value)}
-            className="px-3 py-1.5 rounded-xl border border-gray-200 text-xs text-gray-600"
-          />
-          <span className="text-xs text-gray-400">s/d</span>
-          <input
-            type="date"
-            value={endDate}
-            onChange={(e) => setEndDate(e.target.value)}
-            className="px-3 py-1.5 rounded-xl border border-gray-200 text-xs text-gray-600"
-          />
+
+        <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end text-xs text-gray-500">
+          <span>
+            Menampilkan <strong className="text-gray-900">{filteredData.length}</strong> dari{' '}
+            <strong className="text-gray-900">{data.length}</strong> transaksi
+          </span>
           <button
+            type="button"
             onClick={fetchData}
-            className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl text-xs font-medium transition"
+            disabled={loading}
+            title="Refresh Data"
+            className="p-2 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-xl transition"
           >
-            Terapkan
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
           </button>
         </div>
-      </section>
+      </div>
 
-      {/* 4. Table (F-Pattern Reading Grid) */}
+      {/* 5. Table (F-Pattern Reading Grid) */}
       <section
         id="rekap-barang-keluar-table-container"
         aria-label="Tabel Data Barang Keluar"
@@ -457,7 +573,7 @@ export default function BarangKeluar() {
             <thead className="bg-gray-50/75 border-b border-gray-100 text-xs font-semibold uppercase tracking-wider text-gray-500">
               <tr>
                 <th className="py-3.5 px-4">No. Transaksi</th>
-                <th className="py-3.5 px-4">Tanggal</th>
+                <th className="py-3.5 px-4">Tanggal &amp; Waktu</th>
                 <th className="py-3.5 px-4">Jalur Distribusi</th>
                 <th className="py-3.5 px-4">Pelanggan / Salesman</th>
                 <th className="py-3.5 px-4">Item Barang</th>
@@ -473,14 +589,14 @@ export default function BarangKeluar() {
                     Memuat data barang keluar...
                   </td>
                 </tr>
-              ) : data.length === 0 ? (
+              ) : filteredData.length === 0 ? (
                 <tr>
                   <td colSpan={8} className="py-12 text-center text-gray-400">
-                    Belum ada catatan barang keluar
+                    Belum ada catatan barang keluar pada filter yang dipilih.
                   </td>
                 </tr>
               ) : (
-                data.map((row) => (
+                filteredData.map((row) => (
                   <tr key={row.id} className="hover:bg-gray-50/50 transition">
                     <td className="py-3.5 px-4 font-mono text-xs font-bold text-gray-700">
                       <button
@@ -555,159 +671,273 @@ export default function BarangKeluar() {
         </footer>
       </section>
 
-      {/* Modal Buat Surat Loading */}
+      {/* Modal Buat Surat Loading (Desktop Landscape: Lurus RATA & Proporsional) */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden border border-gray-100">
-            <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-              <h2 className="font-bold text-gray-800">Buat Surat Loading / Barang Keluar</h2>
-              <button onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-gray-600 font-bold">
-                
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/50 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl lg:max-w-5xl max-h-[92vh] flex flex-col overflow-hidden border border-gray-100">
+            {/* Modal Header */}
+            <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-white shrink-0">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold">
+                  <Truck className="w-5 h-5" />
+                </div>
+                <div>
+                  <h2 className="font-bold text-gray-900 text-base sm:text-lg">
+                    Buat Surat Loading / Barang Keluar Grosir
+                  </h2>
+                  <p className="text-xs text-gray-500">
+                    Input daftar muatan barang untuk pelanggan, salesman, atau ekspedisi resmi.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsModalOpen(false)}
+                className="text-gray-400 hover:text-gray-600 p-1.5 rounded-lg hover:bg-gray-100 transition"
+                aria-label="Tutup"
+              >
+                <X className="w-5 h-5" />
               </button>
             </div>
-            <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+
+            {/* Modal Form Body */}
+            <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-5">
+              {/* Identitas Surat Jalan & Transaksi (Grid 3 Kolom Lurus Rata) */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 bg-gray-50/70 p-4 rounded-xl border border-gray-200/80">
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">Tanggal *</label>
+                  <label className="block text-xs font-bold text-gray-700 mb-1.5 uppercase tracking-wider">
+                    Tanggal Transaksi <span className="text-red-500">*</span>
+                  </label>
                   <input
                     type="date"
                     required
                     value={tanggal}
                     onChange={(e) => setTanggal(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm focus:border-emerald-500 outline-none"
+                    className="w-full h-10 px-3.5 py-2 rounded-xl border border-gray-200 text-xs sm:text-sm font-semibold focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 outline-none bg-white transition"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">Pelanggan / Toko *</label>
+                  <label className="block text-xs font-bold text-gray-700 mb-1.5 uppercase tracking-wider">
+                    Pelanggan / Toko Penerima <span className="text-red-500">*</span>
+                  </label>
                   <input
                     type="text"
                     required
-                    placeholder="Nama Toko / Agen"
+                    placeholder="Contoh: Toko Berkah Jaya / Bpk. Rudi"
                     value={pelanggan}
                     onChange={(e) => setPelanggan(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm focus:border-emerald-500 outline-none"
+                    className="w-full h-10 px-3.5 py-2 rounded-xl border border-gray-200 text-xs sm:text-sm font-semibold focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 outline-none bg-white transition"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">Nama Salesman</label>
+                  <label className="block text-xs font-bold text-gray-700 mb-1.5 uppercase tracking-wider">
+                    Nama Salesman / Driver
+                  </label>
                   <input
                     type="text"
-                    placeholder="Nama Sales"
+                    placeholder="Contoh: Salesman Ahmad / Driver Agus"
                     value={salesman}
                     onChange={(e) => setSalesman(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm focus:border-emerald-500 outline-none"
+                    className="w-full h-10 px-3.5 py-2 rounded-xl border border-gray-200 text-xs sm:text-sm font-semibold focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 outline-none bg-white transition"
                   />
                 </div>
               </div>
 
-              {/* Items Section */}
-              <div className="border-t border-gray-100 pt-3">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs font-bold uppercase tracking-wider text-gray-500">
-                    Daftar Barang Loading
-                  </span>
+              {/* Items Section (Tabel Input Multi-Baris Lurus RATA) */}
+              <div className="space-y-2.5">
+                <div className="flex items-center justify-between pb-1 border-b border-gray-100">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold uppercase tracking-wider text-emerald-800">
+                      Daftar Barang Loading ({items.length} Baris)
+                    </span>
+                    <span className="text-[11px] text-gray-400">• Pastikan stok fisik mencukupi</span>
+                  </div>
                   <button
                     type="button"
                     onClick={addItemRow}
-                    className="text-xs text-emerald-600 hover:text-emerald-700 font-semibold flex items-center gap-1"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-lg text-xs font-bold border border-emerald-200 transition"
                   >
-                    <span>＋</span> Tambah Baris
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Tambah Baris</span>
                   </button>
                 </div>
 
-                <div className="space-y-3">
-                  {items.map((row, idx) => (
-                    <div key={idx} className="p-3 bg-gray-50 rounded-xl border border-gray-200/60 space-y-2">
-                      <div className="grid grid-cols-1 sm:grid-cols-12 gap-2 items-center">
-                        <div className="sm:col-span-6">
-                          <label className="block text-[10px] font-semibold text-gray-500 mb-0.5">Pilih Produk</label>
-                          <select
-                            required
-                            value={row.sku}
-                            onChange={(e) => updateItemRow(idx, 'sku', e.target.value)}
-                            className="w-full px-2 py-1.5 rounded-lg border border-gray-200 text-xs focus:border-emerald-500 outline-none bg-white"
-                          >
-                            <option value="">-- Pilih Barang --</option>
-                            {inventoryList.map((i) => (
-                              <option key={i.sku} value={i.sku}>
-                                {i.sku} - {i.namaBarang} (Stok: {i.stok})
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-                        <div className="sm:col-span-2">
-                          <label className="block text-[10px] font-semibold text-gray-500 mb-0.5">Qty</label>
-                          <input
-                            type="number"
-                            required
-                            min="1"
-                            value={row.qty}
-                            onChange={(e) => updateItemRow(idx, 'qty', parseInt(e.target.value) || 0)}
-                            className="w-full px-2 py-1.5 rounded-lg border border-gray-200 text-xs focus:border-emerald-500 outline-none bg-white font-bold text-gray-800"
-                          />
-                          <div className="flex flex-wrap gap-1 mt-1">
-                            {[1, 5, 10, 20, 50].map((add) => (
-                              <button
-                                key={add}
-                                type="button"
-                                onClick={() => updateItemRow(idx, 'qty', (row.qty || 0) + add)}
-                                className="text-[9px] px-1.5 py-0.2 bg-gray-200/80 hover:bg-gray-300 text-gray-700 font-bold rounded"
-                              >
-                                +{add}
-                              </button>
-                            ))}
+                {/* Table Header Row (Lurus Rata Sempurna) */}
+                <div className="hidden sm:grid grid-cols-12 gap-2.5 px-3.5 py-2 bg-slate-900 text-white rounded-xl text-xs font-bold uppercase tracking-wider items-center">
+                  <div className="col-span-5">Pilih Produk / Item Barang *</div>
+                  <div className="col-span-2 text-center">Jumlah Qty (pcs) *</div>
+                  <div className="col-span-2 text-right">Harga Jual (Rp) *</div>
+                  <div className="col-span-2 text-right">Subtotal (Rp)</div>
+                  <div className="col-span-1 text-center">Aksi</div>
+                </div>
+
+                {/* Rows List */}
+                <div className="space-y-2">
+                  {items.map((row, idx) => {
+                    const subtotal = (Number(row.qty) || 0) * (Number(row.hargaJual) || 0);
+                    return (
+                      <div
+                        key={idx}
+                        className="p-3 bg-gray-50/80 rounded-xl border border-gray-200 hover:border-emerald-300 transition"
+                      >
+                        <div className="grid grid-cols-1 sm:grid-cols-12 gap-2.5 items-start">
+                          {/* Produk */}
+                          <div className="sm:col-span-5">
+                            <label className="sm:hidden block text-[11px] font-bold text-gray-700 mb-1">
+                              Pilih Produk *
+                            </label>
+                            <select
+                              required
+                              value={row.sku}
+                              onChange={(e) => updateItemRow(idx, 'sku', e.target.value)}
+                              className="w-full h-10 px-3 py-2 rounded-xl border border-gray-200 text-xs sm:text-sm font-semibold focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 outline-none bg-white transition"
+                            >
+                              <option value="">-- Pilih Barang dari Master --</option>
+                              {inventoryList.map((i) => (
+                                <option key={i.sku} value={i.sku}>
+                                  {i.sku} - {i.namaBarang} (Stok: {i.stok} pcs)
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+
+                          {/* Qty */}
+                          <div className="sm:col-span-2">
+                            <label className="sm:hidden block text-[11px] font-bold text-gray-700 mb-1">
+                              Jumlah Qty *
+                            </label>
+                            <input
+                              type="number"
+                              required
+                              min="1"
+                              value={row.qty}
+                              onChange={(e) => updateItemRow(idx, 'qty', parseInt(e.target.value) || 0)}
+                              className="w-full h-10 px-2 py-2 rounded-xl border border-gray-200 text-xs sm:text-sm font-extrabold focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 outline-none bg-white text-center transition"
+                            />
+                            {/* Quick Add Pills */}
+                            <div className="flex items-center justify-center gap-1 mt-1.5">
+                              {[1, 5, 10, 20, 50].map((add) => (
+                                <button
+                                  key={add}
+                                  type="button"
+                                  onClick={() => updateItemRow(idx, 'qty', (row.qty || 0) + add)}
+                                  className="text-[9px] px-1.5 py-0.5 bg-gray-200/90 hover:bg-emerald-200 hover:text-emerald-900 text-gray-700 font-bold rounded-md transition"
+                                  title={`Tambah +${add} pcs`}
+                                >
+                                  +{add}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* Harga Jual */}
+                          <div className="sm:col-span-2">
+                            <label className="sm:hidden block text-[11px] font-bold text-gray-700 mb-1">
+                              Harga Jual (Rp) *
+                            </label>
+                            <input
+                              type="number"
+                              min="0"
+                              value={row.hargaJual}
+                              onChange={(e) =>
+                                updateItemRow(idx, 'hargaJual', parseFloat(e.target.value) || 0)
+                              }
+                              className="w-full h-10 px-3 py-2 rounded-xl border border-gray-200 text-xs sm:text-sm font-semibold focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 outline-none bg-white text-right transition"
+                            />
+                          </div>
+
+                          {/* Subtotal Preview */}
+                          <div className="sm:col-span-2">
+                            <label className="sm:hidden block text-[11px] font-bold text-gray-700 mb-1">
+                              Subtotal (Rp)
+                            </label>
+                            <div className="w-full h-10 px-3 py-2 rounded-xl border border-gray-200 bg-emerald-50/60 text-xs sm:text-sm font-bold text-emerald-800 flex items-center justify-end font-mono">
+                              {formatRupiah(subtotal)}
+                            </div>
+                          </div>
+
+                          {/* Tombol Hapus Baris */}
+                          <div className="sm:col-span-1 flex items-center justify-center">
+                            <label className="sm:hidden block text-[11px] font-bold text-gray-700 mb-1 invisible">
+                              Aksi
+                            </label>
+                            <button
+                              type="button"
+                              onClick={() => removeItemRow(idx)}
+                              disabled={items.length === 1}
+                              className="w-10 h-10 flex items-center justify-center rounded-xl bg-red-50 hover:bg-red-100 text-red-600 disabled:opacity-25 transition border border-red-200/60"
+                              title="Hapus baris ini"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
                           </div>
                         </div>
-                        <div className="sm:col-span-3">
-                          <label className="block text-[10px] font-semibold text-gray-500 mb-0.5">Harga Jual (Rp)</label>
-                          <input
-                            type="number"
-                            value={row.hargaJual}
-                            onChange={(e) => updateItemRow(idx, 'hargaJual', parseFloat(e.target.value) || 0)}
-                            className="w-full px-2 py-1.5 rounded-lg border border-gray-200 text-xs focus:border-emerald-500 outline-none bg-white"
-                          />
-                        </div>
-                        <div className="sm:col-span-1 flex items-end justify-center pt-4">
-                          <button
-                            type="button"
-                            onClick={() => removeItemRow(idx)}
-                            disabled={items.length === 1}
-                            className="text-red-400 hover:text-red-600 font-bold disabled:opacity-20"
-                          >
-                            
-                          </button>
-                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
+                </div>
+
+                {/* Ringkasan Akumulasi Total Loading */}
+                <div className="p-3.5 bg-emerald-50 rounded-xl border border-emerald-200 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs sm:text-sm">
+                  <div className="flex items-center gap-3 text-emerald-900 font-medium">
+                    <span>
+                      Total Macam: <strong className="font-bold">{items.length} Barang</strong>
+                    </span>
+                    <span>&bull;</span>
+                    <span>
+                      Total Qty:{' '}
+                      <strong className="font-bold font-mono">
+                        {items.reduce((acc, r) => acc + (Number(r.qty) || 0), 0)} pcs
+                      </strong>
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-gray-600 font-semibold">Grand Total Muatan:</span>
+                    <span className="text-base sm:text-lg font-black text-emerald-800 font-mono">
+                      {formatRupiah(
+                        items.reduce(
+                          (acc, r) =>
+                            acc + (Number(r.qty) || 0) * (Number(r.hargaJual) || 0),
+                          0
+                        )
+                      )}
+                    </span>
+                  </div>
                 </div>
               </div>
 
+              {/* Catatan */}
               <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1">Catatan Pengiriman</label>
+                <label className="block text-xs font-bold text-gray-700 mb-1.5 uppercase tracking-wider">
+                  Catatan Pengiriman / Ekspedisi
+                </label>
                 <textarea
                   rows={2}
-                  placeholder="Catatan tambahan bila ada..."
+                  placeholder="Catatan nomor polisi armada, sopir, atau instruksi serah terima barang..."
                   value={keterangan}
                   onChange={(e) => setKeterangan(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm focus:border-emerald-500 outline-none"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 text-xs sm:text-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 outline-none transition resize-none bg-white"
                 />
               </div>
 
-              <div className="pt-3 border-t border-gray-100 flex justify-end gap-2">
+              {/* Fixed Footer Actions */}
+              <div className="pt-3 border-t border-gray-100 flex items-center justify-end gap-3 shrink-0">
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2 border border-gray-200 text-gray-600 rounded-xl text-sm font-medium hover:bg-gray-50 transition"
+                  className="px-5 py-2.5 border border-gray-200 text-gray-700 rounded-xl text-xs sm:text-sm font-semibold hover:bg-gray-100 transition"
                 >
                   Batal
                 </button>
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-semibold transition disabled:opacity-50"
+                  className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-300 text-white rounded-xl text-xs sm:text-sm font-bold shadow-md shadow-emerald-600/20 transition flex items-center gap-2"
                 >
-                  {submitting ? 'Menyimpan...' : 'Simpan Surat Loading'}
+                  {submitting && (
+                    <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  )}
+                  <span>Simpan Surat Loading</span>
                 </button>
               </div>
             </form>

@@ -1,14 +1,15 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
-import { Camera, Calendar, DollarSign, Building2, CreditCard, CheckCircle2, AlertCircle, Trash2, Sparkles, FileText, Download } from 'lucide-react';
-import { formatTanggal, formatRupiah } from '@/shared/lib/utils';
+import { Camera, Calendar, DollarSign, Building2, CreditCard, CheckCircle2, AlertCircle, Trash2, Sparkles, FileText, Download, Search, RefreshCw } from 'lucide-react';
+import { formatTanggal, formatTanggalWaktu, formatRupiah } from '@/shared/lib/utils';
 import { useBarcodeScanner } from '@/shared/hooks/useBarcodeScanner';
 import CameraBarcodeScanner from '@/shared/components/ui/CameraBarcodeScanner';
 import { ToastFloater, ToastData } from '@/shared/components/ui/ToastFloater';
 import DocumentModalViewer, { DocumentData } from '@/shared/components/documents/DocumentModalViewer';
-import { exportToCsv, exportReportToPdfA4Landscape } from '@/shared/lib/exportDoc';
+import { exportToCsv, exportRekapToPdfA4Landscape } from '@/shared/lib/exportDoc';
+import DateTimeFilterBar from '@/shared/components/ui/DateTimeFilterBar';
 
 // ============================================================
 // PAGE: Barang Masuk (Purchasing & Penerimaan Stok)
@@ -58,6 +59,7 @@ export default function BarangMasuk() {
   const [search, setSearch] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+  const [filterLabel, setFilterLabel] = useState('Semua Waktu');
 
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -345,12 +347,34 @@ export default function BarangMasuk() {
     });
   };
 
+  // Client-side precise filter by datetime and search
+  const filteredData = useMemo(() => {
+    return data.filter((item) => {
+      // Datetime precision filter
+      const itemTime = new Date(item.tanggal).getTime();
+      if (startDate && itemTime < new Date(startDate).getTime()) return false;
+      if (endDate && itemTime > new Date(endDate).getTime()) return false;
+
+      // Search keyword filter
+      if (search) {
+        const q = search.toLowerCase();
+        const matchSku = item.sku.toLowerCase().includes(q);
+        const matchNama = item.namaBarang.toLowerCase().includes(q);
+        const matchSup = (item.supplier || '').toLowerCase().includes(q);
+        const matchFaktur = (item.noFaktur || '').toLowerCase().includes(q);
+        if (!matchSku && !matchNama && !matchSup && !matchFaktur) return false;
+      }
+
+      return true;
+    });
+  }, [data, startDate, endDate, search]);
+
   const handleExportExcel = () => {
     exportToCsv({
-      filename: 'Rekap_Barang_Masuk',
-      data,
+      filename: `Rekap_Barang_Masuk_${new Date().toISOString().slice(0, 10)}`,
+      data: filteredData,
       columns: [
-        { header: 'Tanggal', accessor: (r) => formatTanggal(r.tanggal) },
+        { header: 'Tanggal & Jam', accessor: (r) => formatTanggalWaktu(r.tanggal) },
         { header: 'No. Faktur / Ref', accessor: (r) => r.noFaktur || '-' },
         { header: 'SKU', accessor: (r) => r.sku },
         { header: 'Nama Barang', accessor: (r) => r.namaBarang },
@@ -359,8 +383,7 @@ export default function BarangMasuk() {
         { header: 'Harga Beli (Rp)', accessor: (r) => Number(r.hargaBeli || 0) },
         {
           header: 'Total Pembelian (Rp)',
-          accessor: (r) =>
-            Number(r.totalBeli || Number(r.qty) * Number(r.hargaBeli || 0)),
+          accessor: (r) => Number(r.totalBeli || Number(r.qty) * Number(r.hargaBeli || 0)),
         },
         { header: 'Suplier Pemasok', accessor: (r) => r.supplier || '-' },
         {
@@ -377,23 +400,83 @@ export default function BarangMasuk() {
   };
 
   const handleExportPdfA4 = async () => {
-    await exportReportToPdfA4Landscape(
-      'rekap-barang-masuk-table-container',
-      'Rekap_Barang_Masuk_A4_Landscape',
-      'Rekapitulasi Barang Masuk & PO Loading'
-    );
+    let totalQty = 0;
+    let totalBeli = 0;
+
+    const rows = filteredData.map((item, idx) => {
+      totalQty += Number(item.qty || 0);
+      const subtotal = Number(item.totalBeli || Number(item.qty) * Number(item.hargaBeli || 0));
+      totalBeli += subtotal;
+
+      return [
+        String(idx + 1),
+        formatTanggalWaktu(item.tanggal),
+        item.noFaktur || '-',
+        item.supplier || 'Suplier Resmi',
+        `${item.namaBarang} (${item.sku})`,
+        `${item.qty} ${item.satuan || 'pcs'}`,
+        formatRupiah(Number(item.hargaBeli || 0)),
+        formatRupiah(subtotal),
+        item.skemaBayar === 'hutang' ? 'Hutang (Tempo)' : 'Lunas (Kas)',
+      ];
+    });
+
+    const summaryFooter = [
+      'TOTAL REKAPITULASI',
+      '',
+      '',
+      '',
+      `${filteredData.length} Penerimaan`,
+      `${totalQty.toLocaleString('id-ID')} pcs`,
+      '',
+      formatRupiah(totalBeli),
+      '',
+    ];
+
+    await exportRekapToPdfA4Landscape({
+      title: 'Rekapitulasi Barang Masuk, Pembelian & PO Loading Suplier',
+      divisi: 'Divisi Manufaktur (Pabrik & Distribusi)',
+      cabang: 'Gudang Pusat',
+      periodeFilter: filterLabel || 'Semua Waktu',
+      operator: 'Super Administrator',
+      columns: [
+        'No',
+        'Tanggal & Jam',
+        'No. Faktur / Ref',
+        'Suplier Pemasok',
+        'Item Barang (SKU)',
+        'Qty Masuk',
+        'Harga Beli (Rp)',
+        'Total Beli (Rp)',
+        'Skema Bayar',
+      ],
+      rows,
+      summaryFooter,
+      columnStyles: {
+        0: { halign: 'center', cellWidth: 10 },
+        1: { halign: 'center', cellWidth: 28 },
+        2: { halign: 'center', cellWidth: 26 },
+        3: { cellWidth: 38 },
+        4: { fontStyle: 'bold', cellWidth: 55 },
+        5: { halign: 'center', fontStyle: 'bold', cellWidth: 24 },
+        6: { halign: 'right', cellWidth: 28 },
+        7: { halign: 'right', fontStyle: 'bold', cellWidth: 34 },
+        8: { halign: 'center', cellWidth: 30 },
+      },
+      filename: `Rekap_Barang_Masuk_${new Date().toISOString().slice(0, 10)}_A4_Landscape`,
+    });
   };
 
   // ============================================================
   // SECTION: Render
   // ============================================================
   return (
-    <div className="space-y-6 max-w-7xl mx-auto pb-12">
+    <div className="space-y-5 max-w-7xl mx-auto pb-12">
       {/* Toast Alert Floater dengan Keterangan & Penyebab */}
       <ToastFloater toast={toast} onClose={() => setToast(null)} />
 
-      {/* 1. Header (F-Pattern Top Row) */}
-      <header className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
+      {/* 1. Header (F-Pattern Top Row — Tata Letak Proporsional & Rapi) */}
+      <header className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 mb-1">
             <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800">
@@ -401,89 +484,92 @@ export default function BarangMasuk() {
             </span>
             <span className="text-xs text-gray-400">&bull; Integrasi Kas &amp; Neraca Otomatis</span>
           </div>
-          <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Barang Masuk</h1>
-          <p className="text-xs text-gray-500 mt-1">
+          <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Barang Masuk &amp; PO Loading</h1>
+          <p className="text-xs text-gray-500 mt-0.5">
             Pencatatan stok masuk dari Suplier resmi dengan skema bayar Tunai Lunas (Kas) atau Hutang Dagang (Credit).
           </p>
         </div>
+
         <div className="flex flex-wrap items-center gap-2.5">
-          <button
-            type="button"
-            onClick={handleExportExcel}
-            className="inline-flex items-center gap-1.5 px-3 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 rounded-xl text-xs font-semibold border border-emerald-200 transition"
-            title="Export Rekapitulasi Data Barang Masuk ke Excel CSV"
-          >
-            <Download className="w-3.5 h-3.5 text-emerald-600" />
-            <span>Rekap Excel</span>
-          </button>
-          <button
-            type="button"
-            onClick={handleExportPdfA4}
-            className="inline-flex items-center gap-1.5 px-3 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-semibold transition"
-            title="Export Rekapitulasi Laporan PDF Kertas A4 Landscape"
-          >
-            <FileText className="w-3.5 h-3.5 text-slate-300" />
-            <span>PDF (A4 Landscape)</span>
-          </button>
+          {/* Tombol Ekspor Berpasangan (Toolbar Pill) */}
+          <div className="inline-flex items-center rounded-xl border border-gray-200 bg-gray-50/80 p-1 shadow-xs">
+            <button
+              type="button"
+              onClick={handleExportExcel}
+              className="inline-flex items-center gap-1.5 px-3 py-2 bg-white hover:bg-emerald-50 text-emerald-800 hover:text-emerald-900 rounded-lg text-xs font-bold border border-gray-100 transition shadow-xs"
+              title="Ekspor Rekapitulasi Data Barang Masuk ke Excel CSV"
+            >
+              <Download className="w-3.5 h-3.5 text-emerald-600" />
+              <span>Rekap Excel</span>
+            </button>
+            <button
+              type="button"
+              onClick={handleExportPdfA4}
+              className="inline-flex items-center gap-1.5 px-3 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs font-bold transition shadow-xs ml-1"
+              title="Ekspor Rekapitulasi Laporan PDF Kertas A4 Landscape dengan KOP Surat Resmi"
+            >
+              <FileText className="w-3.5 h-3.5 text-slate-300" />
+              <span>PDF (A4 Landscape)</span>
+            </button>
+          </div>
+
           <Link
             href="/suplier"
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold transition border border-slate-200"
+            className="inline-flex items-center gap-1.5 px-3.5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold transition border border-slate-200"
           >
             <Building2 className="w-4 h-4 text-slate-600" />
             <span>Suplier ({suppliers.length})</span>
           </Link>
           <button
             onClick={openModal}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs sm:text-sm font-semibold shadow-md shadow-emerald-600/20 transition"
+            className="inline-flex items-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white rounded-xl text-xs sm:text-sm font-bold shadow-md shadow-emerald-600/20 transition"
           >
             <span>＋</span> Catat Barang Masuk
           </button>
         </div>
       </header>
 
-      {/* 2. Filters (F-Pattern Second Row) */}
-      <section aria-label="Filter dan Pencarian" className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex flex-col md:flex-row gap-4 items-center justify-between">
-        <div className="w-full md:w-80">
+      {/* 2. Filter Periode Custom Fleksibel: Jam, Hari, Minggu, Bulan, Tahun */}
+      <DateTimeFilterBar
+        initialPreset="ALL"
+        onFilterChange={(sIso, eIso, lbl) => {
+          setStartDate(sIso);
+          setEndDate(eIso);
+          setFilterLabel(lbl);
+        }}
+      />
+
+      {/* 3. Pencarian Cepat & Info Total Data */}
+      <div className="bg-white p-3.5 rounded-2xl border border-gray-100 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-3">
+        <div className="relative w-full sm:w-80">
+          <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
           <input
             type="text"
             placeholder="Cari SKU, Nama Barang, Suplier, No Faktur..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && fetchData()}
-            className="w-full px-3.5 py-2 rounded-xl border border-gray-200 text-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 outline-none transition"
+            className="w-full pl-9 pr-3.5 py-2 rounded-xl border border-gray-200 text-xs focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none bg-gray-50/50"
           />
         </div>
-        <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
-          <span className="text-xs font-semibold text-gray-600">Periode:</span>
-          <input
-            type="date"
-            value={startDate}
-            onChange={(e) => setStartDate(e.target.value)}
-            className="px-3 py-1.5 rounded-xl border border-gray-200 text-xs focus:border-emerald-500 outline-none"
-          />
-          <span className="text-xs text-gray-400">s/d</span>
-          <input
-            type="date"
-            value={endDate}
-            onChange={(e) => setEndDate(e.target.value)}
-            className="px-3 py-1.5 rounded-xl border border-gray-200 text-xs focus:border-emerald-500 outline-none"
-          />
-          {(startDate || endDate || search) && (
-            <button
-              onClick={() => {
-                setStartDate('');
-                setEndDate('');
-                setSearch('');
-              }}
-              className="text-xs text-red-600 hover:underline px-2 py-1"
-            >
-              Reset
-            </button>
-          )}
-        </div>
-      </section>
 
-      {/* 3. Table Section (F-Pattern Reading Grid) */}
+        <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end text-xs text-gray-500">
+          <span>
+            Menampilkan <strong className="text-gray-900">{filteredData.length}</strong> dari{' '}
+            <strong className="text-gray-900">{data.length}</strong> transaksi masuk
+          </span>
+          <button
+            type="button"
+            onClick={fetchData}
+            disabled={loading}
+            title="Refresh Data"
+            className="p-2 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-xl transition"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+          </button>
+        </div>
+      </div>
+
+      {/* 4. Table Section (F-Pattern Reading Grid) */}
       <section
         id="rekap-barang-masuk-table-container"
         aria-label="Daftar Riwayat Barang Masuk"
@@ -493,7 +579,7 @@ export default function BarangMasuk() {
           <table className="w-full text-left text-sm text-gray-600">
             <thead className="bg-gray-50/75 border-b border-gray-100 text-xs font-semibold uppercase tracking-wider text-gray-500">
               <tr>
-                <th className="py-3.5 px-4">Tanggal</th>
+                <th className="py-3.5 px-4">Tanggal &amp; Waktu</th>
                 <th className="py-3.5 px-4">SKU / Nama Barang</th>
                 <th className="py-3.5 px-4">Jumlah</th>
                 <th className="py-3.5 px-4">Harga Beli &amp; Total</th>
@@ -514,15 +600,15 @@ export default function BarangMasuk() {
                     </div>
                   </td>
                 </tr>
-              ) : data.length === 0 ? (
+              ) : filteredData.length === 0 ? (
                 <tr>
                   <td colSpan={9} className="py-16 text-center text-gray-400">
                     <p className="font-semibold text-gray-600 text-base">Belum ada riwayat barang masuk</p>
-                    <p className="text-xs text-gray-400 mt-1">Klik tombol &quot;Catat Barang Masuk&quot; untuk mencatat pengadaan baru.</p>
+                    <p className="text-xs text-gray-400 mt-1">Belum ada transaksi barang masuk pada rentang waktu yang dipilih.</p>
                   </td>
                 </tr>
               ) : (
-                data.map((row) => {
+                filteredData.map((row) => {
                   const total = Number(row.totalBeli) || (Number(row.qty) * (Number(row.hargaBeli) || 0));
                   return (
                     <tr key={row.id} className="hover:bg-emerald-50/30 transition group">

@@ -44,6 +44,24 @@ export function formatTanggalPendek(date: Date | string | null | undefined): str
 }
 
 /**
+ * Format tanggal dan waktu: DD/MM/YYYY HH:mm WIB
+ */
+export function formatTanggalWaktu(date: Date | string | null | undefined): string {
+  if (!date) return '-';
+  const d = typeof date === 'string' ? new Date(date) : date;
+  const tgl = d.toLocaleDateString('id-ID', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  });
+  const jam = d.toLocaleTimeString('id-ID', {
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+  return `${tgl} ${jam} WIB`;
+}
+
+/**
  * Format stok dengan satuan karton/pcs
  */
 export function formatStok(stok: number, pakaiKarton: boolean, settingPcs: number): string {

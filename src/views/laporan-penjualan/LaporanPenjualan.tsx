@@ -22,10 +22,11 @@ import {
   Coffee,
   FileText,
 } from 'lucide-react';
-import { formatRupiah, formatTanggal } from '@/shared/lib/utils';
+import { formatRupiah, formatTanggal, formatTanggalWaktu } from '@/shared/lib/utils';
 import { useDivision } from '@/shared/context/DivisionContext';
 import { exportToCsv } from '@/shared/lib/export';
-import { exportReportToPdfA4Landscape } from '@/shared/lib/exportDoc';
+import { exportRekapToPdfA4Landscape } from '@/shared/lib/exportDoc';
+import DateTimeFilterBar from '@/shared/components/ui/DateTimeFilterBar';
 
 interface PenjualanRow {
   id: string;
@@ -66,9 +67,9 @@ export default function LaporanPenjualanView() {
   const [search, setSearch] = useState('');
 
   // Filters
-  const [presetDate, setPresetDate] = useState<'today' | '7days' | 'month' | 'all'>('month');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+  const [filterLabel, setFilterLabel] = useState('Semua Waktu');
   const [selectedSales, setSelectedSales] = useState('all');
 
   const fetchData = async () => {
@@ -94,26 +95,6 @@ export default function LaporanPenjualanView() {
   };
 
   useEffect(() => {
-    const now = new Date();
-    if (presetDate === 'today') {
-      const d = now.toISOString().slice(0, 10);
-      setStartDate(d);
-      setEndDate(d);
-    } else if (presetDate === '7days') {
-      const past = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-      setStartDate(past.toISOString().slice(0, 10));
-      setEndDate(now.toISOString().slice(0, 10));
-    } else if (presetDate === 'month') {
-      const first = new Date(now.getFullYear(), now.getMonth(), 1);
-      setStartDate(first.toISOString().slice(0, 10));
-      setEndDate(now.toISOString().slice(0, 10));
-    } else {
-      setStartDate('');
-      setEndDate('');
-    }
-  }, [presetDate]);
-
-  useEffect(() => {
     fetchData();
   }, [startDate, endDate, selectedSales, division]);
 
@@ -122,22 +103,33 @@ export default function LaporanPenjualanView() {
   }, [data]);
 
   const filteredData = useMemo(() => {
-    return data.filter(
-      (d) =>
-        d.trxId.toLowerCase().includes(search.toLowerCase()) ||
-        d.namaBarang.toLowerCase().includes(search.toLowerCase()) ||
-        d.pelanggan?.toLowerCase().includes(search.toLowerCase()) ||
-        d.sku.toLowerCase().includes(search.toLowerCase())
-    );
-  }, [data, search]);
+    return data.filter((d) => {
+      // Datetime precision filter
+      const itemTime = new Date(d.tanggal).getTime();
+      if (startDate && itemTime < new Date(startDate).getTime()) return false;
+      if (endDate && itemTime > new Date(endDate).getTime()) return false;
+
+      // Search keyword filter
+      if (search) {
+        const q = search.toLowerCase();
+        const matchTrx = d.trxId.toLowerCase().includes(q);
+        const matchNama = d.namaBarang.toLowerCase().includes(q);
+        const matchPel = (d.pelanggan || '').toLowerCase().includes(q);
+        const matchSku = d.sku.toLowerCase().includes(q);
+        if (!matchTrx && !matchNama && !matchPel && !matchSku) return false;
+      }
+
+      return true;
+    });
+  }, [data, startDate, endDate, search]);
 
   const handleExportExcel = () => {
     exportToCsv({
-      filename: `Laporan_Penjualan_${division}`,
+      filename: `Laporan_Penjualan_${division}_${new Date().toISOString().slice(0, 10)}`,
       data: filteredData,
       columns: [
         { header: 'No. Transaksi', accessor: (r) => r.trxId },
-        { header: 'Tanggal', accessor: (r) => formatTanggal(r.tanggal) },
+        { header: 'Tanggal & Jam', accessor: (r) => formatTanggalWaktu(r.tanggal) },
         { header: 'Pelanggan', accessor: (r) => r.pelanggan || '-' },
         { header: 'Salesman / Kasir', accessor: (r) => r.salesman || '-' },
         { header: 'SKU', accessor: (r) => r.sku },
@@ -155,17 +147,94 @@ export default function LaporanPenjualanView() {
   };
 
   const handleExportPdfA4Landscape = async () => {
-    await exportReportToPdfA4Landscape(
-      'rekap-penjualan-table-container',
-      `Laporan_Penjualan_${division}_A4_Landscape`,
-      'Laporan Penjualan & Laba Bersih'
-    );
+    let totalQty = 0;
+    let totalNetto = 0;
+    let totalHpp = 0;
+    let totalLaba = 0;
+
+    const rows = filteredData.map((r, idx) => {
+      totalQty += Number(r.qty || 0);
+      totalNetto += Number(r.total || 0);
+      totalHpp += Number(r.hppTotal || 0);
+      totalLaba += Number(r.laba || 0);
+
+      return [
+        String(idx + 1),
+        formatTanggalWaktu(r.tanggal),
+        r.trxId,
+        r.pelanggan ? `${r.pelanggan}${r.salesman ? ` (${r.salesman})` : ''}` : r.salesman || '-',
+        `${r.namaBarang} (${r.sku})`,
+        `${r.qty} ${r.satuan}`,
+        formatRupiah(Number(r.hargaJual || 0)),
+        r.diskon && Number(r.diskon) > 0 ? `${r.diskon}%` : '-',
+        formatRupiah(Number(r.total || 0)),
+        formatRupiah(Number(r.hppTotal || 0)),
+        formatRupiah(Number(r.laba || 0)),
+        `${r.marginPct}%`,
+      ];
+    });
+
+    const avgMargin = totalNetto > 0 ? ((totalLaba / totalNetto) * 100).toFixed(1) : '0';
+
+    const summaryFooter = [
+      'TOTAL REKAPITULASI',
+      '',
+      '',
+      '',
+      `${filteredData.length} Transaksi`,
+      `${totalQty.toLocaleString('id-ID')} pcs`,
+      '',
+      '',
+      formatRupiah(totalNetto),
+      formatRupiah(totalHpp),
+      formatRupiah(totalLaba),
+      `${avgMargin}%`,
+    ];
+
+    await exportRekapToPdfA4Landscape({
+      title: 'Rekapitulasi Laporan Penjualan, HPP Modal & Laba Bersih',
+      divisi: isManufaktur ? 'Divisi Manufaktur (Pabrik)' : 'Divisi F&B Hub',
+      cabang: 'Gudang Pusat',
+      periodeFilter: filterLabel || 'Semua Waktu',
+      operator: 'Super Administrator',
+      columns: [
+        'No',
+        'Tanggal & Jam',
+        'No. Trx',
+        'Pelanggan / Sales',
+        'Item Barang (SKU)',
+        'Qty',
+        'Harga (Rp)',
+        'Diskon',
+        'Netto (Rp)',
+        'HPP (Rp)',
+        'Laba (Rp)',
+        'Margin',
+      ],
+      rows,
+      summaryFooter,
+      columnStyles: {
+        0: { halign: 'center', cellWidth: 8 },
+        1: { halign: 'center', cellWidth: 26 },
+        2: { halign: 'center', cellWidth: 24 },
+        3: { cellWidth: 32 },
+        4: { fontStyle: 'bold', cellWidth: 46 },
+        5: { halign: 'center', fontStyle: 'bold', cellWidth: 16 },
+        6: { halign: 'right', cellWidth: 20 },
+        7: { halign: 'center', cellWidth: 14 },
+        8: { halign: 'right', fontStyle: 'bold', cellWidth: 24 },
+        9: { halign: 'right', cellWidth: 22 },
+        10: { halign: 'right', fontStyle: 'bold', cellWidth: 24 },
+        11: { halign: 'center', fontStyle: 'bold', cellWidth: 17 },
+      },
+      filename: `Laporan_Penjualan_${division}_${new Date().toISOString().slice(0, 10)}_A4_Landscape`,
+    });
   };
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto pb-12">
-      {/* 1. Header (F-Pattern Top Row) */}
-      <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div className="space-y-5 max-w-7xl mx-auto pb-12">
+      {/* 1. Header (F-Pattern Top Row — Tata Letak Proporsional & Rapi) */}
+      <header className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div>
           <div className="inline-flex items-center gap-2 px-3 py-1 bg-emerald-50 text-emerald-700 rounded-full text-xs font-semibold mb-1 border border-emerald-100">
             <TrendingUp className="w-3.5 h-3.5" />
@@ -174,45 +243,52 @@ export default function LaporanPenjualanView() {
           <h1 className="text-2xl font-bold text-gray-900 tracking-tight">
             Laporan Penjualan &amp; Laba Bersih
           </h1>
-          <p className="text-xs text-gray-500">
+          <p className="text-xs text-gray-500 mt-0.5">
             Detail real-time omset penjualan, HPP (Harga Pokok), potongan diskon, dan margin laba bersih.
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
-          <button
-            onClick={fetchData}
-            className="inline-flex items-center gap-2 px-3.5 py-2 bg-white hover:bg-gray-50 border border-gray-200 text-gray-700 rounded-xl text-xs font-semibold transition shadow-sm"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-            <span>Segarkan</span>
-          </button>
-          <button
-            onClick={handleExportExcel}
-            className="inline-flex items-center gap-2 px-3.5 py-2 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-xs font-semibold transition shadow-sm"
-            title="Ekspor data penjualan ke file CSV / Excel"
-          >
-            <Download className="w-3.5 h-3.5" />
-            <span>Ekspor Excel</span>
-          </button>
-          <button
-            type="button"
-            onClick={handleExportPdfA4Landscape}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-semibold transition shadow-sm"
-            title="Ekspor Rekap Laporan PDF Kertas A4 Landscape"
-          >
-            <FileText className="w-3.5 h-3.5 text-slate-300" />
-            <span>PDF (A4 Landscape)</span>
-          </button>
+        <div className="flex flex-wrap items-center gap-2.5">
+          {/* Tombol Ekspor Berpasangan (Toolbar Pill) */}
+          <div className="inline-flex items-center rounded-xl border border-gray-200 bg-gray-50/80 p-1 shadow-xs">
+            <button
+              onClick={handleExportExcel}
+              className="inline-flex items-center gap-1.5 px-3 py-2 bg-white hover:bg-emerald-50 text-emerald-800 hover:text-emerald-900 rounded-lg text-xs font-bold border border-gray-100 transition shadow-xs"
+              title="Ekspor data penjualan ke file CSV / Excel"
+            >
+              <Download className="w-3.5 h-3.5 text-emerald-600" />
+              <span>Rekap Excel</span>
+            </button>
+            <button
+              type="button"
+              onClick={handleExportPdfA4Landscape}
+              className="inline-flex items-center gap-1.5 px-3 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs font-bold transition shadow-xs ml-1"
+              title="Ekspor Rekap Laporan PDF Kertas A4 Landscape dengan KOP Surat Resmi"
+            >
+              <FileText className="w-3.5 h-3.5 text-slate-300" />
+              <span>PDF (A4 Landscape)</span>
+            </button>
+          </div>
+
           <button
             onClick={() => window.print()}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-gray-900 hover:bg-gray-800 text-white rounded-xl text-xs font-semibold transition shadow-sm"
+            className="inline-flex items-center gap-2 px-4 py-2.5 bg-gray-900 hover:bg-gray-800 text-white rounded-xl text-xs sm:text-sm font-semibold transition shadow-sm"
           >
             <Printer className="w-3.5 h-3.5" />
             <span>Cetak Laporan</span>
           </button>
         </div>
       </header>
+
+      {/* 2. Filter Periode Custom Fleksibel: Jam, Hari, Minggu, Bulan, Tahun */}
+      <DateTimeFilterBar
+        initialPreset="THIS_MONTH"
+        onFilterChange={(sIso, eIso, lbl) => {
+          setStartDate(sIso);
+          setEndDate(eIso);
+          setFilterLabel(lbl);
+        }}
+      />
 
       {/* 2. Stat Cards Metric (Grid Layout Archetype) */}
       <section aria-label="Ringkasan Metrik Laba" className="grid grid-cols-2 lg:grid-cols-5 gap-3.5">
@@ -277,64 +353,30 @@ export default function LaporanPenjualanView() {
         </article>
       </section>
 
-      {/* 3. Filter Controls Bar (F-Pattern Second Row) */}
-      <section aria-label="Filter Periode Penjualan" className="bg-white p-4 rounded-2xl border border-gray-200/80 shadow-sm space-y-3">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          {/* Preset Buttons */}
-          <div className="flex items-center gap-1.5 text-xs">
-            <span className="text-gray-400 text-xs mr-1 hidden sm:inline">Periode:</span>
-            {[
-              { id: 'today', label: 'Hari Ini' },
-              { id: '7days', label: '7 Hari' },
-              { id: 'month', label: 'Bulan Ini' },
-              { id: 'all', label: 'Semua' },
-            ].map((p) => (
-              <button
-                key={p.id}
-                onClick={() => setPresetDate(p.id as any)}
-                className={`px-3 py-1.5 rounded-xl font-semibold transition ${
-                  presetDate === p.id
-                    ? 'bg-gray-900 text-white shadow-sm'
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200/80'
-                }`}
-              >
-                {p.label}
-              </button>
-            ))}
-          </div>
+      {/* 3. Filter Sales & Pencarian (F-Pattern Second Row) */}
+      <section aria-label="Filter Kasir dan Pencarian" className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-3">
+        {/* Search input */}
+        <div className="relative w-full sm:w-96">
+          <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Cari nomor transaksi, nama barang, SKU, atau pelanggan..."
+            className="w-full bg-gray-50/70 border border-gray-200 rounded-xl pl-9 pr-4 py-2 text-xs text-gray-800 placeholder:text-gray-400 focus:outline-none focus:border-emerald-500"
+          />
+        </div>
 
-          {/* Date Picker Custom */}
-          <div className="flex items-center gap-2 text-xs">
-            <input
-              type="date"
-              value={startDate}
-              onChange={(e) => {
-                setStartDate(e.target.value);
-                setPresetDate('all');
-              }}
-              className="bg-gray-50 border border-gray-200 rounded-xl px-2.5 py-1.5 text-xs text-gray-700"
-            />
-            <span className="text-gray-400">s/d</span>
-            <input
-              type="date"
-              value={endDate}
-              onChange={(e) => {
-                setEndDate(e.target.value);
-                setPresetDate('all');
-              }}
-              className="bg-gray-50 border border-gray-200 rounded-xl px-2.5 py-1.5 text-xs text-gray-700"
-            />
-          </div>
-
-          {/* Kasir / Sales Filter */}
-          <div className="flex items-center gap-2 text-xs">
-            <span className="text-gray-400 hidden sm:inline">Kasir/Sales:</span>
+        {/* Kasir / Sales Filter & Info */}
+        <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end text-xs">
+          <div className="flex items-center gap-1.5">
+            <span className="text-gray-500 font-semibold hidden sm:inline">Kasir/Sales:</span>
             <select
               value={selectedSales}
               onChange={(e) => setSelectedSales(e.target.value)}
-              className="bg-gray-50 border border-gray-200 rounded-xl px-2.5 py-1.5 text-xs text-gray-700 font-medium"
+              className="bg-gray-50 border border-gray-200 rounded-xl px-3 py-1.5 text-xs text-gray-800 font-semibold outline-none focus:border-emerald-500"
             >
-              <option value="all">Semua Kasir / Sales</option>
+              <option value="all">Semua Kasir &amp; Sales</option>
               {salesmenList.map((s) => (
                 <option key={s} value={s}>
                   {s}
@@ -342,18 +384,10 @@ export default function LaporanPenjualanView() {
               ))}
             </select>
           </div>
-        </div>
 
-        {/* Search input */}
-        <div className="relative pt-1">
-          <Search className="w-4 h-4 absolute left-3 top-1/2 text-gray-400" />
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Cari nomor transaksi, nama barang, SKU, atau pelanggan..."
-            className="w-full bg-gray-50/70 border border-gray-200 rounded-xl pl-9 pr-4 py-2 text-xs text-gray-800 placeholder:text-gray-400 focus:outline-none focus:border-gray-400"
-          />
+          <span className="text-gray-500">
+            Menampilkan <strong className="text-gray-900">{filteredData.length}</strong> data
+          </span>
         </div>
       </section>
 
