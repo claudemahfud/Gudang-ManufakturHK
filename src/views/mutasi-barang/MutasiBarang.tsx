@@ -2,6 +2,9 @@
 
 import { useState, useEffect } from 'react';
 import { formatTanggal } from '@/shared/lib/utils';
+import { FileText, Download } from 'lucide-react';
+import DocumentModalViewer, { DocumentData } from '@/shared/components/documents/DocumentModalViewer';
+import { exportToCsv, exportReportToPdfA4Landscape } from '@/shared/lib/exportDoc';
 
 // ============================================================
 // PAGE: Mutasi Barang
@@ -43,6 +46,55 @@ export default function MutasiBarang() {
   });
 
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+  const [selectedDocument, setSelectedDocument] = useState<DocumentData | null>(null);
+
+  const handleViewFakturMutasi = (row: ItemMutasi) => {
+    setSelectedDocument({
+      type: 'faktur_mutasi',
+      nomor: `MUT-${row.id.substring(0, 8).toUpperCase()}`,
+      tanggal: row.tanggal,
+      pihakTerkaitLabel: 'Cabang Tujuan:',
+      pihakTerkaitNama: row.ke || 'Cabang Tujuan',
+      kontakInfo: `Asal Pengiriman: ${row.dari || 'Gudang Pusat'}`,
+      petugasLabel: 'Operator Pengirim:',
+      petugasNama: row.createdBy || 'Petugas Mutasi',
+      items: [
+        {
+          sku: row.sku,
+          namaBarang: row.namaBarang,
+          qty: row.qty,
+          satuan: 'pcs',
+          keterangan: `Mutasi dari ${row.dari} ke ${row.ke}`,
+        },
+      ],
+      catatan: row.keterangan || 'Surat Jalan / Faktur Mutasi resmi perpindahan stok antar unit cabang.',
+    });
+  };
+
+  const handleExportExcel = () => {
+    exportToCsv({
+      filename: 'Rekap_Mutasi_Barang',
+      data,
+      columns: [
+        { header: 'Tanggal', accessor: (r) => formatTanggal(r.tanggal) },
+        { header: 'SKU', accessor: (r) => r.sku },
+        { header: 'Nama Barang', accessor: (r) => r.namaBarang },
+        { header: 'Jumlah (Qty)', accessor: (r) => r.qty },
+        { header: 'Dari Lokasi', accessor: (r) => r.dari },
+        { header: 'Ke Lokasi', accessor: (r) => r.ke },
+        { header: 'Keterangan', accessor: (r) => r.keterangan || '-' },
+        { header: 'Operator', accessor: (r) => r.createdBy || '-' },
+      ],
+    });
+  };
+
+  const handleExportPdfA4 = async () => {
+    await exportReportToPdfA4Landscape(
+      'rekap-mutasi-barang-table-container',
+      'Rekap_Mutasi_Barang_A4_Landscape',
+      'Rekapitulasi Mutasi Barang Antar Cabang'
+    );
+  };
 
   const fetchData = async () => {
     setLoading(true);
@@ -158,15 +210,38 @@ export default function MutasiBarang() {
             Pencatatan perpindahan stok antar gudang, rak simpan, atau cabang
           </p>
         </div>
-        <button
-          onClick={() => setIsModalOpen(true)}
-          className="inline-flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-semibold shadow-sm transition"
-        >
-          <span>＋</span> Catat Mutasi
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={handleExportExcel}
+            className="inline-flex items-center gap-1.5 px-3 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 rounded-xl text-xs font-semibold border border-emerald-200 transition"
+            title="Export Rekapitulasi Data Mutasi ke Excel CSV"
+          >
+            <Download className="w-3.5 h-3.5 text-emerald-600" />
+            <span>Rekap Excel</span>
+          </button>
+          <button
+            type="button"
+            onClick={handleExportPdfA4}
+            className="inline-flex items-center gap-1.5 px-3 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-semibold transition"
+            title="Export Rekapitulasi Laporan PDF Kertas A4 Landscape"
+          >
+            <FileText className="w-3.5 h-3.5 text-slate-300" />
+            <span>PDF (A4 Landscape)</span>
+          </button>
+          <button
+            onClick={() => setIsModalOpen(true)}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs sm:text-sm font-semibold shadow-sm transition"
+          >
+            <span>＋</span> Catat Mutasi
+          </button>
+        </div>
       </div>
 
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+      <div
+        id="rekap-mutasi-barang-table-container"
+        className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden"
+      >
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm text-gray-600">
             <thead className="bg-gray-50/75 border-b border-gray-100 text-xs font-semibold uppercase tracking-wider text-gray-500">
@@ -219,13 +294,25 @@ export default function MutasiBarang() {
                     </td>
                     <td className="py-3.5 px-4 text-gray-700">{row.keterangan || '-'}</td>
                     <td className="py-3.5 px-4 text-xs text-gray-500">{row.createdBy || '-'}</td>
-                    <td className="py-3.5 px-4 text-center">
-                      <button
-                        onClick={() => handleDelete(row.id)}
-                        className="text-red-500 hover:text-red-700 text-xs font-semibold px-2 py-1 rounded hover:bg-red-50 transition"
-                      >
-                        Hapus
-                      </button>
+                    <td className="py-3.5 px-4 text-center whitespace-nowrap">
+                      <div className="inline-flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => handleViewFakturMutasi(row)}
+                          className="inline-flex items-center gap-1 px-2.5 py-1 bg-blue-50 hover:bg-blue-100 text-blue-800 rounded-lg text-xs font-semibold border border-blue-200 transition"
+                          title="Buka Formulir Faktur Mutasi (Export PDF / PNG A5)"
+                        >
+                          <FileText className="w-3.5 h-3.5 text-blue-600" />
+                          <span>Faktur Mutasi</span>
+                        </button>
+                        <button
+                          onClick={() => handleDelete(row.id)}
+                          className="text-red-500 hover:text-red-700 text-xs font-semibold p-1.5 rounded hover:bg-red-50 transition"
+                          title="Hapus riwayat mutasi"
+                        >
+                          Hapus
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -359,6 +446,13 @@ export default function MutasiBarang() {
           </div>
         </div>
       )}
+
+      {/* Formulir Faktur Mutasi Antar Cabang Modal Viewer (Export PDF & PNG Kertas A5) */}
+      <DocumentModalViewer
+        data={selectedDocument}
+        isOpen={Boolean(selectedDocument)}
+        onClose={() => setSelectedDocument(null)}
+      />
     </div>
   );
 }

@@ -20,10 +20,12 @@ import {
   ShoppingBag,
   Factory,
   Coffee,
+  FileText,
 } from 'lucide-react';
 import { formatRupiah, formatTanggal } from '@/shared/lib/utils';
 import { useDivision } from '@/shared/context/DivisionContext';
 import { exportToCsv } from '@/shared/lib/export';
+import { exportReportToPdfA4Landscape } from '@/shared/lib/exportDoc';
 
 interface PenjualanRow {
   id: string;
@@ -152,6 +154,14 @@ export default function LaporanPenjualanView() {
     });
   };
 
+  const handleExportPdfA4Landscape = async () => {
+    await exportReportToPdfA4Landscape(
+      'rekap-penjualan-table-container',
+      `Laporan_Penjualan_${division}_A4_Landscape`,
+      'Laporan Penjualan & Laba Bersih'
+    );
+  };
+
   return (
     <div className="space-y-6 max-w-7xl mx-auto pb-12">
       {/* 1. Header (F-Pattern Top Row) */}
@@ -159,17 +169,17 @@ export default function LaporanPenjualanView() {
         <div>
           <div className="inline-flex items-center gap-2 px-3 py-1 bg-emerald-50 text-emerald-700 rounded-full text-xs font-semibold mb-1 border border-emerald-100">
             <TrendingUp className="w-3.5 h-3.5" />
-            <span>Analisis Finansial & Profitabilitas</span>
+            <span>Analisis Finansial &amp; Profitabilitas</span>
           </div>
           <h1 className="text-2xl font-bold text-gray-900 tracking-tight">
-            Laporan Penjualan & Laba Bersih
+            Laporan Penjualan &amp; Laba Bersih
           </h1>
           <p className="text-xs text-gray-500">
             Detail real-time omset penjualan, HPP (Harga Pokok), potongan diskon, dan margin laba bersih.
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <button
             onClick={fetchData}
             className="inline-flex items-center gap-2 px-3.5 py-2 bg-white hover:bg-gray-50 border border-gray-200 text-gray-700 rounded-xl text-xs font-semibold transition shadow-sm"
@@ -184,6 +194,15 @@ export default function LaporanPenjualanView() {
           >
             <Download className="w-3.5 h-3.5" />
             <span>Ekspor Excel</span>
+          </button>
+          <button
+            type="button"
+            onClick={handleExportPdfA4Landscape}
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-semibold transition shadow-sm"
+            title="Ekspor Rekap Laporan PDF Kertas A4 Landscape"
+          >
+            <FileText className="w-3.5 h-3.5 text-slate-300" />
+            <span>PDF (A4 Landscape)</span>
           </button>
           <button
             onClick={() => window.print()}
@@ -339,7 +358,7 @@ export default function LaporanPenjualanView() {
       </section>
 
       {/* 4. Data Table (F-Pattern Reading Grid) */}
-      <section aria-label="Tabel Laporan Penjualan" className="bg-white rounded-2xl border border-gray-200/80 shadow-sm overflow-hidden">
+      <section id="rekap-penjualan-table-container" aria-label="Tabel Laporan Penjualan" className="bg-white rounded-2xl border border-gray-200/80 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
             <thead className="bg-gray-50 border-b border-gray-200 text-gray-500 font-semibold uppercase tracking-wider">

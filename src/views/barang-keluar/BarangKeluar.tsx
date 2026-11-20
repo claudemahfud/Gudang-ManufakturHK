@@ -2,7 +2,9 @@
 
 import { useState, useEffect } from 'react';
 import { formatTanggal, formatRupiah } from '@/shared/lib/utils';
-import { Truck, ShoppingBag, Layers, CheckCircle2, AlertCircle, ShieldAlert, Lock, KeyRound, X, Check } from 'lucide-react';
+import { Truck, ShoppingBag, Layers, CheckCircle2, AlertCircle, ShieldAlert, Lock, KeyRound, X, Check, FileText, Download } from 'lucide-react';
+import DocumentModalViewer, { DocumentData } from '@/shared/components/documents/DocumentModalViewer';
+import { exportToCsv, exportReportToPdfA4Landscape } from '@/shared/lib/exportDoc';
 
 // ============================================================
 // PAGE: Barang Keluar & Loading Penjualan
@@ -67,6 +69,7 @@ export default function BarangKeluar() {
 
   // Modal Invoice View
   const [invoiceData, setInvoiceData] = useState<any | null>(null);
+  const [selectedDocument, setSelectedDocument] = useState<DocumentData | null>(null);
 
   // Supervisor PIN Delete Protection (Anti-Fraud)
   const [deleteTarget, setDeleteTarget] = useState<ItemKeluar | null>(null);
@@ -255,12 +258,62 @@ export default function BarangKeluar() {
       const json = await res.json();
       if (json.success) {
         setInvoiceData(json.data);
+        setSelectedDocument({
+          type: 'faktur_penjualan',
+          nomor: json.data.trxId || `INV-${trxId}`,
+          tanggal: json.data.tanggal,
+          pihakTerkaitLabel: 'Pelanggan / Toko:',
+          pihakTerkaitNama: json.data.pelanggan || 'Pelanggan Grosir B2B',
+          kontakInfo: 'Penjualan Saluran B2B / Grosir',
+          petugasLabel: 'Salesman / Sales:',
+          petugasNama: json.data.salesman || json.data.createdBy || 'Admin Penjualan',
+          items: (json.data.items || []).map((it: any) => ({
+            sku: it.sku,
+            namaBarang: it.namaBarang,
+            qty: it.qty,
+            satuan: it.satuan || 'pcs',
+            harga: Number(it.hargaJual) || 0,
+            total: Number(it.total) || (Number(it.qty) * Number(it.hargaJual || 0)),
+            keterangan: it.diskon && Number(it.diskon) > 0 ? `Diskon: ${it.diskon}%` : undefined,
+          })),
+          totalNilai: Number(json.data.total) || 0,
+          catatan: 'Barang telah diperiksa dan diserahkan dalam kondisi baik & lengkap. Faktur sah B2B.',
+        });
       } else {
         showToast('Faktur tidak ditemukan', 'error');
       }
     } catch {
       showToast('Gagal memuat faktur', 'error');
     }
+  };
+
+  const handleExportExcel = () => {
+    exportToCsv({
+      filename: 'Rekap_Barang_Keluar_Grosir',
+      data,
+      columns: [
+        { header: 'No. Trx / Faktur', accessor: (r) => r.trxId },
+        { header: 'Tanggal', accessor: (r) => formatTanggal(r.tanggal) },
+        { header: 'Saluran', accessor: (r) => r.channel || 'GROSIR' },
+        { header: 'SKU', accessor: (r) => r.sku },
+        { header: 'Nama Barang', accessor: (r) => r.namaBarang },
+        { header: 'Jumlah (Qty)', accessor: (r) => r.qty },
+        { header: 'Satuan', accessor: (r) => r.satuan },
+        { header: 'Harga Jual (Rp)', accessor: (r) => Number(r.hargaJual || 0) },
+        { header: 'Total Penjualan (Rp)', accessor: (r) => Number(r.total || 0) },
+        { header: 'Pelanggan', accessor: (r) => r.pelanggan || '-' },
+        { header: 'Salesman', accessor: (r) => r.salesman || '-' },
+        { header: 'Operator', accessor: (r) => r.createdBy || '-' },
+      ],
+    });
+  };
+
+  const handleExportPdfA4 = async () => {
+    await exportReportToPdfA4Landscape(
+      'rekap-barang-keluar-table-container',
+      'Rekap_Barang_Keluar_A4_Landscape',
+      'Rekapitulasi Barang Keluar & Faktur Penjualan'
+    );
   };
 
   // ============================================================
@@ -289,12 +342,32 @@ export default function BarangKeluar() {
             Surat loading barang penjualan, ekspedisi ke pelanggan & mutasi keluar
           </p>
         </div>
-        <button
-          onClick={() => setIsModalOpen(true)}
-          className="inline-flex items-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-semibold shadow-sm transition"
-        >
-          <span>＋</span> Buat Surat Loading / Keluar
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={handleExportExcel}
+            className="inline-flex items-center gap-1.5 px-3 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 rounded-xl text-xs font-semibold border border-emerald-200 transition"
+            title="Export Rekapitulasi Data Barang Keluar ke Excel CSV"
+          >
+            <Download className="w-3.5 h-3.5 text-emerald-600" />
+            <span>Rekap Excel</span>
+          </button>
+          <button
+            type="button"
+            onClick={handleExportPdfA4}
+            className="inline-flex items-center gap-1.5 px-3 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-semibold transition"
+            title="Export Rekapitulasi Laporan PDF Kertas A4 Landscape"
+          >
+            <FileText className="w-3.5 h-3.5 text-slate-300" />
+            <span>PDF (A4 Landscape)</span>
+          </button>
+          <button
+            onClick={() => setIsModalOpen(true)}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs sm:text-sm font-semibold shadow-sm transition"
+          >
+            <span>＋</span> Buat Surat Loading / Keluar
+          </button>
+        </div>
       </header>
 
       {/* 2. Channel Switcher Tabs (Semantic <nav>) */}
@@ -374,7 +447,11 @@ export default function BarangKeluar() {
       </section>
 
       {/* 4. Table (F-Pattern Reading Grid) */}
-      <section aria-label="Tabel Data Barang Keluar" className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+      <section
+        id="rekap-barang-keluar-table-container"
+        aria-label="Tabel Data Barang Keluar"
+        className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden"
+      >
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm text-gray-600">
             <thead className="bg-gray-50/75 border-b border-gray-100 text-xs font-semibold uppercase tracking-wider text-gray-500">
@@ -859,6 +936,13 @@ export default function BarangKeluar() {
           </aside>
         </div>
       )}
+
+      {/* Formulir Faktur Penjualan Grosir B2B Modal Viewer (Export PDF & PNG Kertas A5) */}
+      <DocumentModalViewer
+        data={selectedDocument}
+        isOpen={Boolean(selectedDocument)}
+        onClose={() => setSelectedDocument(null)}
+      />
     </div>
   );
 }

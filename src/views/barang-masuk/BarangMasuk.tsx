@@ -2,11 +2,13 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Camera, Calendar, DollarSign, Building2, CreditCard, CheckCircle2, AlertCircle, Trash2, Sparkles } from 'lucide-react';
+import { Camera, Calendar, DollarSign, Building2, CreditCard, CheckCircle2, AlertCircle, Trash2, Sparkles, FileText, Download } from 'lucide-react';
 import { formatTanggal, formatRupiah } from '@/shared/lib/utils';
 import { useBarcodeScanner } from '@/shared/hooks/useBarcodeScanner';
 import CameraBarcodeScanner from '@/shared/components/ui/CameraBarcodeScanner';
 import { ToastFloater, ToastData } from '@/shared/components/ui/ToastFloater';
+import DocumentModalViewer, { DocumentData } from '@/shared/components/documents/DocumentModalViewer';
+import { exportToCsv, exportReportToPdfA4Landscape } from '@/shared/lib/exportDoc';
 
 // ============================================================
 // PAGE: Barang Masuk (Purchasing & Penerimaan Stok)
@@ -61,6 +63,7 @@ export default function BarangMasuk() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isCameraOpen, setIsCameraOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [selectedDocument, setSelectedDocument] = useState<DocumentData | null>(null);
 
   // Form State
   const defaultJatuhTempo = () => {
@@ -313,6 +316,74 @@ export default function BarangMasuk() {
     }
   };
 
+  const handleViewPoLoadingDoc = (row: ItemMasuk) => {
+    const total = Number(row.totalBeli) || Number(row.qty) * (Number(row.hargaBeli) || 0);
+    setSelectedDocument({
+      type: 'po_loading',
+      nomor: row.noFaktur || `PO-${row.id.substring(0, 8).toUpperCase()}`,
+      tanggal: row.tanggal,
+      pihakTerkaitLabel: 'Suplier Pemasok:',
+      pihakTerkaitNama: row.supplier || 'Suplier Resmi',
+      noFakturRef: row.noFaktur,
+      skemaBayar: row.skemaBayar || 'lunas',
+      jatuhTempo: row.jatuhTempo,
+      petugasLabel: 'Petugas Penerima:',
+      petugasNama: row.createdBy || 'Petugas Gudang',
+      items: [
+        {
+          sku: row.sku,
+          namaBarang: row.namaBarang,
+          qty: row.qty,
+          satuan: row.satuan,
+          harga: Number(row.hargaBeli) || 0,
+          total: total,
+          keterangan: row.keterangan,
+        },
+      ],
+      totalNilai: total,
+      catatan: row.keterangan || 'Muatan barang masuk telah diverifikasi fisik dan dimasukkan ke stok.',
+    });
+  };
+
+  const handleExportExcel = () => {
+    exportToCsv({
+      filename: 'Rekap_Barang_Masuk',
+      data,
+      columns: [
+        { header: 'Tanggal', accessor: (r) => formatTanggal(r.tanggal) },
+        { header: 'No. Faktur / Ref', accessor: (r) => r.noFaktur || '-' },
+        { header: 'SKU', accessor: (r) => r.sku },
+        { header: 'Nama Barang', accessor: (r) => r.namaBarang },
+        { header: 'Jumlah (Qty)', accessor: (r) => r.qty },
+        { header: 'Satuan', accessor: (r) => r.satuan },
+        { header: 'Harga Beli (Rp)', accessor: (r) => Number(r.hargaBeli || 0) },
+        {
+          header: 'Total Pembelian (Rp)',
+          accessor: (r) =>
+            Number(r.totalBeli || Number(r.qty) * Number(r.hargaBeli || 0)),
+        },
+        { header: 'Suplier Pemasok', accessor: (r) => r.supplier || '-' },
+        {
+          header: 'Skema Bayar',
+          accessor: (r) => (r.skemaBayar === 'hutang' ? 'Hutang (Tempo)' : 'Bayar Lunas (Kas)'),
+        },
+        {
+          header: 'Jatuh Tempo',
+          accessor: (r) => (r.jatuhTempo ? formatTanggal(r.jatuhTempo) : '-'),
+        },
+        { header: 'Petugas Penerima', accessor: (r) => r.createdBy || '-' },
+      ],
+    });
+  };
+
+  const handleExportPdfA4 = async () => {
+    await exportReportToPdfA4Landscape(
+      'rekap-barang-masuk-table-container',
+      'Rekap_Barang_Masuk_A4_Landscape',
+      'Rekapitulasi Barang Masuk & PO Loading'
+    );
+  };
+
   // ============================================================
   // SECTION: Render
   // ============================================================
@@ -335,17 +406,35 @@ export default function BarangMasuk() {
             Pencatatan stok masuk dari Suplier resmi dengan skema bayar Tunai Lunas (Kas) atau Hutang Dagang (Credit).
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2.5">
+          <button
+            type="button"
+            onClick={handleExportExcel}
+            className="inline-flex items-center gap-1.5 px-3 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 rounded-xl text-xs font-semibold border border-emerald-200 transition"
+            title="Export Rekapitulasi Data Barang Masuk ke Excel CSV"
+          >
+            <Download className="w-3.5 h-3.5 text-emerald-600" />
+            <span>Rekap Excel</span>
+          </button>
+          <button
+            type="button"
+            onClick={handleExportPdfA4}
+            className="inline-flex items-center gap-1.5 px-3 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-semibold transition"
+            title="Export Rekapitulasi Laporan PDF Kertas A4 Landscape"
+          >
+            <FileText className="w-3.5 h-3.5 text-slate-300" />
+            <span>PDF (A4 Landscape)</span>
+          </button>
           <Link
             href="/suplier"
-            className="inline-flex items-center gap-1.5 px-3.5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs sm:text-sm font-semibold transition border border-slate-200"
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold transition border border-slate-200"
           >
             <Building2 className="w-4 h-4 text-slate-600" />
-            <span>Daftar Suplier ({suppliers.length})</span>
+            <span>Suplier ({suppliers.length})</span>
           </Link>
           <button
             onClick={openModal}
-            className="inline-flex items-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs sm:text-sm font-semibold shadow-md shadow-emerald-600/20 transition"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs sm:text-sm font-semibold shadow-md shadow-emerald-600/20 transition"
           >
             <span>＋</span> Catat Barang Masuk
           </button>
@@ -395,7 +484,11 @@ export default function BarangMasuk() {
       </section>
 
       {/* 3. Table Section (F-Pattern Reading Grid) */}
-      <section aria-label="Daftar Riwayat Barang Masuk" className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+      <section
+        id="rekap-barang-masuk-table-container"
+        aria-label="Daftar Riwayat Barang Masuk"
+        className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden"
+      >
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm text-gray-600">
             <thead className="bg-gray-50/75 border-b border-gray-100 text-xs font-semibold uppercase tracking-wider text-gray-500">
@@ -408,7 +501,7 @@ export default function BarangMasuk() {
                 <th className="py-3.5 px-4">Skema Bayar</th>
                 <th className="py-3.5 px-4">No. Faktur</th>
                 <th className="py-3.5 px-4">Petugas</th>
-                <th className="py-3.5 px-4 text-center">Aksi</th>
+                <th className="py-3.5 px-4 text-center">Aksi &amp; Dokumen</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -483,13 +576,24 @@ export default function BarangMasuk() {
                       </td>
                       <td className="py-3.5 px-4 text-xs text-gray-500 whitespace-nowrap">{row.createdBy || '-'}</td>
                       <td className="py-3.5 px-4 text-center whitespace-nowrap">
-                        <button
-                          onClick={() => handleDelete(row.id)}
-                          className="text-red-600 hover:text-red-700 hover:bg-red-50 px-2 py-1 rounded-lg text-xs font-semibold transition"
-                          title="Hapus riwayat barang masuk"
-                        >
-                          Hapus
-                        </button>
+                        <div className="inline-flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => handleViewPoLoadingDoc(row)}
+                            className="inline-flex items-center gap-1 px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 rounded-lg text-xs font-semibold border border-emerald-200 transition"
+                            title="Buka Formulir PO Loading (Export PDF / PNG A5)"
+                          >
+                            <FileText className="w-3.5 h-3.5 text-emerald-600" />
+                            <span>Formulir PO</span>
+                          </button>
+                          <button
+                            onClick={() => handleDelete(row.id)}
+                            className="text-red-600 hover:text-red-700 hover:bg-red-50 p-1.5 rounded-lg text-xs font-semibold transition"
+                            title="Hapus riwayat barang masuk"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );
@@ -846,6 +950,13 @@ export default function BarangMasuk() {
         onClose={() => setIsCameraOpen(false)}
         onScan={handleBarcodeScanned}
         title="Pindai Barcode Barang Masuk"
+      />
+
+      {/* Formulir PO Loading Modal Viewer (Export PDF & PNG Kertas A5) */}
+      <DocumentModalViewer
+        data={selectedDocument}
+        isOpen={Boolean(selectedDocument)}
+        onClose={() => setSelectedDocument(null)}
       />
     </div>
   );

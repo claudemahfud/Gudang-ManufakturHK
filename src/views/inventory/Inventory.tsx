@@ -731,7 +731,7 @@ export default function Inventory() {
                       {item.gramasi || item.varian ? (
                         <span>
                           {item.gramasi}
-                          {item.gramasi && item.varian ? ' &bull; ' : ''}
+                          {item.gramasi && item.varian ? ' • ' : ''}
                           {item.varian}
                         </span>
                       ) : (
