@@ -1,10 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { formatTanggal } from '@/shared/lib/utils';
-import { FileText, Download } from 'lucide-react';
+import { useState, useEffect, useMemo } from 'react';
+import { formatTanggal, formatTanggalWaktu } from '@/shared/lib/utils';
+import { FileText, Download, Plus, Trash2, Search, RefreshCw } from 'lucide-react';
 import DocumentModalViewer, { DocumentData } from '@/shared/components/documents/DocumentModalViewer';
-import { exportToCsv, exportReportToPdfA4Landscape } from '@/shared/lib/exportDoc';
+import { exportToCsv, exportRekapToPdfA4Landscape } from '@/shared/lib/exportDoc';
+import DateTimeFilterBar from '@/shared/components/ui/DateTimeFilterBar';
 
 // ============================================================
 // PAGE: PO & Loading Sheet
@@ -40,6 +41,10 @@ export default function PoLoading() {
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [search, setSearch] = useState('');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [filterLabel, setFilterLabel] = useState('Semua Waktu');
 
   const [tanggal, setTanggal] = useState(new Date().toISOString().split('T')[0]);
   const [supplier, setSupplier] = useState('');
@@ -53,13 +58,31 @@ export default function PoLoading() {
   const [selectedDocument, setSelectedDocument] = useState<DocumentData | null>(null);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
+  const filteredData = useMemo(() => {
+    return data.filter((item) => {
+      const itemTime = new Date(item.tanggal).getTime();
+      if (startDate && itemTime < new Date(startDate).getTime()) return false;
+      if (endDate && itemTime > new Date(endDate).getTime()) return false;
+
+      if (search) {
+        const q = search.toLowerCase();
+        const matchPo = (item.noPo || '').toLowerCase().includes(q);
+        const matchSup = (item.supplier || '').toLowerCase().includes(q);
+        const matchArmada = (item.armada || '').toLowerCase().includes(q);
+        const matchStatus = (item.status || '').toLowerCase().includes(q);
+        if (!matchPo && !matchSup && !matchArmada && !matchStatus) return false;
+      }
+      return true;
+    });
+  }, [data, startDate, endDate, search]);
+
   const handleExportExcel = () => {
     exportToCsv({
-      filename: 'Rekap_PO_Loading',
-      data,
+      filename: `Rekap_PO_Loading_${new Date().toISOString().slice(0, 10)}`,
+      data: filteredData,
       columns: [
         { header: 'No. PO', accessor: (r) => r.noPo },
-        { header: 'Tanggal', accessor: (r) => formatTanggal(r.tanggal) },
+        { header: 'Tanggal & Jam', accessor: (r) => formatTanggalWaktu(r.tanggal) },
         { header: 'Suplier', accessor: (r) => r.supplier || '-' },
         { header: 'Armada', accessor: (r) => r.armada || '-' },
         { header: 'Status', accessor: (r) => r.status.toUpperCase() },
@@ -70,11 +93,60 @@ export default function PoLoading() {
   };
 
   const handleExportPdfA4 = async () => {
-    await exportReportToPdfA4Landscape(
-      'rekap-po-loading-table-container',
-      'Rekap_PO_Loading_A4_Landscape',
-      'Rekapitulasi Purchase Order & Loading Sheet'
-    );
+    const rows = filteredData.map((item, idx) => {
+      return [
+        String(idx + 1),
+        formatTanggalWaktu(item.tanggal),
+        item.noPo,
+        item.supplier || '-',
+        item.armada || '-',
+        item.status.toUpperCase(),
+        item.catatan || '-',
+        item.createdBy || 'Petugas PO',
+      ];
+    });
+
+    const summaryFooter = [
+      'TOTAL PURCHASE ORDER',
+      '',
+      `${filteredData.length} Berkas PO`,
+      '',
+      '',
+      '',
+      '',
+      '',
+    ];
+
+    await exportRekapToPdfA4Landscape({
+      title: 'Rekapitulasi Purchase Order (PO) & Loading Sheet Pengadaan',
+      divisi: 'Divisi Manufaktur & Distribusi',
+      cabang: 'Gudang Pusat',
+      periodeFilter: filterLabel || 'Semua Waktu',
+      operator: 'Super Administrator',
+      columns: [
+        'No',
+        'Tanggal & Jam',
+        'No. PO',
+        'Supplier / Produsen',
+        'Armada Angkut',
+        'Status',
+        'Catatan',
+        'Dibuat Oleh',
+      ],
+      rows,
+      summaryFooter,
+      columnStyles: {
+        0: { halign: 'center', cellWidth: 10 },
+        1: { halign: 'center', cellWidth: 32 },
+        2: { fontStyle: 'bold', cellWidth: 35 },
+        3: { fontStyle: 'bold', cellWidth: 55 },
+        4: { cellWidth: 35 },
+        5: { halign: 'center', fontStyle: 'bold', cellWidth: 25 },
+        6: { cellWidth: 55 },
+        7: { cellWidth: 30 },
+      },
+      filename: `Rekap_PO_Loading_${new Date().toISOString().slice(0, 10)}_A4_Landscape`,
+    });
   };
 
   const fetchData = async () => {
@@ -286,6 +358,41 @@ export default function PoLoading() {
         </div>
       </div>
 
+      <DateTimeFilterBar
+        onFilterChange={(sIso, eIso, lbl) => {
+          setStartDate(sIso);
+          setEndDate(eIso);
+          setFilterLabel(lbl);
+        }}
+      />
+
+      <div className="bg-white p-3.5 rounded-2xl border border-gray-100 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-3">
+        <div className="relative w-full sm:w-96">
+          <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
+          <input
+            type="text"
+            placeholder="Cari No. PO, nama supplier, armada angkut, status..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full pl-9 pr-3.5 py-2 rounded-xl border border-gray-200 text-xs focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none bg-gray-50/50"
+          />
+        </div>
+        <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end text-xs text-gray-500">
+          <span>
+            Menampilkan <strong className="text-gray-900">{filteredData.length}</strong> data
+          </span>
+          <button
+            type="button"
+            onClick={fetchData}
+            disabled={loading}
+            title="Refresh Data"
+            className="p-2 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-xl transition"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+          </button>
+        </div>
+      </div>
+
       <div
         id="rekap-po-loading-table-container"
         className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden"
@@ -295,7 +402,7 @@ export default function PoLoading() {
             <thead className="bg-gray-50/75 border-b border-gray-100 text-xs font-semibold uppercase tracking-wider text-gray-500">
               <tr>
                 <th className="py-3.5 px-4">No. PO</th>
-                <th className="py-3.5 px-4">Tanggal</th>
+                <th className="py-3.5 px-4">Tanggal & Jam</th>
                 <th className="py-3.5 px-4">Supplier / Produsen</th>
                 <th className="py-3.5 px-4">Armada Angkut</th>
                 <th className="py-3.5 px-4">Status</th>
@@ -309,14 +416,14 @@ export default function PoLoading() {
                     Memuat daftar PO...
                   </td>
                 </tr>
-              ) : data.length === 0 ? (
+              ) : filteredData.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="py-12 text-center text-gray-400">
-                    Belum ada Purchase Order aktif
+                    Belum ada Purchase Order aktif pada periode ini
                   </td>
                 </tr>
               ) : (
-                data.map((row) => (
+                filteredData.map((row) => (
                   <tr key={row.id} className="hover:bg-gray-50/50 transition">
                     <td className="py-3.5 px-4 font-mono font-bold text-xs text-gray-800">
                       <button
@@ -329,7 +436,7 @@ export default function PoLoading() {
                       </button>
                     </td>
                     <td className="py-3.5 px-4 text-xs text-gray-600 whitespace-nowrap">
-                      {formatTanggal(row.tanggal)}
+                      {formatTanggalWaktu(row.tanggal)}
                     </td>
                     <td
                       className="py-3.5 px-4 cursor-pointer font-semibold text-gray-800 hover:text-emerald-700 transition"
@@ -403,15 +510,21 @@ export default function PoLoading() {
       {/* Modal Buat PO */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden border border-gray-100">
-            <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-              <h2 className="font-bold text-gray-800">Terbitkan Purchase Order</h2>
-              <button onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-gray-600 font-bold">
-                
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-4xl lg:max-w-5xl max-h-[92vh] flex flex-col overflow-hidden border border-gray-100">
+            <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-slate-50/50">
+              <div>
+                <h2 className="font-bold text-gray-800 text-base">Terbitkan Purchase Order (PO Loading)</h2>
+                <p className="text-xs text-gray-500">Formulir pesanan stok pengadaan ke produsen / supplier</p>
+              </div>
+              <button
+                onClick={() => setIsModalOpen(false)}
+                className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-gray-100 font-bold transition"
+              >
+                ✕
               </button>
             </div>
             <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
                   <label className="block text-xs font-semibold text-gray-700 mb-1">Tanggal PO *</label>
                   <input
@@ -419,7 +532,7 @@ export default function PoLoading() {
                     required
                     value={tanggal}
                     onChange={(e) => setTanggal(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm focus:border-emerald-500 outline-none"
+                    className="w-full h-10 px-3 rounded-xl border border-gray-200 text-sm focus:border-emerald-500 outline-none"
                   />
                 </div>
                 <div>
@@ -430,78 +543,114 @@ export default function PoLoading() {
                     placeholder="Contoh: PT. Sumber Makmur"
                     value={supplier}
                     onChange={(e) => setSupplier(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm focus:border-emerald-500 outline-none"
+                    className="w-full h-10 px-3 rounded-xl border border-gray-200 text-sm focus:border-emerald-500 outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">Armada / NoPol Pengangkut</label>
+                  <input
+                    type="text"
+                    placeholder="Truk Ekspedisi / B 9999 XX"
+                    value={armada}
+                    onChange={(e) => setArmada(e.target.value)}
+                    className="w-full h-10 px-3 rounded-xl border border-gray-200 text-sm focus:border-emerald-500 outline-none"
                   />
                 </div>
               </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1">Armada / NoPol Pengangkut</label>
-                <input
-                  type="text"
-                  placeholder="Truk Ekspedisi / B 9999 XX"
-                  value={armada}
-                  onChange={(e) => setArmada(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm focus:border-emerald-500 outline-none"
-                />
-              </div>
-
               <div className="border-t border-gray-100 pt-3">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs font-bold uppercase tracking-wider text-gray-500">
-                    Daftar Pesanan Produk
-                  </span>
+                  <div>
+                    <span className="text-xs font-bold uppercase tracking-wider text-gray-700">
+                      Daftar Pesanan Produk Loading
+                    </span>
+                    <p className="text-[11px] text-gray-400">Pastikan seluruh item dan kuantitas order sesuai kebutuhan gudang</p>
+                  </div>
                   <button
                     type="button"
                     onClick={addItemRow}
-                    className="text-xs text-emerald-600 hover:text-emerald-700 font-semibold"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 rounded-lg text-xs font-semibold border border-emerald-200 transition"
                   >
-                    ＋ Tambah Barang
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Tambah Barang</span>
                   </button>
                 </div>
 
-                <div className="space-y-2">
-                  {items.map((row, idx) => (
-                    <div key={idx} className="flex gap-2 items-center">
-                      <select
-                        required
-                        value={row.sku}
-                        onChange={(e) => updateItemRow(idx, 'sku', e.target.value)}
-                        className="flex-1 px-3 py-1.5 rounded-lg border border-gray-200 text-xs focus:border-emerald-500 outline-none"
+                <div className="bg-slate-50/75 p-3 rounded-2xl border border-slate-200/80 space-y-2">
+                  <div className="hidden sm:grid grid-cols-12 gap-2 px-2 py-1 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                    <div className="col-span-6">Pilih Produk *</div>
+                    <div className="col-span-3">Jumlah Order (Qty) *</div>
+                    <div className="col-span-2">Satuan</div>
+                    <div className="col-span-1 text-center">Aksi</div>
+                  </div>
+
+                  <div className="space-y-2">
+                    {items.map((row, idx) => (
+                      <div
+                        key={idx}
+                        className="grid grid-cols-1 sm:grid-cols-12 gap-2 items-center bg-white p-2.5 rounded-xl border border-slate-200/70 shadow-sm"
                       >
-                        <option value="">-- Pilih Produk --</option>
-                        {inventoryList.map((i) => (
-                          <option key={i.sku} value={i.sku}>
-                            {i.sku} - {i.namaBarang}
-                          </option>
-                        ))}
-                      </select>
-                      <input
-                        type="number"
-                        min="1"
-                        required
-                        placeholder="Qty Order"
-                        value={row.qtyOrder}
-                        onChange={(e) => updateItemRow(idx, 'qtyOrder', parseInt(e.target.value) || 0)}
-                        className="w-24 px-2 py-1.5 rounded-lg border border-gray-200 text-xs focus:border-emerald-500 outline-none"
-                      />
-                      <input
-                        type="text"
-                        placeholder="Satuan"
-                        value={row.satuan}
-                        onChange={(e) => updateItemRow(idx, 'satuan', e.target.value)}
-                        className="w-20 px-2 py-1.5 rounded-lg border border-gray-200 text-xs focus:border-emerald-500 outline-none"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => removeItemRow(idx)}
-                        disabled={items.length === 1}
-                        className="text-red-400 hover:text-red-600 disabled:opacity-20 px-1 font-bold"
-                      >
-                        
-                      </button>
-                    </div>
-                  ))}
+                        <div className="col-span-1 sm:col-span-6">
+                          <label className="sm:hidden block text-[11px] font-semibold text-gray-600 mb-1">
+                            Pilih Produk *
+                          </label>
+                          <select
+                            required
+                            value={row.sku}
+                            onChange={(e) => updateItemRow(idx, 'sku', e.target.value)}
+                            className="w-full h-10 px-3 rounded-xl border border-gray-200 text-xs focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none bg-white font-medium"
+                          >
+                            <option value="">-- Pilih Produk --</option>
+                            {inventoryList.map((i) => (
+                              <option key={i.sku} value={i.sku}>
+                                {i.sku} - {i.namaBarang}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        <div className="col-span-1 sm:col-span-3">
+                          <label className="sm:hidden block text-[11px] font-semibold text-gray-600 mb-1">
+                            Jumlah Order (Qty) *
+                          </label>
+                          <input
+                            type="number"
+                            min="1"
+                            required
+                            placeholder="Qty Order"
+                            value={row.qtyOrder}
+                            onChange={(e) => updateItemRow(idx, 'qtyOrder', parseInt(e.target.value) || 0)}
+                            className="w-full h-10 px-3 rounded-xl border border-gray-200 text-xs font-bold text-gray-800 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none"
+                          />
+                        </div>
+
+                        <div className="col-span-1 sm:col-span-2">
+                          <label className="sm:hidden block text-[11px] font-semibold text-gray-600 mb-1">
+                            Satuan
+                          </label>
+                          <input
+                            type="text"
+                            placeholder="Satuan"
+                            value={row.satuan}
+                            onChange={(e) => updateItemRow(idx, 'satuan', e.target.value)}
+                            className="w-full h-10 px-3 rounded-xl border border-gray-200 text-xs focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none"
+                          />
+                        </div>
+
+                        <div className="col-span-1 sm:col-span-1 flex items-center justify-center">
+                          <button
+                            type="button"
+                            onClick={() => removeItemRow(idx)}
+                            disabled={items.length === 1}
+                            className="w-8 h-8 rounded-lg flex items-center justify-center text-red-400 hover:text-red-600 hover:bg-red-50 disabled:opacity-20 transition"
+                            title="Hapus baris barang"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
 

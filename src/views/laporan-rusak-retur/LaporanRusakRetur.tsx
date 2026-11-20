@@ -22,11 +22,12 @@ import {
   Download,
   FileText,
 } from 'lucide-react';
-import { formatRupiah, formatTanggal } from '@/shared/lib/utils';
+import { formatRupiah, formatTanggal, formatTanggalWaktu } from '@/shared/lib/utils';
 import { useDivision } from '@/shared/context/DivisionContext';
 import { exportToCsv } from '@/shared/lib/export';
 import DocumentModalViewer, { DocumentData } from '@/shared/components/documents/DocumentModalViewer';
-import { exportReportToPdfA4Landscape } from '@/shared/lib/exportDoc';
+import { exportRekapToPdfA4Landscape } from '@/shared/lib/exportDoc';
+import DateTimeFilterBar from '@/shared/components/ui/DateTimeFilterBar';
 
 export default function LaporanRusakReturView() {
   const { division, isManufaktur, isFnb } = useDivision();
@@ -54,9 +55,9 @@ export default function LaporanRusakReturView() {
   });
 
   // Filters
-  const [presetDate, setPresetDate] = useState<'today' | '7days' | 'month' | 'all'>('month');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+  const [filterLabel, setFilterLabel] = useState('Semua Waktu');
 
   const fetchInventory = async () => {
     try {
@@ -143,46 +144,43 @@ export default function LaporanRusakReturView() {
   };
 
   useEffect(() => {
-    const now = new Date();
-    if (presetDate === 'today') {
-      const d = now.toISOString().slice(0, 10);
-      setStartDate(d);
-      setEndDate(d);
-    } else if (presetDate === '7days') {
-      const past = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-      setStartDate(past.toISOString().slice(0, 10));
-      setEndDate(now.toISOString().slice(0, 10));
-    } else if (presetDate === 'month') {
-      const first = new Date(now.getFullYear(), now.getMonth(), 1);
-      setStartDate(first.toISOString().slice(0, 10));
-      setEndDate(now.toISOString().slice(0, 10));
-    } else {
-      setStartDate('');
-      setEndDate('');
-    }
-  }, [presetDate]);
-
-  useEffect(() => {
     fetchData();
   }, [startDate, endDate, division]);
 
   const filteredRusak = useMemo(() => {
-    return (data.rusakList || []).filter(
-      (r) =>
-        r.namaBarang?.toLowerCase().includes(search.toLowerCase()) ||
-        r.sku?.toLowerCase().includes(search.toLowerCase()) ||
-        r.keterangan?.toLowerCase().includes(search.toLowerCase())
-    );
-  }, [data.rusakList, search]);
+    return (data.rusakList || []).filter((r) => {
+      const itemTime = new Date(r.tanggal).getTime();
+      if (startDate && itemTime < new Date(startDate).getTime()) return false;
+      if (endDate && itemTime > new Date(endDate).getTime()) return false;
+
+      if (search) {
+        const q = search.toLowerCase();
+        const matchNama = (r.namaBarang || '').toLowerCase().includes(q);
+        const matchSku = (r.sku || '').toLowerCase().includes(q);
+        const matchKet = (r.keterangan || '').toLowerCase().includes(q);
+        if (!matchNama && !matchSku && !matchKet) return false;
+      }
+      return true;
+    });
+  }, [data.rusakList, search, startDate, endDate]);
 
   const filteredRetur = useMemo(() => {
-    return (data.returList || []).filter(
-      (rt) =>
-        rt.namaBarang?.toLowerCase().includes(search.toLowerCase()) ||
-        rt.pelanggan?.toLowerCase().includes(search.toLowerCase()) ||
-        rt.alasan?.toLowerCase().includes(search.toLowerCase())
-    );
-  }, [data.returList, search]);
+    return (data.returList || []).filter((rt) => {
+      const itemTime = new Date(rt.tanggal).getTime();
+      if (startDate && itemTime < new Date(startDate).getTime()) return false;
+      if (endDate && itemTime > new Date(endDate).getTime()) return false;
+
+      if (search) {
+        const q = search.toLowerCase();
+        const matchNama = (rt.namaBarang || '').toLowerCase().includes(q);
+        const matchPel = (rt.pelanggan || '').toLowerCase().includes(q);
+        const matchAlasan = (rt.alasan || '').toLowerCase().includes(q);
+        const matchSku = (rt.sku || '').toLowerCase().includes(q);
+        if (!matchNama && !matchPel && !matchAlasan && !matchSku) return false;
+      }
+      return true;
+    });
+  }, [data.returList, search, startDate, endDate]);
 
   const handleExportExcel = () => {
     if (activeTab === 'rusak') {
@@ -190,7 +188,7 @@ export default function LaporanRusakReturView() {
         filename: `Laporan_Barang_Rusak_${division}`,
         data: filteredRusak,
         columns: [
-          { header: 'Tanggal', accessor: (r) => formatTanggal(r.tanggal) },
+          { header: 'Tanggal & Jam', accessor: (r) => formatTanggalWaktu(r.tanggal) },
           { header: 'SKU', accessor: (r) => r.sku },
           { header: 'Nama Produk', accessor: (r) => r.namaBarang },
           { header: 'Jumlah Rusak (Qty)', accessor: (r) => r.qty },
@@ -204,7 +202,7 @@ export default function LaporanRusakReturView() {
         filename: `Laporan_Barang_Retur_${division}`,
         data: filteredRetur,
         columns: [
-          { header: 'Tanggal', accessor: (r) => formatTanggal(r.tanggal) },
+          { header: 'Tanggal & Jam', accessor: (r) => formatTanggalWaktu(r.tanggal) },
           { header: 'Pelanggan', accessor: (r) => r.pelanggan || '-' },
           { header: 'SKU', accessor: (r) => r.sku },
           { header: 'Nama Produk', accessor: (r) => r.namaBarang },
@@ -218,11 +216,125 @@ export default function LaporanRusakReturView() {
   };
 
   const handleExportPdfA4 = async () => {
-    await exportReportToPdfA4Landscape(
-      'rekap-rusak-retur-table-container',
-      `Laporan_Rusak_Retur_${division}_A4_Landscape`,
-      'Laporan Barang Terbuang, Rusak & Retur'
-    );
+    if (activeTab === 'rusak') {
+      let totalQty = 0;
+      let totalRugi = 0;
+
+      const rows = filteredRusak.map((item, idx) => {
+        totalQty += Number(item.qty || 0);
+        totalRugi += Number(item.rugiModal || item.estimasiKerugian || 0);
+        return [
+          String(idx + 1),
+          formatTanggalWaktu(item.tanggal),
+          `${item.namaBarang} (${item.sku})`,
+          `${item.qty} pcs`,
+          formatRupiah(item.rugiModal || item.estimasiKerugian || 0),
+          item.keterangan || '-',
+          item.createdBy || 'Staff Gudang',
+        ];
+      });
+
+      const summaryFooter = [
+        'TOTAL KERUGIAN',
+        '',
+        `${filteredRusak.length} Item Rusak`,
+        `${totalQty.toLocaleString('id-ID')} pcs`,
+        formatRupiah(totalRugi),
+        '',
+        '',
+      ];
+
+      await exportRekapToPdfA4Landscape({
+        title: 'Rekapitulasi Laporan Barang Terbuang & Rusak',
+        divisi: isFnb ? 'Divisi Food & Beverage (F&B)' : 'Divisi Manufaktur & Distribusi',
+        cabang: 'Gudang Pusat',
+        periodeFilter: filterLabel || 'Semua Waktu',
+        operator: 'Super Administrator',
+        columns: [
+          'No',
+          'Tanggal & Jam',
+          'Item Barang (SKU)',
+          'Jumlah Rusak',
+          'Estimasi Rugi',
+          'Penyebab / Keterangan',
+          'Dicatat Oleh',
+        ],
+        rows,
+        summaryFooter,
+        columnStyles: {
+          0: { halign: 'center', cellWidth: 10 },
+          1: { halign: 'center', cellWidth: 32 },
+          2: { fontStyle: 'bold', cellWidth: 60 },
+          3: { halign: 'center', fontStyle: 'bold', cellWidth: 26 },
+          4: { halign: 'right', fontStyle: 'bold', cellWidth: 35 },
+          5: { cellWidth: 70 },
+          6: { cellWidth: 30 },
+        },
+        filename: `Rekap_Barang_Rusak_${division}_${new Date().toISOString().slice(0, 10)}_A4_Landscape`,
+      });
+    } else {
+      let totalQtyRetur = 0;
+
+      const rows = filteredRetur.map((item, idx) => {
+        totalQtyRetur += Number(item.qty || 0);
+        return [
+          String(idx + 1),
+          formatTanggalWaktu(item.tanggal),
+          item.noRetur || `RET-${String(item.id).substring(0, 8).toUpperCase()}`,
+          item.pelanggan || '-',
+          `${item.namaBarang} (${item.sku})`,
+          `${item.qty} pcs`,
+          item.alasan || '-',
+          item.status || 'Diterima',
+          item.createdBy || 'Petugas Gudang',
+        ];
+      });
+
+      const summaryFooter = [
+        'TOTAL RETUR',
+        '',
+        '',
+        '',
+        `${filteredRetur.length} Berkas Retur`,
+        `${totalQtyRetur.toLocaleString('id-ID')} pcs`,
+        '',
+        '',
+        '',
+      ];
+
+      await exportRekapToPdfA4Landscape({
+        title: 'Rekapitulasi Laporan Pengembalian Barang Retur Pelanggan',
+        divisi: isFnb ? 'Divisi Food & Beverage (F&B)' : 'Divisi Manufaktur & Distribusi',
+        cabang: 'Gudang Pusat',
+        periodeFilter: filterLabel || 'Semua Waktu',
+        operator: 'Super Administrator',
+        columns: [
+          'No',
+          'Tanggal & Jam',
+          'No. Retur',
+          'Pelanggan / Toko',
+          'Item Produk (SKU)',
+          'Qty Retur',
+          'Alasan Retur',
+          'Status',
+          'Penerima',
+        ],
+        rows,
+        summaryFooter,
+        columnStyles: {
+          0: { halign: 'center', cellWidth: 10 },
+          1: { halign: 'center', cellWidth: 30 },
+          2: { fontStyle: 'bold', cellWidth: 30 },
+          3: { cellWidth: 35 },
+          4: { fontStyle: 'bold', cellWidth: 50 },
+          5: { halign: 'center', fontStyle: 'bold', cellWidth: 22 },
+          6: { cellWidth: 45 },
+          7: { halign: 'center', cellWidth: 22 },
+          8: { cellWidth: 25 },
+        },
+        filename: `Rekap_Barang_Retur_${division}_${new Date().toISOString().slice(0, 10)}_A4_Landscape`,
+      });
+    }
   };
 
   const handleViewFormulirReturn = (row: any, isRetur: boolean) => {
@@ -387,63 +499,38 @@ export default function LaporanRusakReturView() {
       </div>
 
       {/* Filter Bar */}
-      <div className="bg-white p-4 rounded-2xl border border-gray-200/80 shadow-sm flex flex-wrap items-center justify-between gap-3 text-xs">
-        {/* Preset Buttons */}
-        <div className="flex items-center gap-1.5">
-          <span className="text-gray-400 mr-1 hidden sm:inline">Periode:</span>
-          {[
-            { id: 'today', label: 'Hari Ini' },
-            { id: '7days', label: '7 Hari' },
-            { id: 'month', label: 'Bulan Ini' },
-            { id: 'all', label: 'Semua' },
-          ].map((p) => (
-            <button
-              key={p.id}
-              onClick={() => setPresetDate(p.id as any)}
-              className={`px-3 py-1.5 rounded-xl font-semibold transition ${
-                presetDate === p.id
-                  ? 'bg-gray-900 text-white shadow-sm'
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200/80'
-              }`}
-            >
-              {p.label}
-            </button>
-          ))}
-        </div>
+      <DateTimeFilterBar
+        onFilterChange={(sIso, eIso, lbl) => {
+          setStartDate(sIso);
+          setEndDate(eIso);
+          setFilterLabel(lbl);
+        }}
+      />
 
-        {/* Date Picker Custom */}
-        <div className="flex items-center gap-2">
-          <input
-            type="date"
-            value={startDate}
-            onChange={(e) => {
-              setStartDate(e.target.value);
-              setPresetDate('all');
-            }}
-            className="bg-gray-50 border border-gray-200 rounded-xl px-2.5 py-1.5 text-xs text-gray-700"
-          />
-          <span className="text-gray-400">s/d</span>
-          <input
-            type="date"
-            value={endDate}
-            onChange={(e) => {
-              setEndDate(e.target.value);
-              setPresetDate('all');
-            }}
-            className="bg-gray-50 border border-gray-200 rounded-xl px-2.5 py-1.5 text-xs text-gray-700"
-          />
-        </div>
-
-        {/* Search */}
-        <div className="relative flex-1 min-w-[200px]">
-          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+      <div className="bg-white p-3.5 rounded-2xl border border-gray-100 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-3">
+        <div className="relative w-full sm:w-96">
+          <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
           <input
             type="text"
+            placeholder="Cari nama barang, SKU, pelanggan, keterangan, atau alasan..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Cari nama barang, SKU, pelanggan, atau alasan..."
-            className="w-full bg-gray-50/70 border border-gray-200 rounded-xl pl-9 pr-3 py-1.5 text-xs text-gray-800 placeholder:text-gray-400 focus:outline-none focus:border-gray-400"
+            className="w-full pl-9 pr-3.5 py-2 rounded-xl border border-gray-200 text-xs focus:border-red-500 focus:ring-1 focus:ring-red-500 outline-none bg-gray-50/50"
           />
+        </div>
+        <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end text-xs text-gray-500">
+          <span>
+            Menampilkan <strong className="text-gray-900">{activeTab === 'rusak' ? filteredRusak.length : filteredRetur.length}</strong> data
+          </span>
+          <button
+            type="button"
+            onClick={fetchData}
+            disabled={loading}
+            title="Refresh Data"
+            className="p-2 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-xl transition"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+          </button>
         </div>
       </div>
 
