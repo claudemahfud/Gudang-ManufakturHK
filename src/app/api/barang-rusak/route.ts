@@ -53,6 +53,29 @@ export async function POST(req: Request) {
     }
 
     const parsedQty = parseInt(qty, 10);
+    if (isNaN(parsedQty) || parsedQty <= 0) {
+      return NextResponse.json(
+        { success: false, message: 'Qty harus berupa angka lebih dari 0' },
+        { status: 400 }
+      );
+    }
+
+    const [inv] = await db
+      .select()
+      .from(inventory)
+      .where(eq(inventory.sku, sku))
+      .limit(1);
+
+    if (!inv || (inv.stok ?? 0) < parsedQty) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: `Stok tidak mencukupi untuk mencatat barang rusak "${namaBarang || sku}". Stok tersedia: ${inv?.stok ?? 0}, diminta: ${parsedQty}`,
+        },
+        { status: 400 }
+      );
+    }
+
     const user = (session.user as any)?.name || (session.user as any)?.username || 'System';
 
     const [row] = await db

@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/shared/lib/db';
-import { inventory } from '@/shared/lib/db/schema';
+import { inventory, logs } from '@/shared/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { auth } from '@/shared/lib/auth/config';
+import { requireAuthRole, ROLES_EXECUTIVE } from '@/shared/lib/auth/rbac';
 
 // ============================================================
 // API ROUTE: Detail Item Inventory (Update & Delete)
@@ -100,20 +101,15 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
 
 export async function DELETE(req: NextRequest, { params }: RouteParams) {
   try {
-    const session = await auth();
-    if (!session) {
-      return NextResponse.json(
-        { success: false, error: 'Unauthorized: Harap login terlebih dahulu' },
-        { status: 401 }
-      );
-    }
+    const authResult = await requireAuthRole(ROLES_EXECUTIVE);
+    if (!authResult.authorized) return authResult.response;
 
     const { sku } = await params;
     const decodedSku = decodeURIComponent(sku).trim().toUpperCase();
 
     // Pastikan item ada
     const [existing] = await db
-      .select({ id: inventory.id, sku: inventory.sku })
+      .select({ id: inventory.id, sku: inventory.sku, namaBarang: inventory.namaBarang })
       .from(inventory)
       .where(eq(inventory.sku, decodedSku))
       .limit(1);
@@ -126,6 +122,13 @@ export async function DELETE(req: NextRequest, { params }: RouteParams) {
     }
 
     await db.delete(inventory).where(eq(inventory.sku, decodedSku));
+
+    const user = authResult.user?.name || authResult.user?.username || 'System';
+    await db.insert(logs).values({
+      user,
+      aksi: 'HAPUS_MASTER_BARANG',
+      detail: `Menghapus produk master SKU: ${decodedSku} (${existing.namaBarang})`,
+    });
 
     return NextResponse.json({
       success: true,

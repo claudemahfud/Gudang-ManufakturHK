@@ -71,6 +71,7 @@ export default function Kontak() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (submitting) return;
     if (!form.nama) {
       showToast('Nama kontak wajib diisi', 'error');
       return;

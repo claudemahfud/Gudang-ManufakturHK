@@ -393,6 +393,7 @@ export default function PosView() {
 
   // Process Checkout
   const handleProcessCheckout = async () => {
+    if (isSubmitting) return;
     if (metodePembayaran === 'Tunai' && uangDiterima < grandTotal) {
       setCheckoutError('Uang yang diterima kurang dari total pembayaran');
       if (posSettings.enableSound) playBeep('error');

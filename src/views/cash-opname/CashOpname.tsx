@@ -65,6 +65,7 @@ export default function CashOpnameView() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (submitting) return;
     if (!form.kasFisik || Number(form.kasFisik) < 0) {
       alert('Masukkan jumlah uang fisik di laci dengan benar');
       return;

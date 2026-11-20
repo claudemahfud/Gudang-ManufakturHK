@@ -119,6 +119,32 @@ export async function POST(req: Request) {
       : (body.cabang || 'Pusat');
     const trxDate = tanggal ? new Date(tanggal) : new Date();
 
+    // Validasi ketersediaan stok terlebih dahulu untuk semua item
+    for (const it of items) {
+      const qty = parseInt(it.qty, 10);
+      if (isNaN(qty) || qty <= 0) {
+        return NextResponse.json(
+          { success: false, message: `Jumlah kuantitas untuk item ${it.namaBarang || it.sku} tidak valid` },
+          { status: 400 }
+        );
+      }
+      const [inv] = await db
+        .select()
+        .from(inventory)
+        .where(eq(inventory.sku, it.sku))
+        .limit(1);
+
+      if (!inv || (inv.stok ?? 0) < qty) {
+        return NextResponse.json(
+          {
+            success: false,
+            message: `Stok tidak mencukupi untuk "${it.namaBarang || it.sku}". Stok saat ini: ${inv?.stok ?? 0}, diminta: ${qty}`,
+          },
+          { status: 400 }
+        );
+      }
+    }
+
     const insertedRows = [];
 
     for (const it of items) {

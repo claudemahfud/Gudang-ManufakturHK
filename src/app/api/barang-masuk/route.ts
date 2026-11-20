@@ -129,14 +129,35 @@ export async function POST(req: Request) {
       })
       .returning();
 
-    // Update stock in inventory table
-    await db
-      .update(inventory)
-      .set({
-        stok: sql`${inventory.stok} + ${parsedQty}`,
-        updatedAt: new Date(),
-      })
-      .where(eq(inventory.sku, sku));
+    // Update or insert stock in inventory table
+    const [existingInv] = await db
+      .select()
+      .from(inventory)
+      .where(eq(inventory.sku, sku))
+      .limit(1);
+
+    if (existingInv) {
+      await db
+        .update(inventory)
+        .set({
+          stok: sql`${inventory.stok} + ${parsedQty}`,
+          updatedAt: new Date(),
+        })
+        .where(eq(inventory.sku, sku));
+    } else {
+      await db
+        .insert(inventory)
+        .values({
+          sku,
+          namaBarang,
+          stok: parsedQty,
+          hargaBeli: hargaBeli ? String(hargaBeli) : '0',
+          hargaJual: '0',
+          divisi: body.divisi || 'MANUFAKTUR',
+          cabang: cabangToSave,
+          tipeItem: 'bahan_baku',
+        });
+    }
 
     // Audit log
     await db.insert(logs).values({

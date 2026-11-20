@@ -58,6 +58,7 @@ export default function BiayaOperasional() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (submitting) return;
     if (!form.jumlah) {
       showToast('Nominal biaya wajib diisi', 'error');
       return;
