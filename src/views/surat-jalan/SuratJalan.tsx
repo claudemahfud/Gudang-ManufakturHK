@@ -263,13 +263,24 @@ export default function SuratJalan() {
                 data.map((row) => (
                   <tr key={row.id} className="hover:bg-gray-50/50 transition">
                     <td className="py-3.5 px-4 font-mono font-bold text-xs text-gray-800">
-                      {row.noSj}
+                      <button
+                        type="button"
+                        onClick={() => viewDetail(row.id)}
+                        className="text-left font-mono font-bold text-xs text-emerald-700 hover:text-emerald-900 hover:underline transition"
+                        title="Buka Dokumen Surat Jalan"
+                      >
+                        {row.noSj}
+                      </button>
                     </td>
                     <td className="py-3.5 px-4 text-xs text-gray-600 whitespace-nowrap">
                       {formatTanggal(row.tanggal)}
                     </td>
-                    <td className="py-3.5 px-4">
-                      <div className="font-semibold text-gray-800">{row.pelanggan}</div>
+                    <td
+                      className="py-3.5 px-4 cursor-pointer"
+                      onClick={() => viewDetail(row.id)}
+                      title="Klik untuk membuka dokumen surat jalan"
+                    >
+                      <div className="font-semibold text-gray-800 hover:text-emerald-700 transition">{row.pelanggan}</div>
                       <div className="text-xs text-gray-400 truncate max-w-xs">{row.alamat || '-'}</div>
                     </td>
                     <td className="py-3.5 px-4 text-xs text-gray-700">

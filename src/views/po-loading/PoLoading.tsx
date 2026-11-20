@@ -247,12 +247,25 @@ export default function PoLoading() {
                 data.map((row) => (
                   <tr key={row.id} className="hover:bg-gray-50/50 transition">
                     <td className="py-3.5 px-4 font-mono font-bold text-xs text-gray-800">
-                      {row.noPo}
+                      <button
+                        type="button"
+                        onClick={() => viewDetail(row.id)}
+                        className="text-left font-mono font-bold text-xs text-emerald-700 hover:text-emerald-900 hover:underline transition"
+                        title="Buka Dokumen PO & Loading"
+                      >
+                        {row.noPo}
+                      </button>
                     </td>
                     <td className="py-3.5 px-4 text-xs text-gray-600 whitespace-nowrap">
                       {formatTanggal(row.tanggal)}
                     </td>
-                    <td className="py-3.5 px-4 font-semibold text-gray-800">{row.supplier}</td>
+                    <td
+                      className="py-3.5 px-4 cursor-pointer font-semibold text-gray-800 hover:text-emerald-700 transition"
+                      onClick={() => viewDetail(row.id)}
+                      title="Klik untuk membuka dokumen PO"
+                    >
+                      {row.supplier}
+                    </td>
                     <td className="py-3.5 px-4 text-xs text-gray-600">{row.armada || '-'}</td>
                     <td className="py-3.5 px-4 whitespace-nowrap">
                       <span
