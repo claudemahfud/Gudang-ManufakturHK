@@ -29,8 +29,9 @@ export const inventory = pgTable('inventory', {
   gramasi: varchar('gramasi', { length: 50 }),
   varian: varchar('varian', { length: 100 }),
   stok: integer('stok').notNull().default(0),
-  hargaBeli: decimal('harga_beli', { precision: 15, scale: 2 }).default('0'),
-  hargaJual: decimal('harga_jual', { precision: 15, scale: 2 }).default('0'),
+  hargaBeli: decimal('harga_beli', { precision: 15, scale: 2 }).default('0'), // Harga yang dibayar ke Supplier
+  hargaJual: decimal('harga_jual', { precision: 15, scale: 2 }).default('0'), // Harga jual kembali ke Customer
+  supplier: varchar('supplier', { length: 150 }), // Pemasok / Asal Barang
   settingPcs: integer('setting_pcs').notNull().default(1),
   pakaiKarton: boolean('pakai_karton').notNull().default(true),
   stokMinimum: integer('stok_minimum').default(10),
@@ -53,8 +54,11 @@ export const barangMasuk = pgTable('barang_masuk', {
   qty: integer('qty').notNull(),
   satuan: varchar('satuan', { length: 20 }).notNull().default('pcs'),
   hargaBeli: decimal('harga_beli', { precision: 15, scale: 2 }).default('0'),
-  supplier: varchar('supplier', { length: 150 }),
+  totalBeli: decimal('total_beli', { precision: 15, scale: 2 }).default('0'),
+  supplier: varchar('supplier', { length: 150 }).notNull(), // Wajib ada supplier pemasok
   noFaktur: varchar('no_faktur', { length: 100 }),
+  skemaBayar: varchar('skema_bayar', { length: 30 }).notNull().default('lunas'), // 'lunas' | 'hutang'
+  jatuhTempo: timestamp('jatuh_tempo'),
   divisi: varchar('divisi', { length: 30 }).notNull().default('MANUFAKTUR'),
   cabang: varchar('cabang', { length: 50 }).notNull().default('Pusat'),
   keterangan: text('keterangan'),

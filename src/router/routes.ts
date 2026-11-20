@@ -50,6 +50,7 @@ export const ROUTES = {
   // Operasional
   EXPEDISI: '/expedisi',
   KONTAK: '/kontak',
+  SUPLIER: '/suplier',
 
   // Admin
   USERS: '/users',

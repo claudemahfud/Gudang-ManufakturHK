@@ -38,6 +38,7 @@ export interface InventoryItem {
   stok: number;
   hargaBeli?: string | null;
   hargaJual?: string | null;
+  supplier?: string | null;
   settingPcs: number;
   pakaiKarton: boolean;
   stokMinimum?: number | null;
@@ -57,11 +58,26 @@ export interface BarangMasukItem {
   qty: number;
   satuan: string;
   hargaBeli?: string | null;
-  supplier?: string | null;
+  totalBeli?: string | null;
+  supplier: string;
   noFaktur?: string | null;
+  skemaBayar?: 'lunas' | 'hutang';
+  jatuhTempo?: Date | string | null;
   keterangan?: string | null;
   createdBy?: string | null;
   createdAt?: Date | null;
+}
+
+// Supplier
+export interface SupplierItem {
+  id: string;
+  nama: string;
+  telepon?: string | null;
+  alamat?: string | null;
+  email?: string | null;
+  keterangan?: string | null;
+  aktif?: boolean;
+  totalHutangAktif?: number;
 }
 
 // Barang Keluar

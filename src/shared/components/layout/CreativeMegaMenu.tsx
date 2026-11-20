@@ -12,6 +12,7 @@ import {
   ArrowLeftRight,
   AlertTriangle,
   Truck,
+  Factory,
   ClipboardList,
   RotateCcw,
   Wallet,
@@ -82,6 +83,12 @@ export default function CreativeMegaMenu({ userRole, isOpen, onClose }: MegaMenu
       href: ROUTES.INVENTORY,
       icon: Package,
       badge: 'Utama',
+    },
+    {
+      title: 'Daftar Suplier',
+      desc: 'Master suplier & status hutang',
+      href: ROUTES.SUPLIER,
+      icon: Factory,
     },
     {
       title: 'Barang Masuk',

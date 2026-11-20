@@ -1,13 +1,15 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Camera } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
+import { Camera, Calendar, DollarSign, Building2, CreditCard, CheckCircle2, AlertCircle, Trash2 } from 'lucide-react';
 import { formatTanggal, formatRupiah } from '@/shared/lib/utils';
 import { useBarcodeScanner } from '@/shared/hooks/useBarcodeScanner';
 import CameraBarcodeScanner from '@/shared/components/ui/CameraBarcodeScanner';
+import { ToastFloater, ToastData } from '@/shared/components/ui/ToastFloater';
 
 // ============================================================
-// PAGE: Barang Masuk
+// PAGE: Barang Masuk (Purchasing & Penerimaan Stok)
 // Route: /barang-masuk
 // ============================================================
 
@@ -18,8 +20,11 @@ interface ItemMasuk {
   namaBarang: string;
   qty: number;
   satuan: string;
-  hargaBeli: string | null;
+  hargaBeli: string | number | null;
+  totalBeli?: string | number | null;
   supplier: string | null;
+  skemaBayar?: 'lunas' | 'hutang' | null;
+  jatuhTempo?: string | null;
   noFaktur: string | null;
   keterangan: string | null;
   createdBy: string | null;
@@ -28,7 +33,15 @@ interface ItemMasuk {
 interface InventoryOption {
   sku: string;
   namaBarang: string;
-  hargaBeli: string | null;
+  hargaBeli: string | number | null;
+  supplier?: string | null;
+}
+
+interface SupplierOption {
+  id: number;
+  nama: string;
+  kode?: string;
+  telepon?: string;
 }
 
 export default function BarangMasuk() {
@@ -37,6 +50,7 @@ export default function BarangMasuk() {
   // ============================================================
   const [data, setData] = useState<ItemMasuk[]>([]);
   const [inventoryList, setInventoryList] = useState<InventoryOption[]>([]);
+  const [suppliers, setSuppliers] = useState<SupplierOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [startDate, setStartDate] = useState('');
@@ -46,7 +60,15 @@ export default function BarangMasuk() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isCameraOpen, setIsCameraOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [form, setForm] = useState({
+
+  // Form State
+  const defaultJatuhTempo = () => {
+    const d = new Date();
+    d.setDate(d.getDate() + 30);
+    return d.toISOString().split('T')[0];
+  };
+
+  const initialForm = {
     tanggal: new Date().toISOString().split('T')[0],
     sku: '',
     namaBarang: '',
@@ -54,11 +76,26 @@ export default function BarangMasuk() {
     satuan: 'pcs',
     hargaBeli: '',
     supplier: '',
+    skemaBayar: 'lunas' as 'lunas' | 'hutang',
+    jatuhTempo: defaultJatuhTempo(),
     noFaktur: '',
     keterangan: '',
-  });
+  };
 
-  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+  const [form, setForm] = useState(initialForm);
+  const [toast, setToast] = useState<ToastData | null>(null);
+
+  const showToast = (
+    type: 'success' | 'error' | 'warning' | 'info',
+    message: string,
+    penyebab?: string,
+    title?: string
+  ) => {
+    setToast({ type, message, penyebab, title });
+    setTimeout(() => {
+      setToast(null);
+    }, 6000);
+  };
 
   const handleBarcodeScanned = (scannedCode: string) => {
     const clean = scannedCode.trim().toLowerCase();
@@ -69,14 +106,14 @@ export default function BarangMasuk() {
     );
     if (matched) {
       handleSkuChange(matched.sku);
-      showToast(`SKU ${matched.sku} berhasil dipindai`, 'success');
+      showToast('success', `SKU ${matched.sku} terdeteksi`, undefined, 'Scan Barcode Berhasil');
     } else {
       setForm((prev) => ({
         ...prev,
         sku: scannedCode.toUpperCase().trim(),
         namaBarang: prev.namaBarang || scannedCode.toUpperCase().trim(),
       }));
-      showToast(`Barcode ${scannedCode} dipindai (Barang baru)`, 'success');
+      showToast('info', `Barcode ${scannedCode} dipindai (Barang baru)`, undefined, 'Barcode Baru');
     }
   };
 
@@ -99,10 +136,13 @@ export default function BarangMasuk() {
       const res = await fetch(`/api/barang-masuk?${params.toString()}`);
       const json = await res.json();
       if (json.success) {
-        setData(json.data);
+        setData(json.data || []);
+      } else {
+        showToast('error', 'Gagal memuat riwayat barang masuk', json.error, 'Kesalahan Data');
       }
-    } catch {
-      showToast('Gagal memuat data barang masuk', 'error');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Gangguan jaringan';
+      showToast('error', 'Gagal memuat data barang masuk', msg, 'Koneksi Gagal');
     } finally {
       setLoading(false);
     }
@@ -112,8 +152,18 @@ export default function BarangMasuk() {
     try {
       const res = await fetch('/api/inventory?limit=500');
       const json = await res.json();
-      if (json.success) {
+      if (json.success && Array.isArray(json.data)) {
         setInventoryList(json.data);
+      }
+    } catch {}
+  };
+
+  const fetchSuppliers = async () => {
+    try {
+      const res = await fetch('/api/suppliers');
+      const json = await res.json();
+      if (json.success && Array.isArray(json.data)) {
+        setSuppliers(json.data);
       }
     } catch {}
   };
@@ -121,12 +171,8 @@ export default function BarangMasuk() {
   useEffect(() => {
     fetchData();
     fetchInventory();
+    fetchSuppliers();
   }, [startDate, endDate]);
-
-  const showToast = (message: string, type: 'success' | 'error') => {
-    setToast({ message, type });
-    setTimeout(() => setToast(null), 3000);
-  };
 
   // ============================================================
   // SECTION: Handlers
@@ -138,64 +184,113 @@ export default function BarangMasuk() {
       sku,
       namaBarang: selected ? selected.namaBarang : '',
       hargaBeli: selected?.hargaBeli ? String(selected.hargaBeli) : prev.hargaBeli,
+      supplier: selected?.supplier || prev.supplier || (suppliers[0]?.nama || ''),
     }));
   };
+
+  const openModal = () => {
+    if (suppliers.length === 0) {
+      showToast(
+        'warning',
+        'Belum Ada Suplier Terdaftar!',
+        'Aturan bisnis mewajibkan pencatatan barang masuk terhubung dengan Suplier resmi. Daftarkan minimal 1 Suplier di menu "Daftar Suplier" terlebih dahulu.',
+        'Pendaftaran Suplier Diperlukan'
+      );
+      return;
+    }
+
+    setForm({
+      ...initialForm,
+      supplier: suppliers[0]?.nama || '',
+    });
+    setIsModalOpen(true);
+  };
+
+  const calculatedTotalBeli = Math.max(0, (Number(form.qty) || 0) * (Number(form.hargaBeli) || 0));
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (submitting) return;
-    if (!form.sku || !form.qty) {
-      showToast('Mohon lengkapi SKU dan Jumlah', 'error');
+
+    if (!form.sku.trim() || !form.qty) {
+      showToast('warning', 'Formulir belum lengkap', 'Kode SKU dan Jumlah (Qty) barang masuk wajib diisi.', 'Validasi Form');
+      return;
+    }
+
+    if (!form.supplier?.trim()) {
+      showToast('warning', 'Pilih Suplier!', 'Barang masuk wajib mencantumkan asal suplier pemasok.', 'Validasi Form');
       return;
     }
 
     setSubmitting(true);
     try {
+      const payload = {
+        tanggal: form.tanggal,
+        sku: form.sku.trim().toUpperCase(),
+        namaBarang: form.namaBarang.trim(),
+        qty: Number(form.qty),
+        satuan: form.satuan,
+        hargaBeli: Number(form.hargaBeli) || 0,
+        totalBeli: calculatedTotalBeli,
+        supplier: form.supplier.trim(),
+        skemaBayar: form.skemaBayar,
+        jatuhTempo: form.skemaBayar === 'hutang' ? form.jatuhTempo : null,
+        noFaktur: form.noFaktur.trim() || null,
+        keterangan: form.keterangan.trim() || null,
+      };
+
       const res = await fetch('/api/barang-masuk', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
+        body: JSON.stringify(payload),
       });
       const json = await res.json();
+
       if (json.success) {
-        showToast('Barang masuk berhasil dicatat!', 'success');
+        showToast(
+          'success',
+          `Penerimaan barang ${payload.sku} (${payload.qty} ${payload.satuan}) berhasil dicatat!`,
+          payload.skemaBayar === 'lunas'
+            ? 'Pengeluaran kas otomatis tercatat di Buku Kas.'
+            : `Hutang dagang ke ${payload.supplier} otomatis tercatat di Neraca Liabilitas (Jatuh tempo: ${payload.jatuhTempo}).`,
+          'Barang Masuk Berhasil'
+        );
         setIsModalOpen(false);
-        setForm({
-          tanggal: new Date().toISOString().split('T')[0],
-          sku: '',
-          namaBarang: '',
-          qty: '',
-          satuan: 'pcs',
-          hargaBeli: '',
-          supplier: '',
-          noFaktur: '',
-          keterangan: '',
-        });
+        setForm(initialForm);
         fetchData();
+        fetchInventory();
       } else {
-        showToast(json.message || 'Gagal menyimpan data', 'error');
+        showToast(
+          'error',
+          json.error || 'Gagal menyimpan barang masuk',
+          json.penyebab || 'Server menolak transaksi. Periksa kembali kelengkapan data.',
+          'Pencatatan Gagal'
+        );
       }
-    } catch {
-      showToast('Terjadi kesalahan koneksi', 'error');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Terjadi gangguan jaringan';
+      showToast('error', 'Gagal memproses transaksi barang masuk', msg, 'Koneksi Error');
     } finally {
       setSubmitting(false);
     }
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Yakin ingin menghapus data ini? Stok inventory akan dikurangi kembali.')) return;
+    if (!confirm('Yakin ingin membatalkan/menghapus data barang masuk ini? Stok inventory akan dikurangi kembali.')) return;
 
     try {
       const res = await fetch(`/api/barang-masuk/${id}`, { method: 'DELETE' });
       const json = await res.json();
       if (json.success) {
-        showToast('Data barang masuk berhasil dihapus', 'success');
+        showToast('success', 'Riwayat barang masuk berhasil dihapus dan stok dikembalikan.', undefined, 'Berhasil Dihapus');
         fetchData();
+        fetchInventory();
       } else {
-        showToast(json.message || 'Gagal menghapus', 'error');
+        showToast('error', json.error || 'Gagal menghapus', json.penyebab || 'Data tidak dapat dihapus', 'Hapus Gagal');
       }
-    } catch {
-      showToast('Gagal menghapus data', 'error');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Gangguan jaringan';
+      showToast('error', 'Gagal menghapus data', msg, 'Koneksi Gagal');
     }
   };
 
@@ -203,69 +298,80 @@ export default function BarangMasuk() {
   // SECTION: Render
   // ============================================================
   return (
-    <div className="space-y-6">
-      {/* Toast Notification */}
-      {toast && (
-        <div
-          className={`fixed top-5 right-5 z-50 px-5 py-3 rounded-xl shadow-lg border text-sm font-medium ${
-            toast.type === 'success'
-              ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
-              : 'bg-red-50 text-red-800 border-red-200'
-          }`}
-        >
-          {toast.message}
-        </div>
-      )}
+    <div className="space-y-6 max-w-7xl mx-auto pb-12">
+      {/* Toast Alert Floater dengan Keterangan & Penyebab */}
+      <ToastFloater toast={toast} onClose={() => setToast(null)} />
 
       {/* 1. Header (F-Pattern Top Row) */}
-      <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <header className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-800">Barang Masuk</h1>
-          <p className="text-sm text-gray-500 mt-1">
-            Pencatatan penerimaan stok barang dari supplier atau gudang pusat
+          <div className="flex items-center gap-2 mb-1">
+            <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800">
+              Purchasing &amp; Inbound
+            </span>
+            <span className="text-xs text-gray-400">&bull; Integrasi Kas &amp; Neraca Otomatis</span>
+          </div>
+          <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Barang Masuk</h1>
+          <p className="text-xs text-gray-500 mt-1">
+            Pencatatan stok masuk dari Suplier resmi dengan skema bayar Tunai Lunas (Kas) atau Hutang Dagang (Credit).
           </p>
         </div>
-        <button
-          onClick={() => setIsModalOpen(true)}
-          className="inline-flex items-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-semibold shadow-sm transition"
-        >
-          <span>＋</span> Catat Barang Masuk
-        </button>
+        <div className="flex items-center gap-3">
+          <Link
+            href="/suplier"
+            className="inline-flex items-center gap-1.5 px-3.5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs sm:text-sm font-semibold transition border border-slate-200"
+          >
+            <Building2 className="w-4 h-4 text-slate-600" />
+            <span>Daftar Suplier ({suppliers.length})</span>
+          </Link>
+          <button
+            onClick={openModal}
+            className="inline-flex items-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs sm:text-sm font-semibold shadow-md shadow-emerald-600/20 transition"
+          >
+            <span>＋</span> Catat Barang Masuk
+          </button>
+        </div>
       </header>
 
       {/* 2. Filters (F-Pattern Second Row) */}
       <section aria-label="Filter dan Pencarian" className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex flex-col md:flex-row gap-4 items-center justify-between">
-        <div className="w-full md:w-72">
+        <div className="w-full md:w-80">
           <input
             type="text"
-            placeholder="Cari SKU, Nama Barang, Supplier..."
+            placeholder="Cari SKU, Nama Barang, Suplier, No Faktur..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && fetchData()}
-            className="w-full px-3.5 py-2 rounded-xl border border-gray-200 text-sm focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none"
+            className="w-full px-3.5 py-2 rounded-xl border border-gray-200 text-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 outline-none transition"
           />
         </div>
         <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
-          <span className="text-xs text-gray-500">Filter Tanggal:</span>
+          <span className="text-xs font-semibold text-gray-600">Periode:</span>
           <input
             type="date"
             value={startDate}
             onChange={(e) => setStartDate(e.target.value)}
-            className="px-3 py-1.5 rounded-xl border border-gray-200 text-xs text-gray-600"
+            className="px-3 py-1.5 rounded-xl border border-gray-200 text-xs focus:border-emerald-500 outline-none"
           />
           <span className="text-xs text-gray-400">s/d</span>
           <input
             type="date"
             value={endDate}
             onChange={(e) => setEndDate(e.target.value)}
-            className="px-3 py-1.5 rounded-xl border border-gray-200 text-xs text-gray-600"
+            className="px-3 py-1.5 rounded-xl border border-gray-200 text-xs focus:border-emerald-500 outline-none"
           />
-          <button
-            onClick={fetchData}
-            className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl text-xs font-medium transition"
-          >
-            Terapkan
-          </button>
+          {(startDate || endDate || search) && (
+            <button
+              onClick={() => {
+                setStartDate('');
+                setEndDate('');
+                setSearch('');
+              }}
+              className="text-xs text-red-600 hover:underline px-2 py-1"
+            >
+              Reset
+            </button>
+          )}
         </div>
       </section>
 
@@ -278,75 +384,123 @@ export default function BarangMasuk() {
                 <th className="py-3.5 px-4">Tanggal</th>
                 <th className="py-3.5 px-4">SKU / Nama Barang</th>
                 <th className="py-3.5 px-4">Jumlah</th>
-                <th className="py-3.5 px-4">Harga Beli</th>
-                <th className="py-3.5 px-4">Supplier</th>
+                <th className="py-3.5 px-4">Harga Beli &amp; Total</th>
+                <th className="py-3.5 px-4">Suplier Pemasok</th>
+                <th className="py-3.5 px-4">Skema Bayar</th>
                 <th className="py-3.5 px-4">No. Faktur</th>
-                <th className="py-3.5 px-4">Dicatat Oleh</th>
+                <th className="py-3.5 px-4">Petugas</th>
                 <th className="py-3.5 px-4 text-center">Aksi</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
               {loading ? (
                 <tr>
-                  <td colSpan={8} className="py-12 text-center text-gray-400">
-                    Memuat data barang masuk...
+                  <td colSpan={9} className="py-16 text-center text-gray-400">
+                    <div className="flex flex-col items-center justify-center gap-2">
+                      <div className="w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+                      <span className="text-xs font-medium text-gray-500">Memuat data barang masuk...</span>
+                    </div>
                   </td>
                 </tr>
               ) : data.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="py-12 text-center text-gray-400">
-                    Belum ada riwayat barang masuk
+                  <td colSpan={9} className="py-16 text-center text-gray-400">
+                    <p className="font-semibold text-gray-600 text-base">Belum ada riwayat barang masuk</p>
+                    <p className="text-xs text-gray-400 mt-1">Klik tombol &quot;Catat Barang Masuk&quot; untuk mencatat pengadaan baru.</p>
                   </td>
                 </tr>
               ) : (
-                data.map((row) => (
-                  <tr key={row.id} className="hover:bg-gray-50/50 transition">
-                    <td className="py-3.5 px-4 text-xs font-medium text-gray-700 whitespace-nowrap">
-                      {formatTanggal(row.tanggal)}
-                    </td>
-                    <td className="py-3.5 px-4">
-                      <div className="font-semibold text-gray-800">{row.namaBarang}</div>
-                      <div className="text-xs font-mono text-gray-400">{row.sku}</div>
-                    </td>
-                    <td className="py-3.5 px-4 font-bold text-emerald-700 whitespace-nowrap">
-                      +{row.qty} {row.satuan}
-                    </td>
-                    <td className="py-3.5 px-4 whitespace-nowrap text-gray-700">
-                      {formatRupiah(row.hargaBeli)}
-                    </td>
-                    <td className="py-3.5 px-4 text-gray-700">{row.supplier || '-'}</td>
-                    <td className="py-3.5 px-4 text-xs font-mono text-gray-500">
-                      {row.noFaktur || '-'}
-                    </td>
-                    <td className="py-3.5 px-4 text-xs text-gray-500">{row.createdBy || '-'}</td>
-                    <td className="py-3.5 px-4 text-center">
-                      <button
-                        onClick={() => handleDelete(row.id)}
-                        className="text-red-500 hover:text-red-700 text-xs font-semibold px-2 py-1 rounded hover:bg-red-50 transition"
-                      >
-                        Hapus
-                      </button>
-                    </td>
-                  </tr>
-                ))
+                data.map((row) => {
+                  const total = Number(row.totalBeli) || (Number(row.qty) * (Number(row.hargaBeli) || 0));
+                  return (
+                    <tr key={row.id} className="hover:bg-emerald-50/30 transition group">
+                      <td className="py-3.5 px-4 text-xs font-medium text-gray-700 whitespace-nowrap">
+                        {formatTanggal(row.tanggal)}
+                      </td>
+                      <td className="py-3.5 px-4">
+                        <div className="font-semibold text-gray-900 group-hover:text-emerald-700 transition-colors">
+                          {row.namaBarang}
+                        </div>
+                        <div className="text-xs font-mono text-emerald-700">{row.sku}</div>
+                      </td>
+                      <td className="py-3.5 px-4 font-bold text-emerald-700 whitespace-nowrap">
+                        +{row.qty} {row.satuan}
+                      </td>
+                      <td className="py-3.5 px-4 whitespace-nowrap">
+                        <div className="font-semibold text-gray-900">{formatRupiah(total)}</div>
+                        <div className="text-[11px] text-gray-400">@{formatRupiah(row.hargaBeli)}</div>
+                      </td>
+                      <td className="py-3.5 px-4 whitespace-nowrap text-xs text-gray-800">
+                        {row.supplier ? (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-blue-50 text-blue-800 font-medium border border-blue-200">
+                            🏢 {row.supplier}
+                          </span>
+                        ) : (
+                          <span className="text-gray-400 italic text-[11px]">-</span>
+                        )}
+                      </td>
+                      <td className="py-3.5 px-4 whitespace-nowrap">
+                        {row.skemaBayar === 'hutang' ? (
+                          <div>
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-200">
+                              <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                              Hutang (Tempo)
+                            </span>
+                            {row.jatuhTempo && (
+                              <div className="text-[10px] text-amber-700 mt-0.5 font-medium">
+                                Tempo: {formatTanggal(row.jatuhTempo)}
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                            Lunas (Kas)
+                          </span>
+                        )}
+                      </td>
+                      <td className="py-3.5 px-4 text-xs font-mono text-gray-600 whitespace-nowrap">
+                        {row.noFaktur || '-'}
+                      </td>
+                      <td className="py-3.5 px-4 text-xs text-gray-500 whitespace-nowrap">{row.createdBy || '-'}</td>
+                      <td className="py-3.5 px-4 text-center whitespace-nowrap">
+                        <button
+                          onClick={() => handleDelete(row.id)}
+                          className="text-red-600 hover:text-red-700 hover:bg-red-50 px-2 py-1 rounded-lg text-xs font-semibold transition"
+                          title="Hapus riwayat barang masuk"
+                        >
+                          Hapus
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>
         </div>
 
-        {/* Semantic footer for table summary */}
-        <footer className="px-4 py-3 bg-gray-50/50 border-t border-gray-100 flex items-center justify-between text-xs text-gray-500">
-          <span>Menampilkan total <strong>{data.length}</strong> transaksi barang masuk</span>
-          <span className="text-[11px] text-gray-400">Pembaruan stok otomatis terhubung ke Master Inventory</span>
+        {/* Summary Footer */}
+        <footer className="px-5 py-3 bg-gray-50/80 border-t border-gray-100 flex items-center justify-between text-xs text-gray-500">
+          <span>Menampilkan <strong>{data.length}</strong> transaksi barang masuk</span>
+          <span className="text-[11px] text-gray-400">Semua transaksi terintegrasi dengan Kas, Neraca, dan Master Stok</span>
         </footer>
       </section>
 
-      {/* Modal Tambah Barang Masuk — Desktop Landscape */}
+      {/* ============================================================ */}
+      {/* SECTION: Modal Tambah Barang Masuk (Desktop Landscape 2 Kolom) */}
+      {/* ============================================================ */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/50 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/50 backdrop-blur-sm animate-in fade-in duration-150">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg lg:max-w-4xl max-h-[92vh] flex flex-col overflow-hidden border border-gray-100 animate-in zoom-in-95 duration-150">
+            {/* Modal Header (Fixed Top) */}
             <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between shrink-0 bg-white">
-              <h2 className="font-bold text-gray-800 text-base lg:text-lg">Catat Barang Masuk</h2>
+              <div>
+                <h2 className="font-bold text-gray-900 text-base lg:text-lg">Catat Barang Masuk (Purchasing)</h2>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  Input muatan masuk dari Suplier, tentukan harga beli dan skema pembayaran (Kas / Hutang).
+                </p>
+              </div>
               <button
                 type="button"
                 onClick={() => setIsModalOpen(false)}
@@ -356,24 +510,29 @@ export default function BarangMasuk() {
                 ✕
               </button>
             </div>
+
+            {/* Modal Body (Landscape 2 Columns on Desktop) */}
             <form onSubmit={handleSubmit} className="flex-1 flex flex-col overflow-hidden">
               <div className="flex-1 overflow-y-auto p-6">
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 lg:gap-6">
                   {/* Kolom Kiri: Produk, Tanggal & Jumlah */}
                   <div className="space-y-4">
-                    <div className="text-xs font-bold text-emerald-800 uppercase tracking-wider pb-1 border-b border-emerald-100">
-                      Informasi Barang & Qty
+                    <div className="text-xs font-bold text-emerald-800 uppercase tracking-wider pb-1 border-b border-emerald-100 flex items-center gap-1.5">
+                      <Calendar className="w-3.5 h-3.5" />
+                      <span>Informasi Barang &amp; Qty</span>
                     </div>
+
+                    {/* Pilih Produk / SKU */}
                     <div>
                       <div className="flex items-center justify-between mb-1">
-                        <label className="block text-xs font-semibold text-gray-700">
+                        <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider">
                           Pilih Produk / SKU <span className="text-red-500">*</span>
                         </label>
                         <button
                           type="button"
                           onClick={() => setIsCameraOpen(true)}
                           className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 hover:text-emerald-800"
-                          title="Scan Barcode menggunakan Kamera HP"
+                          title="Scan Barcode menggunakan Kamera HP / Web"
                         >
                           <Camera className="w-3.5 h-3.5" />
                           <span>Scan Barcode</span>
@@ -383,9 +542,9 @@ export default function BarangMasuk() {
                         required
                         value={form.sku}
                         onChange={(e) => handleSkuChange(e.target.value)}
-                        className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm focus:border-emerald-500 outline-none"
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 text-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 outline-none transition bg-white font-medium text-gray-800"
                       >
-                        <option value="">-- Pilih Barang dari Inventory --</option>
+                        <option value="">-- Pilih Barang dari Master Inventory --</option>
                         {inventoryList.map((item) => (
                           <option key={item.sku} value={item.sku}>
                             {item.sku} - {item.namaBarang}
@@ -393,15 +552,16 @@ export default function BarangMasuk() {
                         ))}
                       </select>
                       {form.sku && !inventoryList.some((i) => i.sku === form.sku) && (
-                        <div className="text-[11px] text-amber-600 mt-1">
-                          * SKU baru terdeteksi: {form.sku} (akan otomatis dibuatkan di master inventory)
+                        <div className="text-[11px] text-amber-600 mt-1 font-medium">
+                          * SKU baru: {form.sku} (akan otomatis didaftarkan ke inventory)
                         </div>
                       )}
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {/* Tanggal & Jumlah Qty */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                       <div>
-                        <label className="block text-xs font-semibold text-gray-700 mb-1">
+                        <label className="block text-xs font-bold text-gray-700 mb-1 uppercase tracking-wider">
                           Tanggal Masuk <span className="text-red-500">*</span>
                         </label>
                         <input
@@ -409,11 +569,11 @@ export default function BarangMasuk() {
                           required
                           value={form.tanggal}
                           onChange={(e) => setForm({ ...form, tanggal: e.target.value })}
-                          className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm focus:border-emerald-500 outline-none"
+                          className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 text-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 outline-none transition"
                         />
                       </div>
                       <div>
-                        <label className="block text-xs font-semibold text-gray-700 mb-1">
+                        <label className="block text-xs font-bold text-gray-700 mb-1 uppercase tracking-wider">
                           Jumlah (Qty) <span className="text-red-500">*</span>
                         </label>
                         <div className="flex gap-2">
@@ -424,78 +584,189 @@ export default function BarangMasuk() {
                             placeholder="0"
                             value={form.qty}
                             onChange={(e) => setForm({ ...form, qty: e.target.value })}
-                            className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm focus:border-emerald-500 outline-none"
+                            className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 text-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 outline-none transition font-bold text-gray-800"
                           />
                           <select
                             value={form.satuan}
                             onChange={(e) => setForm({ ...form, satuan: e.target.value })}
-                            className="w-24 px-2 py-2 rounded-xl border border-gray-200 text-sm focus:border-emerald-500 outline-none"
+                            className="w-24 px-2 py-2 rounded-xl border border-gray-200 text-sm focus:border-emerald-500 outline-none bg-white font-medium"
                           >
                             <option value="pcs">pcs</option>
                             <option value="karton">karton</option>
                             <option value="pack">pack</option>
                             <option value="kg">kg</option>
+                            <option value="liter">liter</option>
                           </select>
                         </div>
                       </div>
                     </div>
+
+                    {/* Harga Beli Satuan (Modal ke Suplier) */}
+                    <div>
+                      <label className="block text-xs font-bold text-gray-700 mb-1 uppercase tracking-wider">
+                        Harga Beli Satuan (Rp) <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        placeholder="Harga beli modal per satuan"
+                        value={form.hargaBeli}
+                        onChange={(e) => setForm({ ...form, hargaBeli: e.target.value })}
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 text-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 outline-none transition font-semibold"
+                      />
+                      <p className="text-[10px] text-gray-500 mt-1">
+                        Harga yang <strong>dibayar kepada Suplier</strong> untuk 1 {form.satuan}.
+                      </p>
+                    </div>
+
+                    {/* Highlight Total Nilai Pembelian */}
+                    <div className="p-3.5 rounded-xl bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 flex items-center justify-between">
+                      <div>
+                        <div className="text-[11px] font-bold text-emerald-800 uppercase tracking-wider">
+                          Total Nilai Pembelian
+                        </div>
+                        <div className="text-[10px] text-emerald-600 mt-0.5">
+                          {form.qty || 0} {form.satuan} &times; {formatRupiah(form.hargaBeli || 0)}
+                        </div>
+                      </div>
+                      <div className="text-lg font-bold text-emerald-800">
+                        {formatRupiah(calculatedTotalBeli)}
+                      </div>
+                    </div>
                   </div>
 
-                  {/* Kolom Kanan: Supplier, Finansial & Catatan */}
+                  {/* Kolom Kanan: Suplier, Skema Bayar & Catatan */}
                   <div className="space-y-4">
-                    <div className="text-xs font-bold text-emerald-800 uppercase tracking-wider pb-1 border-b border-emerald-100">
-                      Pemasok & Keterangan
+                    <div className="text-xs font-bold text-emerald-800 uppercase tracking-wider pb-1 border-b border-emerald-100 flex items-center gap-1.5">
+                      <Building2 className="w-3.5 h-3.5" />
+                      <span>Suplier &amp; Skema Pembayaran</span>
                     </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <div>
-                        <label className="block text-xs font-semibold text-gray-700 mb-1">
-                          Harga Beli Satuan (Rp)
+
+                    {/* Pilih Suplier Resmi */}
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider">
+                          Suplier Pemasok <span className="text-red-500">*</span>
                         </label>
-                        <input
-                          type="number"
-                          placeholder="0"
-                          value={form.hargaBeli}
-                          onChange={(e) => setForm({ ...form, hargaBeli: e.target.value })}
-                          className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm focus:border-emerald-500 outline-none"
-                        />
+                        <Link
+                          href="/suplier"
+                          className="text-[11px] text-emerald-600 hover:text-emerald-700 font-semibold hover:underline"
+                        >
+                          + Kelola Suplier
+                        </Link>
                       </div>
-                      <div>
-                        <label className="block text-xs font-semibold text-gray-700 mb-1">
-                          Supplier / Sumber
-                        </label>
-                        <input
-                          type="text"
-                          placeholder="Nama Supplier"
-                          value={form.supplier}
-                          onChange={(e) => setForm({ ...form, supplier: e.target.value })}
-                          className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm focus:border-emerald-500 outline-none"
-                        />
+                      <select
+                        required
+                        value={form.supplier}
+                        onChange={(e) => setForm({ ...form, supplier: e.target.value })}
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 text-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 outline-none transition bg-white font-medium text-gray-800"
+                      >
+                        <option value="">-- Pilih Suplier Resmi --</option>
+                        {suppliers.map((s) => (
+                          <option key={s.id} value={s.nama}>
+                            {s.nama} {s.kode ? `(${s.kode})` : ''}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Pilihan Skema Pembayaran: LUNAS vs HUTANG */}
+                    <div>
+                      <label className="block text-xs font-bold text-gray-700 mb-1.5 uppercase tracking-wider">
+                        Skema Bayar ke Suplier <span className="text-red-500">*</span>
+                      </label>
+                      <div className="grid grid-cols-2 gap-2.5">
+                        {/* Option 1: Bayar Lunas (Kas) */}
+                        <button
+                          type="button"
+                          onClick={() => setForm({ ...form, skemaBayar: 'lunas' })}
+                          className={`p-3 rounded-xl border text-left transition flex flex-col justify-between ${
+                            form.skemaBayar === 'lunas'
+                              ? 'border-emerald-500 bg-emerald-50/80 ring-2 ring-emerald-200'
+                              : 'border-gray-200 bg-white hover:bg-gray-50'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="font-bold text-xs text-gray-900">Bayar Lunas</span>
+                            {form.skemaBayar === 'lunas' ? (
+                              <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                            ) : (
+                              <div className="w-4 h-4 rounded-full border border-gray-300" />
+                            )}
+                          </div>
+                          <p className="text-[10px] text-gray-500 mt-1">
+                            Kas / Bank berkurang otomatis
+                          </p>
+                        </button>
+
+                        {/* Option 2: Hutang / Credit */}
+                        <button
+                          type="button"
+                          onClick={() => setForm({ ...form, skemaBayar: 'hutang' })}
+                          className={`p-3 rounded-xl border text-left transition flex flex-col justify-between ${
+                            form.skemaBayar === 'hutang'
+                              ? 'border-amber-500 bg-amber-50/80 ring-2 ring-amber-200'
+                              : 'border-gray-200 bg-white hover:bg-gray-50'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="font-bold text-xs text-gray-900">Hutang / Credit</span>
+                            {form.skemaBayar === 'hutang' ? (
+                              <CheckCircle2 className="w-4 h-4 text-amber-600" />
+                            ) : (
+                              <div className="w-4 h-4 rounded-full border border-gray-300" />
+                            )}
+                          </div>
+                          <p className="text-[10px] text-gray-500 mt-1">
+                            Masuk Hutang Dagang &amp; Neraca
+                          </p>
+                        </button>
                       </div>
                     </div>
 
+                    {/* Jika Skema Hutang: Input Tanggal Jatuh Tempo */}
+                    {form.skemaBayar === 'hutang' && (
+                      <div className="p-3 bg-amber-50/70 border border-amber-200 rounded-xl space-y-1.5 animate-in fade-in duration-150">
+                        <label className="block text-xs font-bold text-amber-900 uppercase tracking-wider">
+                          Tanggal Jatuh Tempo Pembayaran <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          type="date"
+                          required
+                          value={form.jatuhTempo}
+                          onChange={(e) => setForm({ ...form, jatuhTempo: e.target.value })}
+                          className="w-full px-3 py-2 rounded-lg border border-amber-300 text-sm focus:border-amber-500 outline-none bg-white font-medium"
+                        />
+                        <p className="text-[10px] text-amber-700">
+                          Batas akhir pelunasan hutang pembelian barang ke suplier.
+                        </p>
+                      </div>
+                    )}
+
+                    {/* No Faktur & Catatan */}
                     <div>
-                      <label className="block text-xs font-semibold text-gray-700 mb-1">
-                        Nomor Faktur / Surat Jalan Supplier
+                      <label className="block text-xs font-bold text-gray-700 mb-1 uppercase tracking-wider">
+                        Nomor Faktur / Surat Jalan Suplier
                       </label>
                       <input
                         type="text"
-                        placeholder="Contoh: INV/2026/001"
+                        placeholder="Contoh: INV/2026/001 atau SJ-998"
                         value={form.noFaktur}
                         onChange={(e) => setForm({ ...form, noFaktur: e.target.value })}
-                        className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm focus:border-emerald-500 outline-none"
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 text-sm focus:border-emerald-500 outline-none transition font-mono"
                       />
                     </div>
 
                     <div>
-                      <label className="block text-xs font-semibold text-gray-700 mb-1">
+                      <label className="block text-xs font-bold text-gray-700 mb-1 uppercase tracking-wider">
                         Catatan / Keterangan
                       </label>
                       <textarea
                         rows={2}
-                        placeholder="Catatan tambahan bila ada..."
+                        placeholder="Catatan kondisi muatan, lokasi penerimaan, dll..."
                         value={form.keterangan}
                         onChange={(e) => setForm({ ...form, keterangan: e.target.value })}
-                        className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm focus:border-emerald-500 outline-none resize-none"
+                        className="w-full px-3.5 py-2 rounded-xl border border-gray-200 text-xs sm:text-sm focus:border-emerald-500 outline-none transition resize-none"
                       />
                     </div>
                   </div>
@@ -503,20 +774,24 @@ export default function BarangMasuk() {
               </div>
 
               {/* Action Buttons (Fixed Footer) */}
-              <div className="px-6 py-3.5 border-t border-gray-100 bg-gray-50/80 flex justify-end gap-2 shrink-0">
+              <div className="px-6 py-3.5 border-t border-gray-100 bg-gray-50/80 flex justify-end gap-3 shrink-0">
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2 border border-gray-200 text-gray-600 rounded-xl text-sm font-medium hover:bg-gray-100 transition"
+                  disabled={submitting}
+                  className="px-5 py-2.5 border border-gray-200 text-gray-700 rounded-xl text-xs sm:text-sm font-semibold hover:bg-gray-100 transition"
                 >
                   Batal
                 </button>
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-semibold transition disabled:opacity-50"
+                  className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs sm:text-sm font-semibold transition disabled:opacity-50 shadow-md shadow-emerald-600/20 flex items-center gap-2"
                 >
-                  {submitting ? 'Menyimpan...' : 'Simpan Barang Masuk'}
+                  {submitting && (
+                    <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  )}
+                  <span>Simpan Barang Masuk</span>
                 </button>
               </div>
             </form>

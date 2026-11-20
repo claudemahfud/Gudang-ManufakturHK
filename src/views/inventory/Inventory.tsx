@@ -20,6 +20,7 @@ import { ToastFloater, ToastData } from '@/shared/components/ui/ToastFloater';
 interface FormState {
   sku: string;
   namaBarang: string;
+  supplier: string;
   brand: string;
   gramasi: string;
   varian: string;
@@ -35,6 +36,7 @@ interface FormState {
 const initialForm: FormState = {
   sku: '',
   namaBarang: '',
+  supplier: '',
   brand: '',
   gramasi: '',
   varian: '',
@@ -68,6 +70,7 @@ export default function Inventory() {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<ToastData | null>(null);
+  const [suppliers, setSuppliers] = useState<{ id: number; nama: string; kode?: string }[]>([]);
 
   // State Modal Form
   const [modalOpen, setModalOpen] = useState<boolean>(false);
@@ -146,6 +149,22 @@ export default function Inventory() {
     };
   }, [page, limit, searchQuery, refreshKey, division]);
 
+  // Load Daftar Supplier untuk dropdown dan validasi bisnis
+  useEffect(() => {
+    async function loadSuppliers() {
+      try {
+        const res = await fetch('/api/suppliers');
+        const json = await res.json();
+        if (json.success && Array.isArray(json.data)) {
+          setSuppliers(json.data);
+        }
+      } catch (err) {
+        console.error('Gagal mengambil data suplier:', err);
+      }
+    }
+    loadSuppliers();
+  }, [refreshKey]);
+
   // Handle Search Input dengan Debounce Timer Ref
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
@@ -172,8 +191,20 @@ export default function Inventory() {
   // ============================================================
 
   const openCreateModal = () => {
+    if (suppliers.length === 0) {
+      showToast(
+        'warning',
+        'Belum Ada Suplier Terdaftar!',
+        'Aturan bisnis mewajibkan setiap barang baru terhubung dengan Suplier resmi sebagai sumber asal barang masuk. Silakan daftarkan minimal 1 Suplier di menu "Daftar Suplier" terlebih dahulu.',
+        'Pendaftaran Suplier Diperlukan'
+      );
+      return;
+    }
     setModalMode('create');
-    setForm(initialForm);
+    setForm({
+      ...initialForm,
+      supplier: suppliers[0]?.nama || '',
+    });
     setFormError(null);
     setModalOpen(true);
   };
@@ -183,6 +214,7 @@ export default function Inventory() {
     setForm({
       sku: item.sku,
       namaBarang: item.namaBarang,
+      supplier: item.supplier || suppliers[0]?.nama || '',
       brand: item.brand || '',
       gramasi: item.gramasi || '',
       varian: item.varian || '',
@@ -221,6 +253,10 @@ export default function Inventory() {
       setFormError('Nama Barang wajib diisi');
       return;
     }
+    if (!form.supplier?.trim()) {
+      setFormError('Suplier wajib dipilih sebagai sumber asal barang');
+      return;
+    }
 
     try {
       setSubmitting(true);
@@ -234,6 +270,7 @@ export default function Inventory() {
       const payload = {
         sku: form.sku.trim().toUpperCase(),
         namaBarang: form.namaBarang.trim(),
+        supplier: form.supplier.trim(),
         brand: form.brand.trim() || null,
         gramasi: form.gramasi.trim() || null,
         varian: form.varian.trim() || null,
@@ -551,6 +588,7 @@ export default function Inventory() {
               <tr className="bg-gray-50/80 border-b border-gray-100 text-xs font-semibold text-gray-500 uppercase tracking-wider">
                 <th className="py-3.5 px-4">SKU</th>
                 <th className="py-3.5 px-4">Nama Barang</th>
+                <th className="py-3.5 px-4">Suplier Asal</th>
                 <th className="py-3.5 px-4">Brand</th>
                 <th className="py-3.5 px-4">Gramasi / Varian</th>
                 <th className="py-3.5 px-4">Stok Fisik</th>
@@ -562,7 +600,7 @@ export default function Inventory() {
             <tbody className="divide-y divide-gray-100 text-gray-700">
               {loading ? (
                 <tr>
-                  <td colSpan={8} className="py-16 text-center">
+                  <td colSpan={9} className="py-16 text-center">
                     <div className="flex flex-col items-center justify-center gap-2">
                       <div className="w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin" />
                       <span className="text-xs font-medium text-gray-500">
@@ -573,7 +611,7 @@ export default function Inventory() {
                 </tr>
               ) : items.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="py-16 text-center text-gray-400">
+                  <td colSpan={9} className="py-16 text-center text-gray-400">
                     <div className="flex flex-col items-center justify-center gap-2">
                       <span className="text-3xl"></span>
                       <p className="font-semibold text-gray-600 text-base">Tidak ada data barang</p>
@@ -605,6 +643,17 @@ export default function Inventory() {
                         <div className="text-xs text-gray-400 truncate max-w-xs">
                           {item.keterangan}
                         </div>
+                      )}
+                    </td>
+
+                    {/* Suplier Asal */}
+                    <td className="py-3 px-4 whitespace-nowrap text-xs text-gray-700">
+                      {item.supplier ? (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-50 text-blue-800 font-semibold text-xs border border-blue-200">
+                          🏢 {item.supplier}
+                        </span>
+                      ) : (
+                        <span className="text-gray-400 italic text-[11px]">Belum diatur</span>
                       )}
                     </td>
 
@@ -764,7 +813,39 @@ export default function Inventory() {
                   {/* Kolom Kiri: Identitas Produk & Spesifikasi */}
                   <div className="space-y-4">
                     <div className="text-xs font-bold text-emerald-800 uppercase tracking-wider pb-1 border-b border-emerald-100 flex items-center gap-1.5">
-                      <span>Identitas Produk</span>
+                      <span>Identitas Produk &amp; Suplier</span>
+                    </div>
+
+                    {/* Pilih Suplier (Wajib) */}
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider">
+                          Suplier Asal Barang <span className="text-red-500">*</span>
+                        </label>
+                        <a
+                          href="/suplier"
+                          className="text-[11px] text-emerald-600 hover:text-emerald-700 font-semibold hover:underline"
+                        >
+                          + Kelola Suplier
+                        </a>
+                      </div>
+                      <select
+                        required
+                        disabled={submitting}
+                        value={form.supplier}
+                        onChange={(e) => setForm((p) => ({ ...p, supplier: e.target.value }))}
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 outline-none transition text-sm bg-white font-medium text-gray-800"
+                      >
+                        <option value="">-- Pilih Suplier Resmi --</option>
+                        {suppliers.map((s) => (
+                          <option key={s.id} value={s.nama}>
+                            {s.nama} {s.kode ? `(${s.kode})` : ''}
+                          </option>
+                        ))}
+                      </select>
+                      <p className="text-[10px] text-gray-400 mt-0.5">
+                        Sumber asal barang masuk yang mensuplai stok produk ini.
+                      </p>
                     </div>
 
                     {/* SKU & Nama Barang */}
@@ -902,11 +983,11 @@ export default function Inventory() {
                       </div>
                     </div>
 
-                    {/* Harga Beli & Harga Jual */}
+                    {/* Harga Beli & Harga Jual dengan Penjelasan Bisnis */}
                     <div className="grid grid-cols-2 gap-3.5">
                       <div>
                         <label className="block text-xs font-bold text-gray-700 mb-1 uppercase tracking-wider">
-                          Harga Beli Modal (Rp)
+                          Harga Beli (Rp)
                         </label>
                         <input
                           type="number"
@@ -914,8 +995,11 @@ export default function Inventory() {
                           disabled={submitting}
                           value={form.hargaBeli}
                           onChange={(e) => setForm((p) => ({ ...p, hargaBeli: e.target.value }))}
-                          className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 outline-none transition text-sm"
+                          className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 outline-none transition text-sm font-semibold"
                         />
+                        <p className="text-[10px] text-gray-500 mt-1">
+                          Dibayar kepada <strong>Suplier</strong>
+                        </p>
                       </div>
 
                       <div>
@@ -930,8 +1014,38 @@ export default function Inventory() {
                           onChange={(e) => setForm((p) => ({ ...p, hargaJual: e.target.value }))}
                           className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 outline-none transition text-sm font-semibold text-emerald-800"
                         />
+                        <p className="text-[10px] text-gray-500 mt-1">
+                          Dijual kembali ke <strong>Pelanggan / Pasar</strong>
+                        </p>
                       </div>
                     </div>
+
+                    {/* Preview Estimasi Margin */}
+                    {Number(form.hargaJual) > 0 && (
+                      <div className="p-3 bg-emerald-50/70 border border-emerald-200 rounded-xl flex items-center justify-between text-xs">
+                        <span className="text-gray-600 font-medium">Estimasi Margin Laba:</span>
+                        <span
+                          className={`font-bold ${
+                            Number(form.hargaJual) >= Number(form.hargaBeli)
+                              ? 'text-emerald-700'
+                              : 'text-red-600'
+                          }`}
+                        >
+                          {formatRupiah(Number(form.hargaJual) - Number(form.hargaBeli))}
+                          {Number(form.hargaBeli) > 0 && (
+                            <span className="text-[10px] ml-1 font-normal text-gray-500">
+                              (
+                              {(
+                                ((Number(form.hargaJual) - Number(form.hargaBeli)) /
+                                  Number(form.hargaBeli)) *
+                                100
+                              ).toFixed(1)}
+                              %)
+                            </span>
+                          )}
+                        </span>
+                      </div>
+                    )}
 
                     {/* Pengaturan Karton (Setting Pcs & Pakai Karton) */}
                     <div className="p-3.5 bg-gray-50 rounded-xl border border-gray-200 space-y-2.5">
