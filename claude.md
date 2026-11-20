@@ -157,3 +157,27 @@ Teks tidak boleh bertumpuk padat tanpa napas (*kruntelan*). Setiap teks wajib me
    * Desain minimalis modern profesional (palet Slate/Neutral, aksen Emerald).
    * **Bebas Emoji**: Dilarang menggunakan emoji pada tampilan UI; gunakan icon monochrome vector dari `lucide-react`.
    * Favicon monochrome SVG di [public/favicon.svg](file:///d:/SourceCode/Gudang-ManufakturHK/public/favicon.svg).
+
+---
+
+## 🛡️ Standar Integritas Data & Proteksi Sistem (Audit Results & Rules)
+
+Berdasarkan audit komprehensif sistem (20 November 2026), seluruh modul dan API mematuhi standar berikut:
+
+1. **Proteksi Input Ganda (Anti Double-Submit Guard)**:
+   * Seluruh formulir di views (`src/views/**/*.tsx`) dan proses kasir POS wajib memiliki guard `if (submitting) return;` / `if (isSubmitting) return;` di awal handler pengiriman data. Hal ini mencegah duplikasi pencatatan database akibat double-click pengguna.
+2. **Otorisasi Ketat Operasi Destruktif (RBAC pada DELETE / PUT)**:
+   * Seluruh endpoint `DELETE` pada API wajib menggunakan `requireAuthRole(...)` dari `src/shared/lib/auth/rbac.ts` dan mencatat `aksi` ke dalam tabel `logs` untuk pertanggungjawaban audit trail:
+     * Keuangan, Biaya Operasional, Target Komisi, Kontak: `ROLES_FINANCE` / `ROLES_EXECUTIVE`.
+     * Master Inventory, Barang Keluar: `ROLES_EXECUTIVE`.
+     * Barang Masuk, Barang Rusak, Mutasi Barang, Retur, PO Loading: `ROLES_WAREHOUSE`.
+     * Surat Jalan, Armada: `ROLES_EXPEDISI`.
+3. **Pencegahan Stok Negatif & Validasi Stok Kritis**:
+   * Setiap API pengeluaran barang (`/api/barang-keluar`), mutasi (`/api/mutasi-barang`), dan pencatatan rusak (`/api/barang-rusak`) wajib memverifikasi ketersediaan stok fisik di `inventory` (`inv.stok >= requestedQty`) sebelum eksekusi pemotongan dilakukan.
+4. **Auto-Sinkronisasi Master SKU**:
+   * Penerimaan barang masuk (`/api/barang-masuk`) otomatis membuat entri master `inventory` baru jika SKU belum terdaftar, mencegah hilangnya pelacakan stok masuk.
+5. **Integritas Relasi Foreign Key (Cascade Deletion)**:
+   * Penghapusan dokumen multi-item (seperti Surat Jalan & PO Loading) wajib menghapus baris item anak (`suratJalanItems` / `poLoadingItems`) terlebih dahulu sebelum menghapus dokumen induk untuk mencegah kegagalan relasi foreign key pada database PostgreSQL.
+6. **Anti-Duplikasi Kode & Modul**:
+   * Seluruh rute `/barang-rusak` otomatis dialihkan ke `/laporan-rusak-retur` (modul terpadu laporan rusak & retur). Komponen lama yang usang dipelihara sebagai lightweight redirect.
+

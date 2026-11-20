@@ -57,6 +57,7 @@ export default function TargetKomisi() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (submitting) return;
     if (!form.salesman || !form.target) {
       showToast('Salesman dan target penjualan wajib diisi', 'error');
       return;

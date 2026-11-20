@@ -130,6 +130,7 @@ export default function Users() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (submitting) return;
     if (!form.username || !form.password) {
       showToast('Username dan password wajib diisi', 'error');
       return;

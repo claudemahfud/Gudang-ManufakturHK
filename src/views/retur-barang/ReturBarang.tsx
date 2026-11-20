@@ -86,6 +86,7 @@ export default function ReturBarang() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (submitting) return;
     if (!form.sku || !form.qty) {
       showToast('Mohon lengkapi produk dan jumlah retur', 'error');
       return;

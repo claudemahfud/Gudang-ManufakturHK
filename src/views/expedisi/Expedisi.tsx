@@ -56,6 +56,7 @@ export default function Expedisi() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (submitting) return;
     if (!form.nopol) {
       showToast('Nomor Polisi wajib diisi', 'error');
       return;

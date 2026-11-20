@@ -108,6 +108,7 @@ export default function PoLoading() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (submitting) return;
     if (!supplier) {
       showToast('Nama supplier wajib diisi', 'error');
       return;

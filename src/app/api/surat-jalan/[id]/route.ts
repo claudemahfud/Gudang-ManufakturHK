@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { db } from '@/shared/lib/db';
 import { suratJalan, suratJalanItems, logs } from '@/shared/lib/db/schema';
 import { auth } from '@/shared/lib/auth/config';
+import { requireAuthRole, ROLES_EXPEDISI } from '@/shared/lib/auth/rbac';
 import { eq } from 'drizzle-orm';
 
 // ============================================================
@@ -78,20 +79,20 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await auth();
-    if (!session) {
-      return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
-    }
+    const authResult = await requireAuthRole(ROLES_EXPEDISI);
+    if (!authResult.authorized) return authResult.response;
 
     const { id } = await params;
 
+    // Hapus child items terlebih dahulu agar tidak melanggar foreign key constraint
+    await db.delete(suratJalanItems).where(eq(suratJalanItems.suratJalanId, id));
     await db.delete(suratJalan).where(eq(suratJalan.id, id));
 
-    const user = (session.user as any)?.name || (session.user as any)?.username || 'System';
+    const user = authResult.user?.name || authResult.user?.username || 'System';
     await db.insert(logs).values({
       user,
       aksi: 'HAPUS_SURAT_JALAN',
-      detail: `Menghapus surat jalan ID: ${id}`,
+      detail: `Menghapus surat jalan beserta item ID: ${id}`,
     });
 
     return NextResponse.json({ success: true, message: 'Surat jalan berhasil dihapus' });

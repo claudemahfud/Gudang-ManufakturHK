@@ -68,6 +68,7 @@ export default function Keuangan() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (submitting) return;
     if (!form.jumlah) {
       showToast('Jumlah nominal wajib diisi', 'error');
       return;

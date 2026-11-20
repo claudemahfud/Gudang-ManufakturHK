@@ -117,6 +117,7 @@ export default function SuratJalan() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (submitting) return;
     if (!pelanggan) {
       showToast('Nama pelanggan wajib diisi', 'error');
       return;

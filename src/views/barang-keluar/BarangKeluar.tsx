@@ -161,6 +161,7 @@ export default function BarangKeluar() {
   // ============================================================
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (submitting) return;
     if (!pelanggan) {
       showToast('Nama pelanggan wajib diisi', 'error');
       return;

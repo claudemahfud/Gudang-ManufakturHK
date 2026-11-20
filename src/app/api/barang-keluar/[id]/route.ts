@@ -1,12 +1,13 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/shared/lib/db';
 import { barangKeluar, inventory, logs } from '@/shared/lib/db/schema';
-import { auth } from '@/shared/lib/auth/config';
+import { requireAuthRole, ROLES_EXECUTIVE } from '@/shared/lib/auth/rbac';
 import { eq, sql } from 'drizzle-orm';
 
 // ============================================================
 // API: /api/barang-keluar/[id]
 // DELETE barang keluar & rollback stok inventory
+// Hak Akses: Administrator, Direktur Utama, Manager (Executive Anti-Fraud)
 // ============================================================
 
 export async function DELETE(
@@ -14,10 +15,8 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await auth();
-    if (!session) {
-      return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
-    }
+    const authResult = await requireAuthRole(ROLES_EXECUTIVE);
+    if (!authResult.authorized) return authResult.response;
 
     const { id } = await params;
 
@@ -46,11 +45,11 @@ export async function DELETE(
     // Hapus baris pengeluaran
     await db.delete(barangKeluar).where(eq(barangKeluar.id, id));
 
-    const user = (session.user as any)?.name || (session.user as any)?.username || 'System';
+    const user = authResult.user?.name || authResult.user?.username || 'System';
     await db.insert(logs).values({
       user,
       aksi: 'BATAL_BARANG_KELUAR',
-      detail: `Membatalkan item ${item.sku} dari transaksi ${item.trxId}`,
+      detail: `Membatalkan item ${item.sku} (${item.qty} ${item.satuan}) dari transaksi ${item.trxId}`,
     });
 
     return NextResponse.json({ success: true, message: 'Data berhasil dihapus dan stok dikembalikan' });

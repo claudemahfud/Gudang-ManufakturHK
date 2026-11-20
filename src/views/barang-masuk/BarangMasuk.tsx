@@ -114,6 +114,7 @@ export default function BarangMasuk() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (submitting) return;
     if (!form.sku || !form.qty) {
       showToast('Mohon lengkapi SKU dan Jumlah', 'error');
       return;

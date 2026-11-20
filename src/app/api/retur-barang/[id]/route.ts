@@ -1,12 +1,13 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/shared/lib/db';
 import { returBarang, inventory, logs } from '@/shared/lib/db/schema';
-import { auth } from '@/shared/lib/auth/config';
+import { requireAuthRole, ROLES_WAREHOUSE } from '@/shared/lib/auth/rbac';
 import { eq, sql } from 'drizzle-orm';
 
 // ============================================================
 // API: /api/retur-barang/[id]
 // PUT (approve retur & tambah ke stok) + DELETE
+// Hak Akses: Divisi Gudang & Eksekutif
 // ============================================================
 
 export async function PUT(
@@ -14,10 +15,8 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await auth();
-    if (!session) {
-      return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
-    }
+    const authResult = await requireAuthRole(ROLES_WAREHOUSE);
+    if (!authResult.authorized) return authResult.response;
 
     const { id } = await params;
     const { status, tambahKeStok } = await req.json();
@@ -48,6 +47,13 @@ export async function PUT(
         .where(eq(inventory.sku, item.sku));
     }
 
+    const user = authResult.user?.name || authResult.user?.username || 'System';
+    await db.insert(logs).values({
+      user,
+      aksi: 'UPDATE_STATUS_RETUR',
+      detail: `Update retur ID: ${id} status: ${status} (tambah stok: ${!!tambahKeStok})`,
+    });
+
     return NextResponse.json({ success: true, data: updated });
   } catch (err: any) {
     return NextResponse.json({ success: false, message: err.message }, { status: 500 });
@@ -59,14 +65,29 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await auth();
-    if (!session) {
-      return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
-    }
+    const authResult = await requireAuthRole(ROLES_WAREHOUSE);
+    if (!authResult.authorized) return authResult.response;
 
     const { id } = await params;
 
+    const [item] = await db
+      .select()
+      .from(returBarang)
+      .where(eq(returBarang.id, id))
+      .limit(1);
+
+    if (!item) {
+      return NextResponse.json({ success: false, message: 'Data tidak ditemukan' }, { status: 404 });
+    }
+
     await db.delete(returBarang).where(eq(returBarang.id, id));
+
+    const user = authResult.user?.name || authResult.user?.username || 'System';
+    await db.insert(logs).values({
+      user,
+      aksi: 'HAPUS_RETUR',
+      detail: `Menghapus retur ID: ${id} SKU: ${item.sku}`,
+    });
 
     return NextResponse.json({ success: true, message: 'Data berhasil dihapus' });
   } catch (err: any) {

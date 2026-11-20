@@ -1,12 +1,13 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/shared/lib/db';
 import { barangRusak, inventory, logs } from '@/shared/lib/db/schema';
-import { auth } from '@/shared/lib/auth/config';
+import { requireAuthRole, ROLES_WAREHOUSE } from '@/shared/lib/auth/rbac';
 import { eq, sql } from 'drizzle-orm';
 
 // ============================================================
 // API: /api/barang-rusak/[id]
 // DELETE barang rusak & kembalikan stok
+// Hak Akses: Divisi Gudang & Eksekutif
 // ============================================================
 
 export async function DELETE(
@@ -14,10 +15,8 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await auth();
-    if (!session) {
-      return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
-    }
+    const authResult = await requireAuthRole(ROLES_WAREHOUSE);
+    if (!authResult.authorized) return authResult.response;
 
     const { id } = await params;
 
@@ -45,7 +44,7 @@ export async function DELETE(
 
     await db.delete(barangRusak).where(eq(barangRusak.id, id));
 
-    const user = (session.user as any)?.name || (session.user as any)?.username || 'System';
+    const user = authResult.user?.name || authResult.user?.username || 'System';
     await db.insert(logs).values({
       user,
       aksi: 'BATAL_BARANG_RUSAK',

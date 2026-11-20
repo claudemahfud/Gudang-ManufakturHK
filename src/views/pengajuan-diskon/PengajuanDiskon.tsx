@@ -65,6 +65,7 @@ export default function PengajuanDiskon() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (submitting) return;
     if (!form.pelanggan || !form.diskonPct) {
       showToast('Pelanggan dan persentase diskon wajib diisi', 'error');
       return;

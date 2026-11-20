@@ -86,6 +86,7 @@ export default function MutasiBarang() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (submitting) return;
     if (!form.sku || !form.qty || !form.dari || !form.ke) {
       showToast('Mohon lengkapi semua kolom wajib', 'error');
       return;
