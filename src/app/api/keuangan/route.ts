@@ -58,9 +58,10 @@ export async function POST(req: Request) {
     const body = await req.json();
     const { tanggal, jenis, kategori, jumlah, keterangan, divisi = 'MANUFAKTUR' } = body;
 
-    if (!jenis || !kategori || !jumlah) {
+    const parsedJumlah = Number(jumlah);
+    if (!jenis || !kategori || isNaN(parsedJumlah) || parsedJumlah <= 0) {
       return NextResponse.json(
-        { success: false, message: 'Jenis, Kategori, dan Jumlah wajib diisi' },
+        { success: false, message: 'Jenis, Kategori, dan Jumlah (harus lebih dari 0) wajib diisi' },
         { status: 400 }
       );
     }
@@ -73,7 +74,7 @@ export async function POST(req: Request) {
         tanggal: tanggal ? new Date(tanggal) : new Date(),
         jenis, // masuk | keluar
         kategori,
-        jumlah: String(jumlah),
+        jumlah: String(parsedJumlah),
         divisi,
         cabang: body.cabang || 'Pusat',
         keterangan: keterangan || null,
@@ -84,7 +85,7 @@ export async function POST(req: Request) {
     await db.insert(logs).values({
       user,
       aksi: 'CATAT_KEUANGAN',
-      detail: `Catat arus kas (${jenis.toUpperCase()}) ${kategori}: Rp ${jumlah}`,
+      detail: `Catat arus kas (${jenis.toUpperCase()}) ${kategori}: Rp ${parsedJumlah.toLocaleString('id-ID')}`,
     });
 
     return NextResponse.json({ success: true, data: row }, { status: 201 });

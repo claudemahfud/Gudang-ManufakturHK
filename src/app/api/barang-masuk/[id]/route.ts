@@ -34,23 +34,26 @@ export async function DELETE(
       );
     }
 
-    // Rollback stok inventory
-    await db
-      .update(inventory)
-      .set({
-        stok: sql`${inventory.stok} - ${item.qty}`,
-        updatedAt: new Date(),
-      })
-      .where(eq(inventory.sku, item.sku));
-
-    // Hapus data barang masuk
-    await db.delete(barangMasuk).where(eq(barangMasuk.id, id));
-
     const user = authResult.user?.name || authResult.user?.username || 'System';
-    await db.insert(logs).values({
-      user,
-      aksi: 'HAPUS_BARANG_MASUK',
-      detail: `Menghapus barang masuk ID: ${id}, SKU: ${item.sku} (${item.qty} ${item.satuan})`,
+
+    await db.transaction(async (tx) => {
+      // Rollback stok inventory
+      await tx
+        .update(inventory)
+        .set({
+          stok: sql`${inventory.stok} - ${item.qty}`,
+          updatedAt: new Date(),
+        })
+        .where(eq(inventory.sku, item.sku));
+
+      // Hapus data barang masuk
+      await tx.delete(barangMasuk).where(eq(barangMasuk.id, id));
+
+      await tx.insert(logs).values({
+        user,
+        aksi: 'HAPUS_BARANG_MASUK',
+        detail: `Menghapus barang masuk ID: ${id}, SKU: ${item.sku} (${item.qty} ${item.satuan})`,
+      });
     });
 
     return NextResponse.json({ success: true, message: 'Data barang masuk berhasil dihapus' });

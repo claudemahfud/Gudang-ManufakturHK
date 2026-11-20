@@ -33,23 +33,26 @@ export async function DELETE(
       );
     }
 
-    // Rollback stok inventory (+ qty)
-    await db
-      .update(inventory)
-      .set({
-        stok: sql`${inventory.stok} + ${item.qty}`,
-        updatedAt: new Date(),
-      })
-      .where(eq(inventory.sku, item.sku));
-
-    // Hapus baris pengeluaran
-    await db.delete(barangKeluar).where(eq(barangKeluar.id, id));
-
     const user = authResult.user?.name || authResult.user?.username || 'System';
-    await db.insert(logs).values({
-      user,
-      aksi: 'BATAL_BARANG_KELUAR',
-      detail: `Membatalkan item ${item.sku} (${item.qty} ${item.satuan}) dari transaksi ${item.trxId}`,
+
+    await db.transaction(async (tx) => {
+      // Rollback stok inventory (+ qty)
+      await tx
+        .update(inventory)
+        .set({
+          stok: sql`${inventory.stok} + ${item.qty}`,
+          updatedAt: new Date(),
+        })
+        .where(eq(inventory.sku, item.sku));
+
+      // Hapus baris pengeluaran
+      await tx.delete(barangKeluar).where(eq(barangKeluar.id, id));
+
+      await tx.insert(logs).values({
+        user,
+        aksi: 'BATAL_BARANG_KELUAR',
+        detail: `Membatalkan item ${item.sku} (${item.qty} ${item.satuan}) dari transaksi ${item.trxId}`,
+      });
     });
 
     return NextResponse.json({ success: true, message: 'Data berhasil dihapus dan stok dikembalikan' });

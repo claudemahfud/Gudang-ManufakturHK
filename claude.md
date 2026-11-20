@@ -180,4 +180,9 @@ Berdasarkan audit komprehensif sistem (20 November 2026), seluruh modul dan API 
    * Penghapusan dokumen multi-item (seperti Surat Jalan & PO Loading) wajib menghapus baris item anak (`suratJalanItems` / `poLoadingItems`) terlebih dahulu sebelum menghapus dokumen induk untuk mencegah kegagalan relasi foreign key pada database PostgreSQL.
 6. **Anti-Duplikasi Kode & Modul**:
    * Seluruh rute `/barang-rusak` otomatis dialihkan ke `/laporan-rusak-retur` (modul terpadu laporan rusak & retur). Komponen lama yang usang dipelihara sebagai lightweight redirect.
+7. **Jaminan Transaksi Atomik (ACID `db.transaction`)**:
+   * Seluruh mutasi multi-tabel atau proses yang melibatkan pengurangan stok bersamaan dengan pencatatan jurnal (seperti Kasir POS `/api/pos/checkout`, pengeluaran multi-item `/api/barang-keluar`, penerbitan Surat Jalan `/api/surat-jalan`, PO Loading `/api/po-loading`, dan rollback stok pada pembatalan barang) dibungkus dalam `await db.transaction(async (tx) => { ... })` sehingga jika salah satu query gagal, seluruh operasi di-rollback secara otomatis tanpa meninggalkan inkonsistensi data.
+8. **Validasi Finansial & Input Numerik Positif**:
+   * Seluruh input uang pada arus kas (`/api/keuangan`), biaya operasional (`/api/biaya-operasional`), dan kas opname (`/api/fnb/cash-opname`) divalidasi `Number(val) > 0` (non-negatif dan non-NaN) di tingkat server sebelum dicatat ke ledger.
+
 

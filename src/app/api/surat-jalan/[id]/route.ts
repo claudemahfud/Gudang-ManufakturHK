@@ -54,10 +54,8 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await auth();
-    if (!session) {
-      return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
-    }
+    const authResult = await requireAuthRole(ROLES_EXPEDISI);
+    if (!authResult.authorized) return authResult.response;
 
     const { id } = await params;
     const { status } = await req.json();
@@ -67,6 +65,13 @@ export async function PUT(
       .set({ status, updatedAt: new Date() })
       .where(eq(suratJalan.id, id))
       .returning();
+
+    const user = authResult.user?.name || authResult.user?.username || 'System';
+    await db.insert(logs).values({
+      user,
+      aksi: 'UPDATE_STATUS_SURAT_JALAN',
+      detail: `Update status surat jalan ID: ${id} menjadi ${status}`,
+    });
 
     return NextResponse.json({ success: true, data: updated });
   } catch (err: any) {
@@ -84,15 +89,18 @@ export async function DELETE(
 
     const { id } = await params;
 
-    // Hapus child items terlebih dahulu agar tidak melanggar foreign key constraint
-    await db.delete(suratJalanItems).where(eq(suratJalanItems.suratJalanId, id));
-    await db.delete(suratJalan).where(eq(suratJalan.id, id));
-
     const user = authResult.user?.name || authResult.user?.username || 'System';
-    await db.insert(logs).values({
-      user,
-      aksi: 'HAPUS_SURAT_JALAN',
-      detail: `Menghapus surat jalan beserta item ID: ${id}`,
+
+    await db.transaction(async (tx) => {
+      // Hapus child items terlebih dahulu agar tidak melanggar foreign key constraint
+      await tx.delete(suratJalanItems).where(eq(suratJalanItems.suratJalanId, id));
+      await tx.delete(suratJalan).where(eq(suratJalan.id, id));
+
+      await tx.insert(logs).values({
+        user,
+        aksi: 'HAPUS_SURAT_JALAN',
+        detail: `Menghapus surat jalan beserta item ID: ${id}`,
+      });
     });
 
     return NextResponse.json({ success: true, message: 'Surat jalan berhasil dihapus' });

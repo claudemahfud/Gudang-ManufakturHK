@@ -48,6 +48,13 @@ export async function PUT(
       .where(eq(users.username, username))
       .returning();
 
+    const currentUser = (session.user as any)?.name || (session.user as any)?.username || 'Admin';
+    await db.insert(logs).values({
+      user: currentUser,
+      aksi: 'UPDATE_USER',
+      detail: `Mengubah data pengguna ${username} (Role: ${role}, Aktif: ${updateData.aktif})`,
+    });
+
     return NextResponse.json({ success: true, data: updated });
   } catch (err: any) {
     return NextResponse.json({ success: false, message: err.message }, { status: 500 });
@@ -75,6 +82,13 @@ export async function DELETE(
     }
 
     await db.delete(users).where(eq(users.username, username));
+
+    const currentUser = (session.user as any)?.name || (session.user as any)?.username || 'Admin';
+    await db.insert(logs).values({
+      user: currentUser,
+      aksi: 'HAPUS_USER',
+      detail: `Menghapus pengguna: ${username}`,
+    });
 
     return NextResponse.json({ success: true, message: 'Pengguna berhasil dihapus' });
   } catch (err: any) {

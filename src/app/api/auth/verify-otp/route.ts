@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/shared/lib/db';
-import { users, otpCodes } from '@/shared/lib/db/schema';
+import { users, otpCodes, logs } from '@/shared/lib/db/schema';
 import { and, eq, gt } from 'drizzle-orm';
 import crypto from 'crypto';
 
@@ -15,6 +15,13 @@ export async function POST(req: Request) {
     if (!email || !otp || !newPassword) {
       return NextResponse.json(
         { success: false, message: 'Email, OTP, dan Password baru wajib diisi' },
+        { status: 400 }
+      );
+    }
+
+    if (newPassword.length < 6) {
+      return NextResponse.json(
+        { success: false, message: 'Password minimal 6 karakter' },
         { status: 400 }
       );
     }
@@ -43,21 +50,30 @@ export async function POST(req: Request) {
       );
     }
 
-    // Tandai OTP used
-    await db
-      .update(otpCodes)
-      .set({ used: true })
-      .where(eq(otpCodes.id, validOtp.id));
-
-    // Update password pengguna
     const passwordHash = sha256(newPassword);
-    await db
-      .update(users)
-      .set({
-        passwordHash,
-        updatedAt: new Date(),
-      })
-      .where(eq(users.email, email.trim().toLowerCase()));
+
+    await db.transaction(async (tx) => {
+      // Tandai OTP used
+      await tx
+        .update(otpCodes)
+        .set({ used: true })
+        .where(eq(otpCodes.id, validOtp.id));
+
+      // Update password pengguna
+      await tx
+        .update(users)
+        .set({
+          passwordHash,
+          updatedAt: new Date(),
+        })
+        .where(eq(users.email, email.trim().toLowerCase()));
+
+      await tx.insert(logs).values({
+        user: email.trim().toLowerCase(),
+        aksi: 'RESET_PASSWORD',
+        detail: `Pengguna me-reset password via OTP email`,
+      });
+    });
 
     return NextResponse.json({
       success: true,

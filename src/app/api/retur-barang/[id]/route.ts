@@ -31,30 +31,36 @@ export async function PUT(
       return NextResponse.json({ success: false, message: 'Data tidak ditemukan' }, { status: 404 });
     }
 
-    const [updated] = await db
-      .update(returBarang)
-      .set({ status })
-      .where(eq(returBarang.id, id))
-      .returning();
-
-    if (tambahKeStok && item.status !== 'disetujui') {
-      await db
-        .update(inventory)
-        .set({
-          stok: sql`${inventory.stok} + ${item.qty}`,
-          updatedAt: new Date(),
-        })
-        .where(eq(inventory.sku, item.sku));
-    }
-
     const user = authResult.user?.name || authResult.user?.username || 'System';
-    await db.insert(logs).values({
-      user,
-      aksi: 'UPDATE_STATUS_RETUR',
-      detail: `Update retur ID: ${id} status: ${status} (tambah stok: ${!!tambahKeStok})`,
+    let updatedResult: any;
+
+    await db.transaction(async (tx) => {
+      const [updated] = await tx
+        .update(returBarang)
+        .set({ status })
+        .where(eq(returBarang.id, id))
+        .returning();
+
+      updatedResult = updated;
+
+      if (tambahKeStok && item.status !== 'disetujui') {
+        await tx
+          .update(inventory)
+          .set({
+            stok: sql`${inventory.stok} + ${item.qty}`,
+            updatedAt: new Date(),
+          })
+          .where(eq(inventory.sku, item.sku));
+      }
+
+      await tx.insert(logs).values({
+        user,
+        aksi: 'UPDATE_STATUS_RETUR',
+        detail: `Update retur ID: ${id} status: ${status} (tambah stok: ${!!tambahKeStok})`,
+      });
     });
 
-    return NextResponse.json({ success: true, data: updated });
+    return NextResponse.json({ success: true, data: updatedResult });
   } catch (err: any) {
     return NextResponse.json({ success: false, message: err.message }, { status: 500 });
   }

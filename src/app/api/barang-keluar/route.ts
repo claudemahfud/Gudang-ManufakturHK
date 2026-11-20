@@ -145,53 +145,55 @@ export async function POST(req: Request) {
       }
     }
 
-    const insertedRows = [];
+    const insertedRows: any[] = [];
 
-    for (const it of items) {
-      const qty = parseInt(it.qty, 10);
-      const hargaJual = parseFloat(it.hargaJual || 0);
-      const diskon = parseFloat(it.diskon || 0);
-      const subtotal = qty * hargaJual * (1 - diskon / 100);
+    await db.transaction(async (tx) => {
+      for (const it of items) {
+        const qty = parseInt(it.qty, 10);
+        const hargaJual = parseFloat(it.hargaJual || 0);
+        const diskon = parseFloat(it.diskon || 0);
+        const subtotal = qty * hargaJual * (1 - diskon / 100);
 
-      const [row] = await db
-        .insert(barangKeluar)
-        .values({
-          trxId,
-          tanggal: trxDate,
-          sku: it.sku,
-          namaBarang: it.namaBarang,
-          qty,
-          satuan: it.satuan || 'pcs',
-          hargaJual: String(hargaJual),
-          total: String(subtotal),
-          pelanggan: pelanggan || null,
-          salesman: salesman || null,
-          diskon: String(diskon),
-          divisi: body.divisi || 'MANUFAKTUR',
-          cabang: cabangToSave,
-          channel: body.channel || 'GROSIR',
-          keterangan: keterangan || null,
-          createdBy: user,
-        })
-        .returning();
+        const [row] = await tx
+          .insert(barangKeluar)
+          .values({
+            trxId,
+            tanggal: trxDate,
+            sku: it.sku,
+            namaBarang: it.namaBarang,
+            qty,
+            satuan: it.satuan || 'pcs',
+            hargaJual: String(hargaJual),
+            total: String(subtotal),
+            pelanggan: pelanggan || null,
+            salesman: salesman || null,
+            diskon: String(diskon),
+            divisi: body.divisi || 'MANUFAKTUR',
+            cabang: cabangToSave,
+            channel: body.channel || 'GROSIR',
+            keterangan: keterangan || null,
+            createdBy: user,
+          })
+          .returning();
 
-      // Kurangi stok inventory
-      await db
-        .update(inventory)
-        .set({
-          stok: sql`${inventory.stok} - ${qty}`,
-          updatedAt: new Date(),
-        })
-        .where(eq(inventory.sku, it.sku));
+        // Kurangi stok inventory
+        await tx
+          .update(inventory)
+          .set({
+            stok: sql`${inventory.stok} - ${qty}`,
+            updatedAt: new Date(),
+          })
+          .where(eq(inventory.sku, it.sku));
 
-      insertedRows.push(row);
-    }
+        insertedRows.push(row);
+      }
 
-    // Audit log
-    await db.insert(logs).values({
-      user,
-      aksi: 'PENGELUARAN_BARANG',
-      detail: `Mencatat transaksi keluar ${trxId} (${items.length} item) ke ${pelanggan || '-'}`,
+      // Audit log
+      await tx.insert(logs).values({
+        user,
+        aksi: 'PENGELUARAN_BARANG',
+        detail: `Mencatat transaksi keluar ${trxId} (${items.length} item) ke ${pelanggan || '-'}`,
+      });
     });
 
     return NextResponse.json(

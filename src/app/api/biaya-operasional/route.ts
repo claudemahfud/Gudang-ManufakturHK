@@ -34,9 +34,10 @@ export async function POST(req: Request) {
     const body = await req.json();
     const { tanggal, kategori, jumlah, keterangan } = body;
 
-    if (!kategori || !jumlah) {
+    const parsedJumlah = Number(jumlah);
+    if (!kategori || isNaN(parsedJumlah) || parsedJumlah <= 0) {
       return NextResponse.json(
-        { success: false, message: 'Kategori dan Jumlah wajib diisi' },
+        { success: false, message: 'Kategori dan Jumlah (harus lebih dari 0) wajib diisi' },
         { status: 400 }
       );
     }
@@ -48,7 +49,7 @@ export async function POST(req: Request) {
       .values({
         tanggal: tanggal ? new Date(tanggal) : new Date(),
         kategori,
-        jumlah: String(jumlah),
+        jumlah: String(parsedJumlah),
         keterangan: keterangan || null,
         createdBy: user,
       })
@@ -57,7 +58,7 @@ export async function POST(req: Request) {
     await db.insert(logs).values({
       user,
       aksi: 'BIAYA_OPERASIONAL',
-      detail: `Catat biaya operasional [${kategori}]: Rp ${jumlah}`,
+      detail: `Catat biaya operasional [${kategori}]: Rp ${parsedJumlah.toLocaleString('id-ID')}`,
     });
 
     return NextResponse.json({ success: true, data: row }, { status: 201 });
