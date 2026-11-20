@@ -184,6 +184,37 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Aturan 1: Validasi Kesamaan Nama Barang dari Suplier Berbeda -> Wajib Tambahkan Brand
+    const existingWithSameName = await db
+      .select({
+        id: inventory.id,
+        sku: inventory.sku,
+        namaBarang: inventory.namaBarang,
+        brand: inventory.brand,
+        supplier: inventory.supplier,
+        hargaBeli: inventory.hargaBeli,
+      })
+      .from(inventory)
+      .where(sql`LOWER(TRIM(${inventory.namaBarang})) = LOWER(TRIM(${namaBarang}))`)
+      .limit(5);
+
+    if (existingWithSameName.length > 0) {
+      const differentSupplierItem = existingWithSameName.find(
+        (i) => i.supplier && i.supplier.trim().toLowerCase() !== supplier.trim().toLowerCase()
+      );
+
+      if (differentSupplierItem && (!brand || !brand.trim())) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: 'Brand / Merek wajib diisi!',
+            penyebab: `Ditemukan barang dengan nama yang sama ("${differentSupplierItem.namaBarang}") dari Suplier lain ("${differentSupplierItem.supplier}"). Anda wajib mencantumkan Brand/Merek agar identitas dan kualitas produk tidak tertukar di gudang dan kasir.`,
+          },
+          { status: 400 }
+        );
+      }
+    }
+
     const normalizedSku = sku.trim().toUpperCase();
 
     // Periksa keunikan SKU

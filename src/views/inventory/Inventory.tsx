@@ -9,7 +9,7 @@ import { useState, useEffect, useRef } from 'react';
 import { formatRupiah, formatStok } from '@/shared/lib/utils';
 import type { InventoryItem } from '@/shared/types';
 import { useDivision } from '@/shared/context/DivisionContext';
-import { Factory, Coffee, Download, Trash2, AlertCircle } from 'lucide-react';
+import { Factory, Coffee, Download, Trash2, AlertCircle, Sparkles, Info } from 'lucide-react';
 import { exportToCsv } from '@/shared/lib/export';
 import { ToastFloater, ToastData } from '@/shared/components/ui/ToastFloater';
 
@@ -258,6 +258,32 @@ export default function Inventory() {
       return;
     }
 
+    // Aturan Wajib: Nama item sama dengan Suplier beda -> Wajib isi Brand
+    const duplicateNameItem = items.find(
+      (it) =>
+        it.sku !== form.sku &&
+        it.namaBarang.trim().toLowerCase() === form.namaBarang.trim().toLowerCase()
+    );
+
+    if (
+      duplicateNameItem &&
+      duplicateNameItem.supplier &&
+      form.supplier &&
+      duplicateNameItem.supplier.trim().toLowerCase() !== form.supplier.trim().toLowerCase()
+    ) {
+      if (!form.brand.trim()) {
+        const errorMsg = `Brand / Merek wajib diisi! Ditemukan barang bernama "${duplicateNameItem.namaBarang}" dari Suplier lain ("${duplicateNameItem.supplier}"). Cantumkan Brand agar tidak tertukar.`;
+        setFormError(errorMsg);
+        showToast(
+          'warning',
+          'Wajib Menambahkan Brand / Merek!',
+          `Barang dengan nama serupa sudah ada dari Suplier "${duplicateNameItem.supplier}". Anda wajib mencantumkan Brand/Merek untuk membedakan produk.`,
+          'Validasi Brand Produk'
+        );
+        return;
+      }
+    }
+
     try {
       setSubmitting(true);
 
@@ -468,6 +494,38 @@ export default function Inventory() {
       ],
     });
   };
+
+  // Deteksi Duplikasi & Strategi Multi-Suplier
+  const duplicateNameExisting = form.namaBarang.trim()
+    ? items.find(
+        (it) =>
+          it.sku !== form.sku &&
+          it.namaBarang.trim().toLowerCase() === form.namaBarang.trim().toLowerCase()
+      )
+    : null;
+
+  // Kasus 1: Nama sama, Suplier beda, Brand masih KOSONG -> Wajib minta user menambahkan brand
+  const isDifferentSupplierMissingBrand = Boolean(
+    duplicateNameExisting &&
+      duplicateNameExisting.supplier &&
+      form.supplier &&
+      duplicateNameExisting.supplier.trim().toLowerCase() !== form.supplier.trim().toLowerCase() &&
+      !form.brand.trim()
+  );
+
+  // Kasus 2: Nama sama, Brand sama, Suplier beda, dan Harga Beli beda -> Atur strategi penerapannya
+  const isSameBrandDifferentSupplierAndPrice = Boolean(
+    duplicateNameExisting &&
+      duplicateNameExisting.supplier &&
+      form.supplier &&
+      duplicateNameExisting.supplier.trim().toLowerCase() !== form.supplier.trim().toLowerCase() &&
+      form.brand.trim() &&
+      duplicateNameExisting.brand &&
+      form.brand.trim().toLowerCase() === duplicateNameExisting.brand.trim().toLowerCase() &&
+      Number(form.hargaBeli) > 0 &&
+      Number(duplicateNameExisting.hargaBeli) > 0 &&
+      Number(form.hargaBeli) !== Number(duplicateNameExisting.hargaBeli)
+  );
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto pb-12">
@@ -888,15 +946,19 @@ export default function Inventory() {
                     <div className="grid grid-cols-3 gap-3">
                       <div>
                         <label className="block text-xs font-bold text-gray-700 mb-1 uppercase tracking-wider">
-                          Brand
+                          Brand / Merek {isDifferentSupplierMissingBrand && <span className="text-red-600 font-bold">* WAJIB</span>}
                         </label>
                         <input
                           type="text"
                           disabled={submitting}
                           value={form.brand}
                           onChange={(e) => setForm((p) => ({ ...p, brand: e.target.value }))}
-                          placeholder="Merek"
-                          className="w-full px-3 py-2 rounded-xl border border-gray-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 outline-none transition text-xs sm:text-sm"
+                          placeholder={isDifferentSupplierMissingBrand ? 'Wajib isi merek...' : 'Merek'}
+                          className={`w-full px-3 py-2 rounded-xl border outline-none transition text-xs sm:text-sm ${
+                            isDifferentSupplierMissingBrand
+                              ? 'border-red-400 ring-2 ring-red-100 bg-red-50/30 text-red-900 placeholder-red-400'
+                              : 'border-gray-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100'
+                          }`}
                         />
                       </div>
 
@@ -928,6 +990,87 @@ export default function Inventory() {
                         />
                       </div>
                     </div>
+
+                    {/* Alert 1: Nama Item Sama, Suplier Beda -> Wajib Tambahkan Brand */}
+                    {isDifferentSupplierMissingBrand && (
+                      <div className="p-3 rounded-xl bg-amber-50 border border-amber-300 text-amber-900 text-xs flex items-start gap-2.5 animate-in fade-in">
+                        <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                        <div className="leading-relaxed">
+                          <strong className="block font-bold text-amber-950 mb-0.5">
+                            Wajib Tambahkan Brand / Merek!
+                          </strong>
+                          Ditemukan barang dengan nama &quot;<strong>{duplicateNameExisting?.namaBarang}</strong>&quot; yang sudah ada dari Suplier lain (&quot;<strong>{duplicateNameExisting?.supplier}</strong>&quot;). 
+                          Untuk mencegah salah ambil fisik barang dan tertukar di gudang maupun kasir POS, Anda <strong>wajib mengisi kolom Brand</strong> di atas.
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Alert 2: Kondisi Brand Sama, Suplier Beda, Harga Beli Beda -> Atur Strategi Penerapannya */}
+                    {isSameBrandDifferentSupplierAndPrice && (
+                      <div className="p-3.5 rounded-xl bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-200 text-xs space-y-2.5 animate-in fade-in shadow-sm">
+                        <div className="flex items-center gap-1.5 font-bold text-amber-900">
+                          <Sparkles className="w-4 h-4 text-amber-600" />
+                          <span>Strategi Multi-Suplier &amp; Perbedaan Harga Beli</span>
+                        </div>
+                        <p className="text-amber-800 leading-relaxed text-[11px]">
+                          Produk <strong>{form.namaBarang} ({form.brand})</strong> sudah terdaftar dari Suplier <strong>{duplicateNameExisting?.supplier}</strong> seharga <strong>{formatRupiah(duplicateNameExisting?.hargaBeli)}</strong>. 
+                          Saat ini Anda memasukkan dari Suplier <strong>{form.supplier}</strong> seharga <strong>{formatRupiah(form.hargaBeli)}</strong>. 
+                          Pilih strategi pengelolaan yang diinginkan:
+                        </p>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+                          {/* Strategi A: Varian SKU Terpisah */}
+                          <div className="p-2.5 rounded-lg bg-white border border-amber-300 flex flex-col justify-between">
+                            <div>
+                              <div className="font-bold text-gray-900 text-[11px] mb-0.5">
+                                Strategi 1: SKU Varian Terpisah
+                              </div>
+                              <p className="text-[10px] text-gray-500 mb-2 leading-tight">
+                                Stok &amp; retur terisolasi per suplier. Otomatis tambahkan kode suplier pada SKU.
+                              </p>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const suplierSuffix = (form.supplier || 'SUP')
+                                  .replace(/[^a-zA-Z0-9]/g, '')
+                                  .substring(0, 4)
+                                  .toUpperCase();
+                                setForm((prev) => ({
+                                  ...prev,
+                                  sku: `${duplicateNameExisting?.sku || 'SKU'}-${suplierSuffix}`,
+                                }));
+                                showToast(
+                                  'info',
+                                  'SKU Varian Dibuat',
+                                  `Kode SKU disesuaikan menjadi ${duplicateNameExisting?.sku || 'SKU'}-${suplierSuffix}`
+                                );
+                              }}
+                              className="w-full py-1.5 px-2 bg-amber-600 hover:bg-amber-700 text-white rounded text-[11px] font-semibold transition"
+                            >
+                              Terapkan SKU ({duplicateNameExisting?.sku || 'SKU'}-{(form.supplier || 'SUP').replace(/[^a-zA-Z0-9]/g, '').substring(0, 4).toUpperCase()})
+                            </button>
+                          </div>
+
+                          {/* Strategi B: Moving Average HPP via Barang Masuk */}
+                          <div className="p-2.5 rounded-lg bg-white border border-emerald-300 flex flex-col justify-between">
+                            <div>
+                              <div className="font-bold text-emerald-900 text-[11px] mb-0.5">
+                                Strategi 2: Moving Average HPP
+                              </div>
+                              <p className="text-[10px] text-gray-600 mb-2 leading-tight">
+                                Jika fisik barang &amp; barcode kasir sama, catat muatan via menu Barang Masuk untuk kalkulasi HPP rata-rata.
+                              </p>
+                            </div>
+                            <a
+                              href="/barang-masuk"
+                              className="block text-center py-1.5 px-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-[11px] font-semibold transition"
+                            >
+                              Buka Form Barang Masuk
+                            </a>
+                          </div>
+                        </div>
+                      </div>
+                    )}
 
                     {/* Keterangan */}
                     <div>

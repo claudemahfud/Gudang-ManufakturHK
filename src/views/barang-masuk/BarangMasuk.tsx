@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Camera, Calendar, DollarSign, Building2, CreditCard, CheckCircle2, AlertCircle, Trash2 } from 'lucide-react';
+import { Camera, Calendar, DollarSign, Building2, CreditCard, CheckCircle2, AlertCircle, Trash2, Sparkles } from 'lucide-react';
 import { formatTanggal, formatRupiah } from '@/shared/lib/utils';
 import { useBarcodeScanner } from '@/shared/hooks/useBarcodeScanner';
 import CameraBarcodeScanner from '@/shared/components/ui/CameraBarcodeScanner';
@@ -34,6 +34,7 @@ interface InventoryOption {
   sku: string;
   namaBarang: string;
   hargaBeli: string | number | null;
+  stok?: string | number | null;
   supplier?: string | null;
 }
 
@@ -207,6 +208,24 @@ export default function BarangMasuk() {
   };
 
   const calculatedTotalBeli = Math.max(0, (Number(form.qty) || 0) * (Number(form.hargaBeli) || 0));
+
+  // Perhitungan Moving Average HPP Real-time
+  const selectedInv = inventoryList.find((i) => i.sku === form.sku);
+  const curStock = Number(selectedInv?.stok) || 0;
+  const curPrice = Number(selectedInv?.hargaBeli) || 0;
+  const qtyIn = Number(form.qty) || 0;
+  const priceIn = Number(form.hargaBeli) || 0;
+  const newStock = curStock + qtyIn;
+  const isPriceDifferent = Boolean(
+    selectedInv &&
+      curPrice > 0 &&
+      priceIn > 0 &&
+      priceIn !== curPrice
+  );
+  const estimatedAvg =
+    newStock > 0 && curStock > 0
+      ? Math.round((curStock * curPrice + qtyIn * priceIn) / newStock)
+      : priceIn;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -618,6 +637,28 @@ export default function BarangMasuk() {
                         Harga yang <strong>dibayar kepada Suplier</strong> untuk 1 {form.satuan}.
                       </p>
                     </div>
+
+                    {/* Banner Strategi Penerapan: Moving Weighted Average Costing */}
+                    {isPriceDifferent && (
+                      <div className="p-3 bg-blue-50/80 border border-blue-200 rounded-xl text-xs space-y-1.5 text-blue-900 animate-in fade-in shadow-sm">
+                        <div className="flex items-center gap-1.5 font-bold text-blue-950">
+                          <Sparkles className="w-3.5 h-3.5 text-blue-600" />
+                          <span>Penerapan Strategi: Moving Average HPP</span>
+                        </div>
+                        <p className="text-[11px] text-blue-800 leading-relaxed">
+                          Harga beli muatan ini (<strong>{formatRupiah(priceIn)}</strong>) berbeda dengan HPP Master saat ini (<strong>{formatRupiah(curPrice)}</strong>).
+                          Sistem akan otomatis menghitung HPP rata-rata tertimbang agar nilai neraca persediaan gudang akurat.
+                        </p>
+                        {qtyIn > 0 && (
+                          <div className="pt-1.5 border-t border-blue-200/80 flex items-center justify-between text-[11px]">
+                            <span className="text-blue-700">Estimasi HPP Rata-Rata Baru:</span>
+                            <span className="font-bold text-blue-950 text-xs">
+                              {formatRupiah(estimatedAvg)} / {form.satuan}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    )}
 
                     {/* Highlight Total Nilai Pembelian */}
                     <div className="p-3.5 rounded-xl bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 flex items-center justify-between">
