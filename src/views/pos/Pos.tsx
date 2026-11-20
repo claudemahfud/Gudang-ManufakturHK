@@ -44,6 +44,10 @@ import {
   Check,
   MapPin,
   ChevronDown,
+  ShieldAlert,
+  Lock,
+  KeyRound,
+  ShieldCheck,
 } from 'lucide-react';
 import { formatRupiah } from '@/shared/lib/utils';
 import { ROUTES } from '@/router/routes';
@@ -73,6 +77,11 @@ interface PosSettings {
   enableSound: boolean;
   gridMode: 'compact' | 'normal';
   defaultMetode: 'Tunai' | 'Transfer' | 'QRIS';
+  // Anti-Fraud & Proteksi PIN Supervisor
+  enableSupervisorPin: boolean;
+  supervisorPin: string;
+  maxDiskonTanpaPin: number;
+  requirePinVoidCart: boolean;
 }
 
 const DEFAULT_POS_SETTINGS: PosSettings = {
@@ -85,6 +94,10 @@ const DEFAULT_POS_SETTINGS: PosSettings = {
   enableSound: true,
   gridMode: 'normal',
   defaultMetode: 'Tunai',
+  enableSupervisorPin: true,
+  supervisorPin: '1234',
+  maxDiskonTanpaPin: 15,
+  requirePinVoidCart: true,
 };
 
 // Web Audio API beep synthesizer (zero dependency)
@@ -159,6 +172,13 @@ export default function PosView() {
   const [mobileCartOpen, setMobileCartOpen] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [waPhone, setWaPhone] = useState('');
+
+  // Supervisor PIN Protection States (Anti-Fraud)
+  const [isSupervisorModalOpen, setIsSupervisorModalOpen] = useState(false);
+  const [supervisorAction, setSupervisorAction] = useState<'discount' | 'void_cart' | null>(null);
+  const [pendingDiskon, setPendingDiskon] = useState<number | null>(null);
+  const [supervisorPinInput, setSupervisorPinInput] = useState('');
+  const [supervisorPinError, setSupervisorPinError] = useState<string | null>(null);
 
   // POS Settings State (Local to device / independent from backoffice)
   const [posSettings, setPosSettings] = useState<PosSettings>(DEFAULT_POS_SETTINGS);
@@ -292,10 +312,62 @@ export default function PosView() {
     setCart((prev) => prev.filter((c) => c.sku !== sku));
   };
 
+  // Anti-Fraud Supervisor Handlers
+  const handleDiscountChange = (newVal: number) => {
+    const clampedVal = Math.min(100, Math.max(0, newVal));
+    if (posSettings.enableSupervisorPin && clampedVal > posSettings.maxDiskonTanpaPin) {
+      setPendingDiskon(clampedVal);
+      setSupervisorAction('discount');
+      setSupervisorPinInput('');
+      setSupervisorPinError(null);
+      setIsSupervisorModalOpen(true);
+    } else {
+      setDiskonPct(clampedVal);
+    }
+  };
+
   const clearCart = () => {
-    if (cart.length > 0 && confirm('Kosongkan keranjang belanja?')) {
+    if (cart.length === 0) return;
+    if (posSettings.enableSupervisorPin && posSettings.requirePinVoidCart) {
+      setSupervisorAction('void_cart');
+      setSupervisorPinInput('');
+      setSupervisorPinError(null);
+      setIsSupervisorModalOpen(true);
+    } else {
+      if (confirm('Kosongkan keranjang belanja?')) {
+        setCart([]);
+      }
+    }
+  };
+
+  const handleVerifySupervisorPin = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (supervisorPinInput.trim() !== posSettings.supervisorPin.trim()) {
+      setSupervisorPinError('PIN Supervisor salah! Akses otorisasi ditolak.');
+      if (posSettings.enableSound) playBeep('error');
+      return;
+    }
+
+    if (posSettings.enableSound) playBeep('success');
+    if (supervisorAction === 'discount' && pendingDiskon !== null) {
+      setDiskonPct(pendingDiskon);
+      setPendingDiskon(null);
+    } else if (supervisorAction === 'void_cart') {
       setCart([]);
     }
+
+    setIsSupervisorModalOpen(false);
+    setSupervisorPinInput('');
+    setSupervisorPinError(null);
+    setSupervisorAction(null);
+  };
+
+  const handleCancelSupervisorModal = () => {
+    setIsSupervisorModalOpen(false);
+    setSupervisorPinInput('');
+    setSupervisorPinError(null);
+    setSupervisorAction(null);
+    setPendingDiskon(null);
   };
 
   // Fullscreen Toggle
@@ -786,16 +858,26 @@ export default function PosView() {
 
           {/* Cart Summary & Checkout CTA */}
           <div className="p-4 border-t border-slate-800 bg-slate-950 space-y-3">
-            {/* Diskon Input */}
+            {/* Diskon Input with Anti-Fraud Indicator */}
             <div className="flex items-center justify-between text-xs">
-              <span className="text-slate-400">Diskon Transaksi (%)</span>
+              <div className="flex items-center gap-1.5">
+                <span className="text-slate-400">Diskon Transaksi (%)</span>
+                {posSettings.enableSupervisorPin && (
+                  <span
+                    className="text-[9px] px-1 py-0.2 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20 font-mono"
+                    title={`Diskon di atas ${posSettings.maxDiskonTanpaPin}% butuh otorisasi PIN Supervisor`}
+                  >
+                    Max {posSettings.maxDiskonTanpaPin}%
+                  </span>
+                )}
+              </div>
               <div className="flex items-center gap-1.5 w-24">
                 <input
                   type="number"
                   min="0"
                   max="100"
                   value={diskonPct}
-                  onChange={(e) => setDiskonPct(Math.min(100, Math.max(0, Number(e.target.value))))}
+                  onChange={(e) => handleDiscountChange(Number(e.target.value))}
                   className="w-full bg-slate-900 border border-slate-800 rounded px-2 py-1 text-right text-xs text-slate-100 font-mono focus:outline-none focus:border-emerald-500"
                 />
                 <span className="text-slate-500 font-mono">%</span>
@@ -1188,6 +1270,10 @@ export default function PosView() {
                   enableSound: fd.get('enableSound') === 'on',
                   gridMode: (fd.get('gridMode') as any) || 'normal',
                   defaultMetode: (fd.get('defaultMetode') as any) || 'Tunai',
+                  enableSupervisorPin: fd.get('enableSupervisorPin') === 'on',
+                  supervisorPin: String(fd.get('supervisorPin') || '1234'),
+                  maxDiskonTanpaPin: Math.min(100, Math.max(0, Number(fd.get('maxDiskonTanpaPin') || 15))),
+                  requirePinVoidCart: fd.get('requirePinVoidCart') === 'on',
                 });
               }}
               className="p-5 space-y-4 overflow-y-auto max-h-[70vh]"
@@ -1312,6 +1398,82 @@ export default function PosView() {
                 </div>
               </div>
 
+              {/* Anti-Fraud & Supervisor PIN Protection Section */}
+              <div className="space-y-3 pt-3 border-t border-slate-800">
+                <div className="flex items-center gap-2">
+                  <ShieldAlert className="w-4 h-4 text-amber-400" />
+                  <h4 className="text-xs font-bold text-amber-400 uppercase tracking-wider">
+                    Keamanan & Anti-Fraud Kasir (PIN Supervisor)
+                  </h4>
+                </div>
+                <p className="text-[11px] text-slate-400 leading-relaxed">
+                  Cegah kecurangan kasir, manipulasi harga diskon khusus, dan pembatalan nota sembarangan
+                </p>
+
+                <div className="space-y-2.5 pt-1">
+                  <label className="flex items-center gap-3 p-2.5 rounded-xl bg-slate-950 border border-slate-800 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      name="enableSupervisorPin"
+                      defaultChecked={posSettings.enableSupervisorPin}
+                      className="rounded border-slate-700 text-emerald-500 focus:ring-emerald-500"
+                    />
+                    <div className="text-xs">
+                      <div className="font-semibold text-slate-200">Aktifkan Proteksi PIN Supervisor</div>
+                      <div className="text-[10px] text-slate-400">
+                        Wajibkan otorisasi PIN saat diskon khusus atau batal keranjang
+                      </div>
+                    </div>
+                  </label>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-xs font-semibold text-slate-300 block mb-1">
+                        PIN Supervisor (4-6 Digit)
+                      </label>
+                      <input
+                        type="password"
+                        name="supervisorPin"
+                        maxLength={6}
+                        defaultValue={posSettings.supervisorPin}
+                        placeholder="1234"
+                        className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-100 font-mono tracking-widest focus:outline-none focus:border-emerald-500"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs font-semibold text-slate-300 block mb-1">
+                        Batas Diskon Normal Kasir (%)
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        max="100"
+                        name="maxDiskonTanpaPin"
+                        defaultValue={posSettings.maxDiskonTanpaPin}
+                        className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-100 font-mono focus:outline-none focus:border-emerald-500"
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <label className="flex items-center gap-3 p-2.5 rounded-xl bg-slate-950 border border-slate-800 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      name="requirePinVoidCart"
+                      defaultChecked={posSettings.requirePinVoidCart}
+                      className="rounded border-slate-700 text-emerald-500 focus:ring-emerald-500"
+                    />
+                    <div className="text-xs">
+                      <div className="font-semibold text-slate-200">Wajibkan PIN Saat Kosongkan Keranjang (Void)</div>
+                      <div className="text-[10px] text-slate-400">
+                        Mencegah kasir membatalkan belanja yang sudah diinput tanpa izin supervisor
+                      </div>
+                    </div>
+                  </label>
+                </div>
+              </div>
+
               <div className="p-4 border-t border-slate-800 flex items-center justify-end gap-2 bg-slate-950 -mx-5 -mb-5 mt-4">
                 <button
                   type="button"
@@ -1333,7 +1495,167 @@ export default function PosView() {
       )}
 
       {/* ============================================================ */}
-      {/* 7. DEDICATED PRINT STYLES FOR 58mm THERMAL PRINTER */}
+      {/* 7. MODAL: Otorisasi PIN Supervisor Kasir (Anti-Fraud) */}
+      {/* ============================================================ */}
+      {isSupervisorModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-in fade-in duration-150">
+          <aside
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="pos-supervisor-title"
+            className="bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden animate-in zoom-in-95 duration-150 text-white"
+          >
+            {/* Header Dialog */}
+            <header className="p-5 border-b border-slate-800 flex items-start justify-between bg-gradient-to-r from-amber-950/40 via-slate-900 to-slate-900">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-amber-500/20 text-amber-400 border border-amber-500/30 flex items-center justify-center shadow-xs">
+                  <ShieldAlert className="w-5 h-5" />
+                </div>
+                {/* Triple Line: Title, Sub-Title, Sub-Sub-Title */}
+                <div>
+                  <h3 id="pos-supervisor-title" className="text-sm sm:text-base font-extrabold text-white tracking-tight leading-tight">
+                    Otorisasi Supervisor
+                  </h3>
+                  <p className="text-xs text-slate-400 font-medium mt-0.5">
+                    Verifikasi Keamanan Kasir POS
+                  </p>
+                  <p className="text-[11px] text-amber-400 font-semibold mt-0.5">
+                    {supervisorAction === 'discount'
+                      ? `Diskon Khusus > ${posSettings.maxDiskonTanpaPin}%`
+                      : 'Pembatalan Keranjang (Void Cart)'}
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleCancelSupervisorModal}
+                className="text-slate-400 hover:text-white p-1 rounded-xl transition"
+                aria-label="Tutup Dialog Otorisasi"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </header>
+
+            {/* Action Summary Info Card (List Dual-Line) */}
+            <form onSubmit={handleVerifySupervisorPin} className="p-5 space-y-4">
+              <div className="p-3.5 rounded-2xl bg-slate-950 border border-slate-800 space-y-2 text-xs">
+                {supervisorAction === 'discount' ? (
+                  <>
+                    <div className="flex justify-between items-center text-slate-400">
+                      <span>Diskon Diajukan:</span>
+                      <span className="font-mono font-bold text-amber-400 text-sm">{pendingDiskon}%</span>
+                    </div>
+                    <div className="flex justify-between items-center text-slate-400">
+                      <span>Batas Kasir Normal:</span>
+                      <span className="font-mono text-slate-200">{posSettings.maxDiskonTanpaPin}%</span>
+                    </div>
+                    <div className="flex justify-between items-center text-slate-400 border-t border-slate-800 pt-1.5">
+                      <span>Potongan Diskon:</span>
+                      <span className="font-bold text-emerald-400 font-mono">
+                        - {formatRupiah((subtotal * Number(pendingDiskon || 0)) / 100)}
+                      </span>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="flex justify-between items-center text-slate-400">
+                      <span>Aksi Diminta:</span>
+                      <span className="font-bold text-red-400">Void / Hapus Keranjang</span>
+                    </div>
+                    <div className="flex justify-between items-center text-slate-400">
+                      <span>Jumlah Item:</span>
+                      <span className="font-semibold text-slate-200">{totalItemCount} pcs barang</span>
+                    </div>
+                    <div className="flex justify-between items-center text-slate-400 border-t border-slate-800 pt-1.5">
+                      <span>Total Nilai Dibatalkan:</span>
+                      <span className="font-bold text-red-400 font-mono text-sm">{formatRupiah(grandTotal)}</span>
+                    </div>
+                  </>
+                )}
+              </div>
+
+              {/* PIN Input */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-300 flex items-center justify-between">
+                  <span className="flex items-center gap-1.5">
+                    <KeyRound className="w-3.5 h-3.5 text-amber-400" />
+                    <span>Ketik PIN Supervisor:</span>
+                  </span>
+                  <span className="text-[10px] text-slate-500 font-mono">Default: 1234</span>
+                </label>
+                <input
+                  type="password"
+                  maxLength={6}
+                  autoFocus
+                  value={supervisorPinInput}
+                  onChange={(e) => {
+                    setSupervisorPinInput(e.target.value.replace(/\D/g, ''));
+                    setSupervisorPinError(null);
+                  }}
+                  placeholder="PIN..."
+                  className="w-full text-center tracking-[0.5em] font-mono text-xl font-bold bg-slate-950 border border-slate-800 focus:border-amber-400 focus:ring-2 focus:ring-amber-400/20 rounded-xl px-4 py-2.5 outline-none text-white transition"
+                />
+              </div>
+
+              {/* Error Alert */}
+              {supervisorPinError && (
+                <div className="p-2.5 rounded-xl bg-red-950/60 border border-red-800 text-xs text-red-300 font-semibold flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 shrink-0 text-red-400" />
+                  <span>{supervisorPinError}</span>
+                </div>
+              )}
+
+              {/* Touchscreen Numeric Keypad for POS Terminal */}
+              <div className="grid grid-cols-3 gap-1.5 pt-1">
+                {['1', '2', '3', '4', '5', '6', '7', '8', '9', 'C', '0', '⌫'].map((k) => (
+                  <button
+                    key={k}
+                    type="button"
+                    onClick={() => {
+                      if (k === 'C') setSupervisorPinInput('');
+                      else if (k === '⌫') setSupervisorPinInput((p) => p.slice(0, -1));
+                      else if (supervisorPinInput.length < 6) setSupervisorPinInput((p) => p + k);
+                      setSupervisorPinError(null);
+                    }}
+                    className={`py-2 rounded-xl text-xs font-bold transition active:scale-95 ${
+                      k === 'C'
+                        ? 'bg-red-950/40 hover:bg-red-900/50 text-red-400 border border-red-800/60'
+                        : k === '⌫'
+                        ? 'bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700'
+                        : 'bg-slate-800/80 hover:bg-slate-700 text-white border border-slate-700/80'
+                    }`}
+                  >
+                    {k}
+                  </button>
+                ))}
+              </div>
+
+              {/* Modal Buttons */}
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-800">
+                <button
+                  type="button"
+                  onClick={handleCancelSupervisorModal}
+                  className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-white transition"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  disabled={!supervisorPinInput}
+                  className="px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs shadow-lg shadow-amber-500/20 transition active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
+                >
+                  <Lock className="w-3.5 h-3.5" />
+                  <span>Setujui Otorisasi</span>
+                </button>
+              </div>
+            </form>
+          </aside>
+        </div>
+      )}
+
+      {/* ============================================================ */}
+      {/* 8. DEDICATED PRINT STYLES FOR 58mm THERMAL PRINTER */}
       {/* ============================================================ */}
       <style jsx global>{`
         @media print {

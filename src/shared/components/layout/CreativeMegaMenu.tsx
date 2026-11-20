@@ -461,15 +461,21 @@ export default function CreativeMegaMenu({ userRole, isOpen, onClose }: MegaMenu
                 <span>PUSAT AKSI CEPAT</span>
               </div>
 
-              {/* Triple Line: Overline / Title / Subtitle */}
-              <div className="space-y-1">
-                <h4 className="text-sm font-extrabold text-white tracking-tight leading-snug">
+              {/* Triple Line: Overline / Title / Subtitle (Clickable to open menu directly) */}
+              <Link
+                href={ROUTES.POS}
+                target="_blank"
+                onClick={onClose}
+                className="group/title block space-y-1 cursor-pointer hover:opacity-95 transition"
+                title="Buka Kasir POS Sekarang"
+              >
+                <h4 className="text-sm font-extrabold text-white tracking-tight leading-snug group-hover/title:text-emerald-300 transition">
                   {isManufaktur ? 'Divisi Manufaktur & Distribusi' : 'Food & Beverage Hub'}
                 </h4>
                 <p className="text-xs text-slate-200 leading-relaxed">
                   Operasional aktif di cabang <strong>{cabang}</strong>. Akses kasir dan kelola stok secara real-time.
                 </p>
-              </div>
+              </Link>
 
               <div className="pt-2 border-t border-white/10 space-y-2">
                 <div className="flex items-center justify-between text-xs">

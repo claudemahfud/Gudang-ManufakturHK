@@ -28,7 +28,11 @@ Aplikasi ini sudah memiliki **25+ modul lengkap** yang siap pakai:
 * **Kasir POS Standalone Fullscreen** (`/pos`):
   * Layar penuh mandiri terpisah dari BackOffice (tanpa sidebar).
   * Optimasi smartphone, tablet, dan desktop.
-  * Fitur **Setting POS Terpisah** (modal konfigurasi toko, printer, audio beep, dan footer nota).
+  * Fitur **Setting POS Terpisah** (modal konfigurasi toko, printer, audio beep, footer nota, dan **Proteksi Anti-Fraud PIN Supervisor**).
+  * **Proteksi PIN Supervisor (Anti-Fraud)**:
+    * Otorisasi diskon khusus: diskon di atas batas normal kasir (default > 15%) wajib memasukkan PIN Supervisor (default `1234` atau configurable).
+    * Otorisasi pembatalan keranjang (*Void Cart*): mengosongkan keranjang yang sudah terisi item wajib otorisasi PIN Supervisor.
+    * Dilengkapi On-Screen Numeric Keypad touch-friendly untuk mesin kasir touchscreen.
   * Cetak Nota Thermal **58mm** otomatis via `@media print`.
   * Multi-role: dapat digunakan oleh Direktur Utama, Manager, Admin, Gudang, Salesman, dan Agen.
 * **Laporan Penjualan & Laba Bersih** (`/laporan-penjualan`):
@@ -46,7 +50,7 @@ Aplikasi ini sudah memiliki **25+ modul lengkap** yang siap pakai:
 * **Dashboard Utama** (`/dashboard`): Live monitor aset inventory, total master SKU, alert stok kritis, dan grafik stok brand.
 * **Master Inventory** (`/inventory`): Master data SKU, nama barang, brand, gramasi, varian, harga beli, harga jual, setting karton/pcs, dan stok minimum.
 * **Barang Masuk** (`/barang-masuk`): Penerimaan stok supplier & nomor faktur.
-* **Barang Keluar** (`/barang-keluar`): Pengiriman/penjualan grosir & cetak invoice.
+* **Barang Keluar** (`/barang-keluar`): Pengiriman/penjualan grosir & cetak invoice. Dilengkapi proteksi **PIN Supervisor Anti-Fraud** saat menghapus data riwayat transaksi penjualan/pengeluaran untuk melindungi integritas laporan omset tunai.
 * **Mutasi Barang** (`/mutasi-barang`): Pemindahan stok antar rak/gudang.
 * **Stok Kritis** (`/stok-kritis`): Peringatan dini barang yang mendekati limit minimum.
 * *(Catatan: Fitur Barang Rusak lama `/barang-rusak` telah digabungkan satu pintu ke `/laporan-rusak-retur` agar tidak duplikat).*
@@ -73,7 +77,8 @@ Aplikasi ini sudah memiliki **25+ modul lengkap** yang siap pakai:
 ### 6. Modul Operasional & Administrasi
 * **Expedisi / Armada** (`/expedisi`): Manajemen armada mobil/truk dan status servis.
 * **Kontak Mitra** (`/kontak`): Buku alamat pelanggan dan supplier.
-* **Pengguna** (`/users`): Manajemen akun user dan penugasan role (Admin only).
+* **Pengguna** (`/users`): Manajemen akun user dan penugasan role (Admin only). Dilengkapi **Kartu Data Pengguna Collapsible / Minimized**: secara default kartu tertutup ciut (*collapsed*) guna menghemat ruang layar dan memuat cepat, serta dapat dibuka/diciutkan kembali melalui tombol *Buka Data User / Ciutkan (Minimize)*.
+* **Ergonomi Interaksi Navigasi & Dokumen**: Seluruh kartu menu (Creative Mega Menu, Dashboard Quick Hub) dan tabel dokumen (`/surat-jalan`, `/po-loading`, `/barang-keluar`) dapat dibuka langsung dengan mengklik nama kartu atau nomor dokumen/pelanggan, tanpa keharusan mengklik tombol aksi kecil.
 * **Setting Profil Akun & Ganti Mode** (`/profile`):
   * Pengaturan data diri pengguna (Nama Lengkap, Email, Username, Role, Cabang).
   * Pembaruan kata sandi akun aman dengan verifikasi password lama.

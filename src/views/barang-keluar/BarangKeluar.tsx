@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { formatTanggal, formatRupiah } from '@/shared/lib/utils';
-import { Truck, ShoppingBag, Layers, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Truck, ShoppingBag, Layers, CheckCircle2, AlertCircle, ShieldAlert, Lock, KeyRound, X, Check } from 'lucide-react';
 
 // ============================================================
 // PAGE: Barang Keluar & Loading Penjualan
@@ -67,6 +67,12 @@ export default function BarangKeluar() {
 
   // Modal Invoice View
   const [invoiceData, setInvoiceData] = useState<any | null>(null);
+
+  // Supervisor PIN Delete Protection (Anti-Fraud)
+  const [deleteTarget, setDeleteTarget] = useState<ItemKeluar | null>(null);
+  const [deletePinInput, setDeletePinInput] = useState('');
+  const [deletePinError, setDeletePinError] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
@@ -198,19 +204,47 @@ export default function BarangKeluar() {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Yakin ingin menghapus item pengeluaran ini? Stok akan dikembalikan.')) return;
+  const handleRequestDelete = (item: ItemKeluar) => {
+    setDeleteTarget(item);
+    setDeletePinInput('');
+    setDeletePinError(null);
+  };
+
+  const handleConfirmDeleteWithPin = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!deleteTarget) return;
+
+    let supervisorPin = '1234';
     try {
-      const res = await fetch(`/api/barang-keluar/${id}`, { method: 'DELETE' });
+      const saved = localStorage.getItem('app_pos_settings');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.supervisorPin) supervisorPin = parsed.supervisorPin;
+      }
+    } catch {}
+
+    if (deletePinInput.trim() !== supervisorPin.trim()) {
+      setDeletePinError('PIN Supervisor tidak sesuai! Otorisasi pembatalan/penghapusan transaksi ditolak.');
+      return;
+    }
+
+    setIsDeleting(true);
+    setDeletePinError(null);
+    try {
+      const res = await fetch(`/api/barang-keluar/${deleteTarget.id}`, { method: 'DELETE' });
       const json = await res.json();
       if (json.success) {
-        showToast('Data berhasil dihapus', 'success');
+        showToast('Transaksi berhasil dihapus & stok telah dikembalikan ke inventory', 'success');
+        setDeleteTarget(null);
+        setDeletePinInput('');
         fetchData();
       } else {
-        showToast(json.message || 'Gagal menghapus', 'error');
+        setDeletePinError(json.message || 'Gagal menghapus transaksi');
       }
     } catch {
-      showToast('Gagal menghapus', 'error');
+      setDeletePinError('Terjadi kesalahan koneksi saat menghapus');
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -371,7 +405,14 @@ export default function BarangKeluar() {
                 data.map((row) => (
                   <tr key={row.id} className="hover:bg-gray-50/50 transition">
                     <td className="py-3.5 px-4 font-mono text-xs font-bold text-gray-700">
-                      {row.trxId}
+                      <button
+                        type="button"
+                        onClick={() => viewInvoice(row.trxId)}
+                        className="text-left font-mono font-bold text-xs text-emerald-700 hover:text-emerald-900 hover:underline transition"
+                        title="Buka Faktur Transaksi"
+                      >
+                        {row.trxId}
+                      </button>
                     </td>
                     <td className="py-3.5 px-4 text-xs text-gray-600 whitespace-nowrap">
                       {formatTanggal(row.tanggal)}
@@ -389,8 +430,12 @@ export default function BarangKeluar() {
                         </span>
                       )}
                     </td>
-                    <td className="py-3.5 px-4">
-                      <div className="font-semibold text-gray-800">{row.pelanggan || '-'}</div>
+                    <td
+                      className="py-3.5 px-4 cursor-pointer"
+                      onClick={() => viewInvoice(row.trxId)}
+                      title="Klik untuk membuka faktur transaksi"
+                    >
+                      <div className="font-semibold text-gray-800 hover:text-emerald-700 transition">{row.pelanggan || '-'}</div>
                       <div className="text-xs text-gray-400">Sales: {row.salesman || '-'}</div>
                     </td>
                     <td className="py-3.5 px-4">
@@ -411,8 +456,9 @@ export default function BarangKeluar() {
                         Faktur
                       </button>
                       <button
-                        onClick={() => handleDelete(row.id)}
+                        onClick={() => handleRequestDelete(row)}
                         className="text-red-500 hover:text-red-700 text-xs font-semibold px-2 py-1 rounded hover:bg-red-50 transition"
+                        title="Hapus Transaksi (Perlu PIN Supervisor)"
                       >
                         Hapus
                       </button>
@@ -658,6 +704,158 @@ export default function BarangKeluar() {
               </button>
             </div>
           </div>
+        </div>
+      )}
+      {/* ============================================================ */}
+      {/* 6. MODAL: Otorisasi PIN Supervisor Hapus Transaksi (Anti-Fraud) */}
+      {/* ============================================================ */}
+      {deleteTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-950/70 backdrop-blur-xs animate-in fade-in duration-150">
+          <aside
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="supervisor-auth-title"
+            className="bg-white rounded-3xl shadow-2xl border border-gray-200 w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-150"
+          >
+            {/* Modal Header */}
+            <header className="p-5 border-b border-gray-100 flex items-start justify-between bg-gradient-to-r from-red-50/80 via-white to-amber-50/50">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-red-600 text-white flex items-center justify-center shadow-xs">
+                  <ShieldAlert className="w-5 h-5" />
+                </div>
+                {/* Triple Line: Title, Sub-Title, Sub-Sub-Title */}
+                <div>
+                  <h3 id="supervisor-auth-title" className="text-sm sm:text-base font-extrabold text-gray-900 tracking-tight leading-tight">
+                    Otorisasi PIN Supervisor
+                  </h3>
+                  <p className="text-xs text-gray-600 font-medium mt-0.5">
+                    Pengamanan Pembatalan Transaksi Penjualan
+                  </p>
+                  <p className="text-[11px] text-red-700 font-semibold mt-0.5">
+                    Anti-Fraud: Mencegah manipulasi omset tunai & stok
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setDeleteTarget(null);
+                  setDeletePinInput('');
+                  setDeletePinError(null);
+                }}
+                className="text-gray-400 hover:text-gray-700 p-1 rounded-xl transition"
+                aria-label="Tutup Dialog Otorisasi"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </header>
+
+            {/* Target Transaction Summary (List Dual-Line) */}
+            <form onSubmit={handleConfirmDeleteWithPin} className="p-5 space-y-4">
+              <div className="p-3.5 rounded-2xl bg-gray-50 border border-gray-200/80 space-y-2 text-xs">
+                <div className="flex justify-between items-center text-gray-500">
+                  <span>Nomor Referensi:</span>
+                  <span className="font-mono font-bold text-gray-900">{deleteTarget.trxId}</span>
+                </div>
+                <div className="flex justify-between items-center text-gray-500">
+                  <span>Item & Jumlah:</span>
+                  <span className="font-semibold text-gray-900">{deleteTarget.namaBarang} ({deleteTarget.qty} {deleteTarget.satuan})</span>
+                </div>
+                <div className="flex justify-between items-center text-gray-500 border-t border-gray-200/60 pt-1.5">
+                  <span className="font-bold text-gray-700">Total Nilai Penjualan:</span>
+                  <span className="font-bold text-red-600 font-mono text-sm">{formatRupiah(deleteTarget.total)}</span>
+                </div>
+              </div>
+
+              {/* Warning Notice */}
+              <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 flex items-start gap-2.5 text-xs text-amber-900">
+                <AlertCircle className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" />
+                <p className="leading-relaxed">
+                  Menghapus transaksi ini akan <strong>mengembalikan {deleteTarget.qty} {deleteTarget.satuan} ke stok gudang</strong> dan memotong rekaman omset dari laporan penjualan.
+                </p>
+              </div>
+
+              {/* PIN Input Section */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-gray-800 flex items-center justify-between">
+                  <span className="flex items-center gap-1.5">
+                    <KeyRound className="w-3.5 h-3.5 text-red-600" />
+                    <span>Masukkan PIN Supervisor (4-6 Angka):</span>
+                  </span>
+                  <span className="text-[10px] text-gray-400 font-normal">Default: 1234</span>
+                </label>
+                <input
+                  type="password"
+                  maxLength={6}
+                  autoFocus
+                  value={deletePinInput}
+                  onChange={(e) => {
+                    setDeletePinInput(e.target.value.replace(/\D/g, ''));
+                    setDeletePinError(null);
+                  }}
+                  placeholder="Ketik PIN Supervisor..."
+                  className="w-full text-center tracking-[0.5em] font-mono text-lg font-bold bg-white border border-gray-300 focus:border-red-500 focus:ring-2 focus:ring-red-500/20 rounded-xl px-4 py-2.5 outline-none transition"
+                />
+              </div>
+
+              {/* Error Alert If Wrong PIN */}
+              {deletePinError && (
+                <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-xs text-red-700 font-semibold flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 shrink-0 text-red-600" />
+                  <span>{deletePinError}</span>
+                </div>
+              )}
+
+              {/* Quick On-Screen Number Keypad for POS / Touchscreen */}
+              <div className="grid grid-cols-3 gap-1.5 pt-1">
+                {['1', '2', '3', '4', '5', '6', '7', '8', '9', 'C', '0', '⌫'].map((k) => (
+                  <button
+                    key={k}
+                    type="button"
+                    onClick={() => {
+                      if (k === 'C') setDeletePinInput('');
+                      else if (k === '⌫') setDeletePinInput((p) => p.slice(0, -1));
+                      else if (deletePinInput.length < 6) setDeletePinInput((p) => p + k);
+                      setDeletePinError(null);
+                    }}
+                    className={`py-2 rounded-xl text-xs font-bold transition active:scale-95 ${
+                      k === 'C'
+                        ? 'bg-red-50 hover:bg-red-100 text-red-700 border border-red-200'
+                        : k === '⌫'
+                        ? 'bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-200'
+                        : 'bg-white hover:bg-gray-50 text-gray-800 border border-gray-200 shadow-2xs'
+                    }`}
+                  >
+                    {k}
+                  </button>
+                ))}
+              </div>
+
+              {/* Modal Actions */}
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-gray-100">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDeleteTarget(null);
+                    setDeletePinInput('');
+                    setDeletePinError(null);
+                  }}
+                  className="px-4 py-2 rounded-xl text-xs font-semibold text-gray-600 hover:bg-gray-100 transition"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  disabled={!deletePinInput || isDeleting}
+                  className="px-5 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-xs shadow-md shadow-red-600/20 transition active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
+                >
+                  <Lock className="w-3.5 h-3.5" />
+                  <span>{isDeleting ? 'Memproses...' : 'Setujui Hapus Transaksi'}</span>
+                </button>
+              </div>
+            </form>
+          </aside>
         </div>
       )}
     </div>
