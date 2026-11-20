@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/shared/lib/db';
-import { inventory } from '@/shared/lib/db/schema';
+import { inventory, kontak } from '@/shared/lib/db/schema';
 import { sql, or, and, ilike, desc, eq } from 'drizzle-orm';
 import { auth } from '@/shared/lib/auth/config';
 import { canViewCostPrice } from '@/shared/lib/auth/rbac';
@@ -141,6 +141,7 @@ export async function POST(req: NextRequest) {
       stok,
       hargaBeli,
       hargaJual,
+      supplier,
       settingPcs,
       pakaiKarton,
       stokMinimum,
@@ -151,6 +152,34 @@ export async function POST(req: NextRequest) {
     if (!sku?.trim() || !namaBarang?.trim()) {
       return NextResponse.json(
         { success: false, error: 'SKU dan Nama Barang wajib diisi' },
+        { status: 400 }
+      );
+    }
+
+    // Validasi Keberadaan Suplier (Aturan: Jika suplier belum ada, tidak bisa tambah barang baru)
+    const [supplierCount] = await db
+      .select({ count: sql<number>`COUNT(*)` })
+      .from(kontak)
+      .where(or(eq(kontak.tipe, 'supplier'), eq(kontak.tipe, 'keduanya')));
+
+    if (!supplierCount || Number(supplierCount.count) === 0) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Belum ada Suplier yang terdaftar di sistem',
+          penyebab: 'Setiap barang baru wajib memiliki asal Suplier pemasok. Silakan daftarkan suplier terlebih dahulu melalui menu "Daftar Suplier".',
+        },
+        { status: 400 }
+      );
+    }
+
+    if (!supplier || !supplier.trim()) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Suplier pemasok wajib dipilih',
+          penyebab: 'Barang baru wajib dikaitkan dengan Suplier sebagai sumber pengadaan barang masuk.',
+        },
         { status: 400 }
       );
     }
@@ -183,6 +212,7 @@ export async function POST(req: NextRequest) {
         stok: Number(stok) || 0,
         hargaBeli: hargaBeli !== undefined && hargaBeli !== '' ? String(hargaBeli) : '0',
         hargaJual: hargaJual !== undefined && hargaJual !== '' ? String(hargaJual) : '0',
+        supplier: supplier?.trim() || null,
         settingPcs: Number(settingPcs) > 0 ? Number(settingPcs) : 1,
         pakaiKarton: pakaiKarton === undefined ? true : Boolean(pakaiKarton),
         stokMinimum: stokMinimum !== undefined && stokMinimum !== '' ? Number(stokMinimum) : 10,

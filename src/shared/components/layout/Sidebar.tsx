@@ -120,6 +120,11 @@ export const MENU_HIERARCHY: ParentMenuItem[] = [
         href: ROUTES.INVENTORY,
       },
       {
+        label: 'Daftar Suplier',
+        icon: Factory,
+        href: ROUTES.SUPLIER,
+      },
+      {
         label: 'Kalkulator HPP & Resep',
         icon: Calculator,
         href: ROUTES.KALKULATOR_HPP,
