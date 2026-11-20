@@ -1,7 +1,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { Camera } from 'lucide-react';
 import { formatTanggal, formatRupiah } from '@/shared/lib/utils';
+import { useBarcodeScanner } from '@/shared/hooks/useBarcodeScanner';
+import CameraBarcodeScanner from '@/shared/components/ui/CameraBarcodeScanner';
 
 // ============================================================
 // PAGE: Barang Masuk
@@ -41,6 +44,7 @@ export default function BarangMasuk() {
 
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isCameraOpen, setIsCameraOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [form, setForm] = useState({
     tanggal: new Date().toISOString().split('T')[0],
@@ -55,6 +59,31 @@ export default function BarangMasuk() {
   });
 
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+
+  const handleBarcodeScanned = (scannedCode: string) => {
+    const clean = scannedCode.trim().toLowerCase();
+    const matched = inventoryList.find(
+      (i) =>
+        i.sku.toLowerCase() === clean ||
+        i.sku.toLowerCase().replace(/[^a-z0-9]/g, '') === clean.replace(/[^a-z0-9]/g, '')
+    );
+    if (matched) {
+      handleSkuChange(matched.sku);
+      showToast(`SKU ${matched.sku} berhasil dipindai`, 'success');
+    } else {
+      setForm((prev) => ({
+        ...prev,
+        sku: scannedCode.toUpperCase().trim(),
+        namaBarang: prev.namaBarang || scannedCode.toUpperCase().trim(),
+      }));
+      showToast(`Barcode ${scannedCode} dipindai (Barang baru)`, 'success');
+    }
+  };
+
+  useBarcodeScanner({
+    onScan: handleBarcodeScanned,
+    enabled: isModalOpen,
+  });
 
   // ============================================================
   // SECTION: Fetch Data
@@ -327,9 +356,20 @@ export default function BarangMasuk() {
             </div>
             <form onSubmit={handleSubmit} className="p-6 space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1">
-                  Pilih Produk / SKU *
-                </label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-xs font-semibold text-gray-700">
+                    Pilih Produk / SKU *
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setIsCameraOpen(true)}
+                    className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 hover:text-emerald-800"
+                    title="Scan Barcode menggunakan Kamera HP"
+                  >
+                    <Camera className="w-3.5 h-3.5" />
+                    <span>Scan Barcode</span>
+                  </button>
+                </div>
                 <select
                   required
                   value={form.sku}
@@ -343,6 +383,11 @@ export default function BarangMasuk() {
                     </option>
                   ))}
                 </select>
+                {form.sku && !inventoryList.some((i) => i.sku === form.sku) && (
+                  <div className="text-[11px] text-amber-600 mt-1">
+                    * SKU baru terdeteksi: {form.sku} (akan otomatis dibuatkan di master inventory)
+                  </div>
+                )}
               </div>
 
               <div className="grid grid-cols-2 gap-3">
@@ -459,6 +504,14 @@ export default function BarangMasuk() {
           </div>
         </div>
       )}
+
+      {/* Camera Barcode Scanner Modal */}
+      <CameraBarcodeScanner
+        isOpen={isCameraOpen}
+        onClose={() => setIsCameraOpen(false)}
+        onScan={handleBarcodeScanned}
+        title="Pindai Barcode Barang Masuk"
+      />
     </div>
   );
 }

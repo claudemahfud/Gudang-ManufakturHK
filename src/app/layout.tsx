@@ -12,8 +12,15 @@ const poppins = Poppins({
 export const metadata: Metadata = {
   title: 'Gudang Manufaktur & F&B Hub',
   description: 'Sistem Inventory, Pergudangan Manufaktur & F&B Terpadu',
+  manifest: '/manifest.json',
   icons: {
     icon: '/favicon.svg',
+    apple: '/favicon.svg',
+  },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'black-translucent',
+    title: 'Gudang HK',
   },
 };
 

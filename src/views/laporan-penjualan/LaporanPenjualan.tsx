@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { formatRupiah, formatTanggal } from '@/shared/lib/utils';
 import { useDivision } from '@/shared/context/DivisionContext';
+import { exportToCsv } from '@/shared/lib/export';
 
 interface PenjualanRow {
   id: string;
@@ -128,6 +129,29 @@ export default function LaporanPenjualanView() {
     );
   }, [data, search]);
 
+  const handleExportExcel = () => {
+    exportToCsv({
+      filename: `Laporan_Penjualan_${division}`,
+      data: filteredData,
+      columns: [
+        { header: 'No. Transaksi', accessor: (r) => r.trxId },
+        { header: 'Tanggal', accessor: (r) => formatTanggal(r.tanggal) },
+        { header: 'Pelanggan', accessor: (r) => r.pelanggan || '-' },
+        { header: 'Salesman / Kasir', accessor: (r) => r.salesman || '-' },
+        { header: 'SKU', accessor: (r) => r.sku },
+        { header: 'Nama Produk', accessor: (r) => r.namaBarang },
+        { header: 'Qty', accessor: (r) => r.qty },
+        { header: 'Satuan', accessor: (r) => r.satuan },
+        { header: 'Harga Satuan (Rp)', accessor: (r) => Number(r.hargaJual || 0) },
+        { header: 'Diskon (%)', accessor: (r) => Number(r.diskon || 0) },
+        { header: 'Total Netto (Rp)', accessor: (r) => Number(r.total || 0) },
+        { header: 'Estimasi HPP (Rp)', accessor: (r) => r.hppTotal },
+        { header: 'Laba Kotor (Rp)', accessor: (r) => r.laba },
+        { header: 'Margin (%)', accessor: (r) => `${r.marginPct}%` },
+      ],
+    });
+  };
+
   return (
     <div className="space-y-6 max-w-7xl mx-auto pb-12">
       {/* 1. Header (F-Pattern Top Row) */}
@@ -152,6 +176,14 @@ export default function LaporanPenjualanView() {
           >
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
             <span>Segarkan</span>
+          </button>
+          <button
+            onClick={handleExportExcel}
+            className="inline-flex items-center gap-2 px-3.5 py-2 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-xs font-semibold transition shadow-sm"
+            title="Ekspor data penjualan ke file CSV / Excel"
+          >
+            <Download className="w-3.5 h-3.5" />
+            <span>Ekspor Excel</span>
           </button>
           <button
             onClick={() => window.print()}
