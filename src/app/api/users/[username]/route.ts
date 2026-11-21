@@ -3,11 +3,7 @@ import { db } from '@/shared/lib/db';
 import { users, logs } from '@/shared/lib/db/schema';
 import { auth } from '@/shared/lib/auth/config';
 import { eq } from 'drizzle-orm';
-import crypto from 'crypto';
-
-function sha256(str: string): string {
-  return crypto.createHash('sha256').update(str).digest('hex');
-}
+import { hashPassword } from '@/shared/lib/auth/password';
 
 export async function PUT(
   req: Request,
@@ -39,7 +35,7 @@ export async function PUT(
     }
 
     if (password && password.trim().length > 0) {
-      updateData.passwordHash = sha256(password);
+      updateData.passwordHash = await hashPassword(password);
     }
 
     const [updated] = await db
