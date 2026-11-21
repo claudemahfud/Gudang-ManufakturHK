@@ -2,12 +2,8 @@ import { NextResponse } from 'next/server';
 import { db } from '@/shared/lib/db';
 import { users, logs } from '@/shared/lib/db/schema';
 import { auth } from '@/shared/lib/auth/config';
-import { eq } from 'drizzle-orm';
-import crypto from 'crypto';
-
-function sha256(str: string): string {
-  return crypto.createHash('sha256').update(str).digest('hex');
-}
+import { and, eq, ne, sql } from 'drizzle-orm';
+import { hashPassword, verifyPassword } from '@/shared/lib/auth/password';
 
 // ============================================================
 // API: /api/profile
@@ -83,7 +79,22 @@ export async function PUT(req: Request) {
     }
 
     if (email !== undefined) {
-      updateData.email = email ? email.trim() : null;
+      const normalizedEmail = email ? String(email).trim().toLowerCase() : null;
+      if (normalizedEmail) {
+        // Email dipakai untuk reset password: tidak boleh sama dengan akun lain
+        const [taken] = await db
+          .select({ id: users.id })
+          .from(users)
+          .where(and(sql`lower(${users.email}) = ${normalizedEmail}`, ne(users.id, user.id)))
+          .limit(1);
+        if (taken) {
+          return NextResponse.json(
+            { success: false, message: 'Email sudah dipakai akun lain' },
+            { status: 400 }
+          );
+        }
+      }
+      updateData.email = normalizedEmail;
     }
 
     // Jika ganti password
@@ -95,8 +106,8 @@ export async function PUT(req: Request) {
         );
       }
 
-      const curHash = sha256(currentPassword);
-      if (curHash !== user.passwordHash) {
+      const { ok: currentOk } = await verifyPassword(String(currentPassword), user.passwordHash);
+      if (!currentOk) {
         return NextResponse.json(
           { success: false, message: 'Password saat ini salah' },
           { status: 400 }
@@ -110,7 +121,7 @@ export async function PUT(req: Request) {
         );
       }
 
-      updateData.passwordHash = sha256(newPassword);
+      updateData.passwordHash = await hashPassword(String(newPassword));
     }
 
     await db.update(users).set(updateData).where(eq(users.id, user.id));

@@ -67,11 +67,12 @@ Buka browser di [http://localhost:3000](http://localhost:3000).
 
 ---
 
-## 🔐 Akun Default Awal
+## 🔐 Akun Seed & Keamanan
 
-| Username | Password | Role |
-| :--- | :--- | :--- |
-| `admin` | `admin123` | Administrator (Akses Penuh) |
-| `direktur` | `admin123` | Direktur Utama |
-| `kepalagudang` | `admin123` | Kepala Gudang |
-| `sales1` | `admin123` | Salesman |
+Seed membuat akun `admin`, `direktur`, `kepalagudang`, dan `sales1` dengan password awal yang tertulis di `supabase/seed.sql`.
+**Wajib ganti password semua akun seed segera setelah instalasi**, terutama di lingkungan produksi.
+
+- Password di-hash dengan **scrypt + salt**. Hash SHA-256 lama tetap bisa login dan otomatis di-hash ulang ke scrypt saat login berhasil.
+- `AUTH_SECRET` (atau `NEXTAUTH_SECRET`) **wajib** di-set; aplikasi tidak lagi memakai secret cadangan.
+- Reset password via OTP membutuhkan `RESEND_API_KEY` dan `EMAIL_FROM`. Tanpa keduanya, kode OTP hanya tampil di konsol saat development dan tidak dikirim di produksi.
+- Skrip di `scripts/` membaca koneksi dari `DATABASE_URL`: `node --env-file=.env.local scripts/<nama>.mjs`.

@@ -1,54 +1,71 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/shared/lib/db';
 import { users, otpCodes } from '@/shared/lib/db/schema';
-import { eq } from 'drizzle-orm';
-import crypto from 'crypto';
+import { and, eq, sql } from 'drizzle-orm';
+import { sha256Hex } from '@/shared/lib/auth/password';
+import {
+  OTP_MAX_REQUESTS,
+  OTP_TTL_MS,
+  deliverOtp,
+  generateOtp,
+  normalizeEmail,
+  recentOtpRequests,
+} from '@/shared/lib/auth/otp';
 
-function sha256(str: string): string {
-  return crypto.createHash('sha256').update(str).digest('hex');
-}
+// Respons selalu sama agar tidak bisa dipakai menebak email terdaftar.
+const GENERIC_RESPONSE = {
+  success: true,
+  message: 'Jika email terdaftar, kode OTP telah dikirimkan ke email tersebut.',
+};
 
 export async function POST(req: Request) {
   try {
-    const { email } = await req.json();
+    const { email: rawEmail } = await req.json();
+    const email = normalizeEmail(rawEmail);
     if (!email) {
       return NextResponse.json({ success: false, message: 'Email wajib diisi' }, { status: 400 });
     }
 
-    // Cek apakah ada user dengan email ini
-    const [user] = await db
-      .select()
-      .from(users)
-      .where(eq(users.email, email.trim().toLowerCase()))
-      .limit(1);
-
-    if (!user) {
-      return NextResponse.json(
-        { success: false, message: 'Email tidak terdaftar dalam sistem' },
-        { status: 404 }
-      );
+    if ((await recentOtpRequests(email)) >= OTP_MAX_REQUESTS) {
+      return NextResponse.json(GENERIC_RESPONSE);
     }
 
-    // Generate 6 digit OTP
-    const rawOtp = Math.floor(100000 + Math.random() * 900000).toString();
-    const otpHash = sha256(rawOtp);
-    const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 menit
+    const matches = await db
+      .select({ id: users.id, aktif: users.aktif })
+      .from(users)
+      .where(sql`lower(${users.email}) = ${email}`)
+      .limit(2);
 
-    await db.insert(otpCodes).values({
-      email: email.trim().toLowerCase(),
-      otpHash,
-      expiresAt,
-      used: false,
+    // Hanya kirim bila email menunjuk tepat satu akun aktif
+    if (matches.length !== 1 || !matches[0].aktif) {
+      return NextResponse.json(GENERIC_RESPONSE);
+    }
+
+    const rawOtp = generateOtp();
+
+    await db.transaction(async (tx) => {
+      // Kode lama tidak berlaku lagi begitu kode baru diminta
+      await tx
+        .update(otpCodes)
+        .set({ used: true })
+        .where(and(eq(otpCodes.email, email), eq(otpCodes.used, false)));
+
+      await tx.insert(otpCodes).values({
+        email,
+        otpHash: sha256Hex(rawOtp),
+        expiresAt: new Date(Date.now() + OTP_TTL_MS),
+        used: false,
+      });
     });
 
-    // Logging console OTP untuk testing lokal
-    console.log(`[AUTH OTP] Email: ${email} | Code: ${rawOtp} (Valid 10 mins)`);
+    await deliverOtp(email, rawOtp);
 
-    return NextResponse.json({
-      success: true,
-      message: 'Kode OTP telah berhasil dikirimkan ke email Anda',
-    });
-  } catch (err: any) {
-    return NextResponse.json({ success: false, message: err.message }, { status: 500 });
+    return NextResponse.json(GENERIC_RESPONSE);
+  } catch (err) {
+    console.error('[AUTH OTP] request-otp error', err);
+    return NextResponse.json(
+      { success: false, message: 'Terjadi kesalahan server. Coba lagi nanti.' },
+      { status: 500 }
+    );
   }
 }
