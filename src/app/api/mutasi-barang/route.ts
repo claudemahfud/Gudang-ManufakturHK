@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { db } from '@/shared/lib/db';
 import { mutasiBarang, inventory, logs } from '@/shared/lib/db/schema';
 import { auth } from '@/shared/lib/auth/config';
+import { requireAuthRole, ROLES_WAREHOUSE } from '@/shared/lib/auth/rbac';
 import { desc, eq } from 'drizzle-orm';
 
 // ============================================================
@@ -30,10 +31,9 @@ export async function GET() {
 
 export async function POST(req: Request) {
   try {
-    const session = await auth();
-    if (!session) {
-      return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
-    }
+    const authResult = await requireAuthRole(ROLES_WAREHOUSE);
+    if (!authResult.authorized) return authResult.response;
+    const session = { user: authResult.user };
 
     const body = await req.json();
     const { tanggal, sku, namaBarang, qty, dari, ke, keterangan } = body;

@@ -2,7 +2,9 @@ import { NextResponse } from 'next/server';
 import { db } from '@/shared/lib/db';
 import { inventory, barangKeluar, keuangan, logs } from '@/shared/lib/db/schema';
 import { requireAuthRole, ROLES_POS } from '@/shared/lib/auth/rbac';
-import { eq, sql } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
+import { decrementStock, errorResponse, normalizeSku, parsePositiveInt } from '@/shared/lib/stock';
+import { generateTrxId } from '@/shared/lib/utils';
 
 // ============================================================
 // API: /api/pos/checkout
@@ -60,83 +62,75 @@ export async function POST(req: Request) {
       );
     }
 
-    // 1. Validasi stok semua item
+    // 1. Validasi item & ambil harga resmi dari master inventory.
+    //    Harga & nama dari klien diabaikan agar tidak bisa dimanipulasi.
+    const lines: { sku: string; namaBarang: string; qty: number; hargaJual: number; satuan: string }[] = [];
     for (const item of items) {
-      if (!item.sku || !item.qty || item.qty <= 0) {
+      const sku = normalizeSku(item?.sku);
+      const qty = parsePositiveInt(item?.qty);
+      if (!sku || !qty) {
         return NextResponse.json(
-          { success: false, message: `Data item ${item.namaBarang || item.sku} tidak valid` },
+          { success: false, message: `Data item ${item?.namaBarang || item?.sku || ''} tidak valid` },
           { status: 400 }
         );
       }
 
       const [inv] = await db
-        .select()
+        .select({ namaBarang: inventory.namaBarang, hargaJual: inventory.hargaJual, stok: inventory.stok })
         .from(inventory)
-        .where(eq(inventory.sku, item.sku))
+        .where(eq(inventory.sku, sku))
         .limit(1);
 
       if (!inv) {
         return NextResponse.json(
-          { success: false, message: `Barang dengan SKU ${item.sku} tidak ditemukan di sistem` },
+          { success: false, message: `Barang dengan SKU ${sku} tidak ditemukan di sistem` },
           { status: 404 }
         );
       }
 
-      if (inv.stok < item.qty) {
-        return NextResponse.json(
-          {
-            success: false,
-            message: `Stok "${inv.namaBarang}" tidak mencukupi (Tersedia: ${inv.stok}, Diminta: ${item.qty})`,
-          },
-          { status: 400 }
-        );
-      }
+      lines.push({
+        sku,
+        namaBarang: inv.namaBarang,
+        qty,
+        hargaJual: Number(inv.hargaJual ?? 0),
+        satuan: item.satuan || 'pcs',
+      });
     }
 
-    // 2. Kalkulasi Nilai Transaksi
-    const subtotal = items.reduce((acc, curr) => acc + curr.hargaJual * curr.qty, 0);
-    const nominalDiskon = (subtotal * Number(diskonPct || 0)) / 100;
-    const grandTotal = Math.max(0, subtotal - nominalDiskon);
-    const kembalian =
-      metodePembayaran === 'Tunai' ? Math.max(0, Number(uangDiterima) - grandTotal) : 0;
+    // 2. Kalkulasi Nilai Transaksi (diskon dibatasi 0-100%)
+    const diskon = Math.min(100, Math.max(0, Number(diskonPct) || 0));
+    const subtotal = roundRp(lines.reduce((acc, l) => acc + l.hargaJual * l.qty, 0));
+    const nominalDiskon = roundRp((subtotal * diskon) / 100);
+    const grandTotal = Math.max(0, roundRp(subtotal - nominalDiskon));
+    const uangMasuk = Math.max(0, Number(uangDiterima) || 0);
+    const kembalian = metodePembayaran === 'Tunai' ? Math.max(0, roundRp(uangMasuk - grandTotal)) : 0;
 
-    if (metodePembayaran === 'Tunai' && uangDiterima < grandTotal) {
+    if (metodePembayaran === 'Tunai' && uangMasuk < grandTotal) {
       return NextResponse.json(
         {
           success: false,
-          message: `Uang yang diterima (Rp ${uangDiterima.toLocaleString('id-ID')}) kurang dari total tagihan (Rp ${grandTotal.toLocaleString('id-ID')})`,
+          message: `Uang yang diterima (Rp ${uangMasuk.toLocaleString('id-ID')}) kurang dari total tagihan (Rp ${grandTotal.toLocaleString('id-ID')})`,
         },
         { status: 400 }
       );
     }
 
     // 3. Generate Nomor Transaksi Unik
-    const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-    const randomSuffix = Math.floor(1000 + Math.random() * 9000);
-    const trxId = `POS-${dateStr}-${randomSuffix}`;
+    const trxId = generateTrxId('POS');
     const tanggalTrx = new Date();
     const cashierName = user.name || user.username || 'Kasir';
 
     // 4. Proses Transaksi Database (Atomic Transaction)
-    const insertedItems: any[] = [];
-
     await db.transaction(async (tx) => {
-      for (const item of items) {
+      for (const item of lines) {
         const itemSubtotal = item.hargaJual * item.qty;
-        const itemDiskon = (itemSubtotal * Number(diskonPct || 0)) / 100;
-        const itemNetTotal = itemSubtotal - itemDiskon;
+        const itemNetTotal = roundRp(itemSubtotal - (itemSubtotal * diskon) / 100);
 
-        // Kurangi stok inventory
-        await tx
-          .update(inventory)
-          .set({
-            stok: sql`${inventory.stok} - ${item.qty}`,
-            updatedAt: new Date(),
-          })
-          .where(eq(inventory.sku, item.sku));
+        // Kurangi stok hanya bila masih cukup (aman dari checkout bersamaan)
+        await decrementStock(tx, item.sku, item.qty);
 
         // Catat ke barang_keluar
-        const [bk] = await tx
+        await tx
           .insert(barangKeluar)
           .values({
             trxId,
@@ -144,21 +138,18 @@ export async function POST(req: Request) {
             sku: item.sku,
             namaBarang: item.namaBarang,
             qty: item.qty,
-            satuan: item.satuan || 'pcs',
+            satuan: item.satuan,
             hargaJual: String(item.hargaJual),
             total: String(itemNetTotal),
             pelanggan,
             salesman: cashierName,
-            diskon: String(diskonPct || 0),
+            diskon: String(diskon),
             divisi,
             cabang: finalCabang,
             channel: 'POS',
             keterangan: `POS Checkout (${metodePembayaran}) [${divisi} - ${finalCabang}]${catatan ? ` - ${catatan}` : ''}`,
             createdBy: user.username,
-          })
-          .returning();
-
-        insertedItems.push(bk);
+          });
       }
 
       // Catat arus kas pemasukan ke keuangan
@@ -189,19 +180,19 @@ export async function POST(req: Request) {
       role: userRole,
       pelanggan,
       metodePembayaran,
-      items: items.map((i) => ({
+      items: lines.map((i) => ({
         sku: i.sku,
         namaBarang: i.namaBarang,
         qty: i.qty,
-        satuan: i.satuan || 'pcs',
+        satuan: i.satuan,
         hargaJual: i.hargaJual,
-        subtotal: i.hargaJual * i.qty,
+        subtotal: roundRp(i.hargaJual * i.qty),
       })),
       subtotal,
-      diskonPct: Number(diskonPct || 0),
+      diskonPct: diskon,
       nominalDiskon,
       grandTotal,
-      uangDiterima: Number(uangDiterima || grandTotal),
+      uangDiterima: uangMasuk || grandTotal,
       kembalian,
       catatan,
     };
@@ -211,7 +202,11 @@ export async function POST(req: Request) {
       message: 'Checkout POS berhasil diproses',
       data: receiptData,
     });
-  } catch (err: any) {
-    return NextResponse.json({ success: false, message: err.message }, { status: 500 });
+  } catch (err) {
+    return errorResponse(err, 'POS_CHECKOUT');
   }
+}
+
+function roundRp(n: number): number {
+  return Math.round(n * 100) / 100;
 }

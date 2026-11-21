@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { db } from '@/shared/lib/db';
 import { barangMasuk, inventory, logs, keuangan, hutangSupplier, kontak } from '@/shared/lib/db/schema';
 import { auth } from '@/shared/lib/auth/config';
+import { requireAuthRole, ROLES_WAREHOUSE } from '@/shared/lib/auth/rbac';
 import { eq, desc, and, gte, lte, sql, or } from 'drizzle-orm';
 
 // ============================================================
@@ -86,10 +87,9 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   try {
-    const session = await auth();
-    if (!session) {
-      return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
-    }
+    const authResult = await requireAuthRole(ROLES_WAREHOUSE);
+    if (!authResult.authorized) return authResult.response;
+    const session = { user: authResult.user };
 
     const body = await req.json();
     const {
@@ -175,10 +175,13 @@ export async function POST(req: Request) {
       insertedRecord = inserted;
 
       // 2. Update atau Insert Stok di Master Inventory
+      // FOR UPDATE: dua penerimaan bersamaan antre, sehingga rata-rata HPP
+      // dihitung dari stok & harga terbaru, bukan nilai basi.
       const [existingInv] = await tx
         .select()
         .from(inventory)
         .where(eq(inventory.sku, sku.trim().toUpperCase()))
+        .for('update')
         .limit(1);
 
       if (existingInv) {
