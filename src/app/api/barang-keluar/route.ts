@@ -1,9 +1,11 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/shared/lib/db';
-import { barangKeluar, inventory, logs } from '@/shared/lib/db/schema';
+import { barangKeluar, logs } from '@/shared/lib/db/schema';
 import { auth } from '@/shared/lib/auth/config';
+import { requireAuthRole, ROLES_STOCK_OUT } from '@/shared/lib/auth/rbac';
+import { decrementStock, errorResponse, normalizeSku, parsePositiveInt } from '@/shared/lib/stock';
 import { generateTrxId } from '@/shared/lib/utils';
-import { eq, desc, and, gte, lte, sql } from 'drizzle-orm';
+import { eq, desc, and, gte, lte } from 'drizzle-orm';
 
 // ============================================================
 // API: /api/barang-keluar
@@ -94,10 +96,9 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   try {
-    const session = await auth();
-    if (!session) {
-      return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
-    }
+    const authResult = await requireAuthRole(ROLES_STOCK_OUT);
+    if (!authResult.authorized) return authResult.response;
+    const session = { user: authResult.user };
 
     const body = await req.json();
     const { tanggal, pelanggan, salesman, keterangan, items } = body;
@@ -119,40 +120,39 @@ export async function POST(req: Request) {
       : (body.cabang || 'Pusat');
     const trxDate = tanggal ? new Date(tanggal) : new Date();
 
-    // Validasi ketersediaan stok terlebih dahulu untuk semua item
+    // Validasi bentuk data semua item sebelum menyentuh stok.
+    // Harga grosir boleh dinegosiasi per transaksi, tapi wajib angka >= 0
+    // dan diskon dibatasi 0-100%.
+    const lines: { sku: string; qty: number; hargaJual: number; diskon: number; satuan: string }[] = [];
     for (const it of items) {
-      const qty = parseInt(it.qty, 10);
-      if (isNaN(qty) || qty <= 0) {
+      const sku = normalizeSku(it?.sku);
+      const qty = parsePositiveInt(it?.qty);
+      const hargaJual = Number(it?.hargaJual ?? 0);
+      const diskon = Number(it?.diskon ?? 0);
+      if (!sku || !qty) {
         return NextResponse.json(
-          { success: false, message: `Jumlah kuantitas untuk item ${it.namaBarang || it.sku} tidak valid` },
+          { success: false, message: `Jumlah kuantitas untuk item ${it?.namaBarang || it?.sku || ''} tidak valid` },
           { status: 400 }
         );
       }
-      const [inv] = await db
-        .select()
-        .from(inventory)
-        .where(eq(inventory.sku, it.sku))
-        .limit(1);
-
-      if (!inv || (inv.stok ?? 0) < qty) {
+      if (!Number.isFinite(hargaJual) || hargaJual < 0 || !Number.isFinite(diskon) || diskon < 0 || diskon > 100) {
         return NextResponse.json(
-          {
-            success: false,
-            message: `Stok tidak mencukupi untuk "${it.namaBarang || it.sku}". Stok saat ini: ${inv?.stok ?? 0}, diminta: ${qty}`,
-          },
+          { success: false, message: `Harga atau diskon untuk item ${it?.namaBarang || sku} tidak valid` },
           { status: 400 }
         );
       }
+      lines.push({ sku, qty, hargaJual, diskon, satuan: it.satuan || 'pcs' });
     }
 
-    const insertedRows: any[] = [];
+    const insertedRows: (typeof barangKeluar.$inferSelect)[] = [];
 
     await db.transaction(async (tx) => {
-      for (const it of items) {
-        const qty = parseInt(it.qty, 10);
-        const hargaJual = parseFloat(it.hargaJual || 0);
-        const diskon = parseFloat(it.diskon || 0);
-        const subtotal = qty * hargaJual * (1 - diskon / 100);
+      for (const it of lines) {
+        const { qty, hargaJual, diskon } = it;
+        const subtotal = Math.round(qty * hargaJual * (1 - diskon / 100) * 100) / 100;
+
+        // Kurangi stok hanya bila masih cukup (aman dari transaksi bersamaan)
+        const inv = await decrementStock(tx, it.sku, qty);
 
         const [row] = await tx
           .insert(barangKeluar)
@@ -160,7 +160,7 @@ export async function POST(req: Request) {
             trxId,
             tanggal: trxDate,
             sku: it.sku,
-            namaBarang: it.namaBarang,
+            namaBarang: inv.namaBarang,
             qty,
             satuan: it.satuan || 'pcs',
             hargaJual: String(hargaJual),
@@ -175,15 +175,6 @@ export async function POST(req: Request) {
             createdBy: user,
           })
           .returning();
-
-        // Kurangi stok inventory
-        await tx
-          .update(inventory)
-          .set({
-            stok: sql`${inventory.stok} - ${qty}`,
-            updatedAt: new Date(),
-          })
-          .where(eq(inventory.sku, it.sku));
 
         insertedRows.push(row);
       }
@@ -200,7 +191,7 @@ export async function POST(req: Request) {
       { success: true, trxId, data: insertedRows, message: 'Barang keluar berhasil dicatat' },
       { status: 201 }
     );
-  } catch (err: any) {
-    return NextResponse.json({ success: false, message: err.message }, { status: 500 });
+  } catch (err) {
+    return errorResponse(err, 'BARANG_KELUAR_POST');
   }
 }

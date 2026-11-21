@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/shared/lib/db';
-import { barangMasuk, inventory, logs } from '@/shared/lib/db/schema';
+import { barangMasuk, logs } from '@/shared/lib/db/schema';
 import { requireAuthRole, ROLES_WAREHOUSE } from '@/shared/lib/auth/rbac';
-import { eq, sql } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
+import { BusinessError, decrementStock, errorResponse } from '@/shared/lib/stock';
 
 // ============================================================
 // API: /api/barang-masuk/[id]
@@ -19,35 +20,24 @@ export async function DELETE(
     if (!authResult.authorized) return authResult.response;
 
     const { id } = await params;
-
-    // Cari data barang masuk dulu
-    const [item] = await db
-      .select()
-      .from(barangMasuk)
-      .where(eq(barangMasuk.id, id))
-      .limit(1);
-
-    if (!item) {
-      return NextResponse.json(
-        { success: false, message: 'Data barang masuk tidak ditemukan' },
-        { status: 404 }
-      );
-    }
-
     const user = authResult.user?.name || authResult.user?.username || 'System';
 
     await db.transaction(async (tx) => {
-      // Rollback stok inventory
-      await tx
-        .update(inventory)
-        .set({
-          stok: sql`${inventory.stok} - ${item.qty}`,
-          updatedAt: new Date(),
-        })
-        .where(eq(inventory.sku, item.sku));
+      // Hapus & ambil barisnya dalam satu langkah (aman dari klik ganda)
+      const [item] = await tx.delete(barangMasuk).where(eq(barangMasuk.id, id)).returning();
+      if (!item) throw new BusinessError('Data barang masuk tidak ditemukan', 404);
 
-      // Hapus data barang masuk
-      await tx.delete(barangMasuk).where(eq(barangMasuk.id, id));
+      // Rollback stok; ditolak bila barangnya sudah terjual/terpakai
+      try {
+        await decrementStock(tx, item.sku, item.qty);
+      } catch (e) {
+        if (e instanceof BusinessError && e.status === 400) {
+          throw new BusinessError(
+            `Barang masuk tidak bisa dihapus: sebagian stok ${item.sku} sudah keluar. ${e.message}`
+          );
+        }
+        throw e;
+      }
 
       await tx.insert(logs).values({
         user,
@@ -57,7 +47,7 @@ export async function DELETE(
     });
 
     return NextResponse.json({ success: true, message: 'Data barang masuk berhasil dihapus' });
-  } catch (err: any) {
-    return NextResponse.json({ success: false, message: err.message }, { status: 500 });
+  } catch (err) {
+    return errorResponse(err, 'BARANG_MASUK_DELETE');
   }
 }

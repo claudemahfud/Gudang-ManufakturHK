@@ -1,8 +1,10 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/shared/lib/db';
-import { barangRusak, inventory, logs } from '@/shared/lib/db/schema';
+import { barangRusak, logs } from '@/shared/lib/db/schema';
 import { auth } from '@/shared/lib/auth/config';
-import { eq, desc, sql } from 'drizzle-orm';
+import { requireAuthRole, ROLES_WAREHOUSE } from '@/shared/lib/auth/rbac';
+import { desc } from 'drizzle-orm';
+import { decrementStock, errorResponse, normalizeSku } from '@/shared/lib/stock';
 
 // ============================================================
 // API: /api/barang-rusak
@@ -37,10 +39,8 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   try {
-    const session = await auth();
-    if (!session) {
-      return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
-    }
+    const authResult = await requireAuthRole(ROLES_WAREHOUSE);
+    if (!authResult.authorized) return authResult.response;
 
     const body = await req.json();
     const { tanggal, sku, namaBarang, qty, keterangan, divisi = 'MANUFAKTUR' } = body;
@@ -60,54 +60,37 @@ export async function POST(req: Request) {
       );
     }
 
-    const [inv] = await db
-      .select()
-      .from(inventory)
-      .where(eq(inventory.sku, sku))
-      .limit(1);
+    const normalizedSku = normalizeSku(sku);
+    const user = authResult.user?.name || authResult.user?.username || 'System';
 
-    if (!inv || (inv.stok ?? 0) < parsedQty) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: `Stok tidak mencukupi untuk mencatat barang rusak "${namaBarang || sku}". Stok tersedia: ${inv?.stok ?? 0}, diminta: ${parsedQty}`,
-        },
-        { status: 400 }
-      );
-    }
+    // Potong stok, catat, dan log dalam satu transaksi atomik
+    const row = await db.transaction(async (tx) => {
+      const inv = await decrementStock(tx, normalizedSku, parsedQty);
 
-    const user = (session.user as any)?.name || (session.user as any)?.username || 'System';
+      const [inserted] = await tx
+        .insert(barangRusak)
+        .values({
+          tanggal: tanggal ? new Date(tanggal) : new Date(),
+          sku: normalizedSku,
+          namaBarang: inv.namaBarang || namaBarang,
+          qty: parsedQty,
+          divisi,
+          keterangan: keterangan || null,
+          createdBy: user,
+        })
+        .returning();
 
-    const [row] = await db
-      .insert(barangRusak)
-      .values({
-        tanggal: tanggal ? new Date(tanggal) : new Date(),
-        sku,
-        namaBarang,
-        qty: parsedQty,
-        divisi,
-        keterangan: keterangan || null,
-        createdBy: user,
-      })
-      .returning();
+      await tx.insert(logs).values({
+        user,
+        aksi: 'BARANG_RUSAK',
+        detail: `Mencatat barang rusak SKU: ${normalizedSku} (-${parsedQty} pcs). Ket: ${keterangan || '-'}`,
+      });
 
-    // Potong stok dari inventory
-    await db
-      .update(inventory)
-      .set({
-        stok: sql`${inventory.stok} - ${parsedQty}`,
-        updatedAt: new Date(),
-      })
-      .where(eq(inventory.sku, sku));
-
-    await db.insert(logs).values({
-      user,
-      aksi: 'BARANG_RUSAK',
-      detail: `Mencatat barang rusak SKU: ${sku} (-${parsedQty} pcs). Ket: ${keterangan || '-'}`,
+      return inserted;
     });
 
     return NextResponse.json({ success: true, data: row }, { status: 201 });
-  } catch (err: any) {
-    return NextResponse.json({ success: false, message: err.message }, { status: 500 });
+  } catch (err) {
+    return errorResponse(err, 'BARANG_RUSAK_POST');
   }
 }

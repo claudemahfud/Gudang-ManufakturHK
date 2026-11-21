@@ -1,9 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/shared/lib/db';
 import { inventory, logs } from '@/shared/lib/db/schema';
-import { eq } from 'drizzle-orm';
-import { auth } from '@/shared/lib/auth/config';
-import { requireAuthRole, ROLES_EXECUTIVE } from '@/shared/lib/auth/rbac';
+import { eq, sql } from 'drizzle-orm';
+import {
+  canViewCostPrice,
+  requireAuthRole,
+  ROLES_EXECUTIVE,
+  ROLES_STOCK_ADJUST,
+  ROLES_WAREHOUSE,
+} from '@/shared/lib/auth/rbac';
 
 // ============================================================
 // API ROUTE: Detail Item Inventory (Update & Delete)
@@ -18,20 +23,23 @@ interface RouteParams {
 
 export async function PUT(req: NextRequest, { params }: RouteParams) {
   try {
-    const session = await auth();
-    if (!session) {
-      return NextResponse.json(
-        { success: false, error: 'Unauthorized: Harap login terlebih dahulu' },
-        { status: 401 }
-      );
-    }
+    const authResult = await requireAuthRole(ROLES_WAREHOUSE);
+    if (!authResult.authorized) return authResult.response;
+    const userRole = authResult.userRole;
+    const actor = authResult.user?.name || authResult.user?.username || 'System';
 
     const { sku } = await params;
     const decodedSku = decodeURIComponent(sku).trim().toUpperCase();
 
     // Pastikan item ada
     const [existing] = await db
-      .select({ id: inventory.id, sku: inventory.sku })
+      .select({
+        id: inventory.id,
+        sku: inventory.sku,
+        stok: inventory.stok,
+        hargaBeli: inventory.hargaBeli,
+        hargaJual: inventory.hargaJual,
+      })
       .from(inventory)
       .where(eq(inventory.sku, decodedSku))
       .limit(1);
@@ -50,6 +58,7 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
       gramasi,
       varian,
       stok,
+      stokAwal,
       hargaBeli,
       hargaJual,
       supplier,
@@ -66,6 +75,42 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
       );
     }
 
+    // --- Koreksi stok: hanya selisih terhadap stok saat form dibuka ---
+    let stokDelta = 0;
+    if (stok !== undefined) {
+      const target = Number(stok);
+      if (!Number.isInteger(target) || target < 0) {
+        return NextResponse.json({ success: false, error: 'Stok harus bilangan bulat >= 0' }, { status: 400 });
+      }
+      const base = stokAwal !== undefined ? Number(stokAwal) : existing.stok;
+      stokDelta = Number.isFinite(base) ? target - base : 0;
+    }
+    if (stokDelta !== 0 && !ROLES_STOCK_ADJUST.includes(userRole)) {
+      return NextResponse.json(
+        { success: false, error: 'Koreksi stok hanya untuk pimpinan / Kepala Gudang. Gunakan Barang Masuk / Keluar.' },
+        { status: 403 }
+      );
+    }
+
+    // --- Harga jual: hanya pimpinan / Kepala Gudang ---
+    const hargaJualBaru = hargaJual !== undefined ? Number(hargaJual) : undefined;
+    if (hargaJualBaru !== undefined && (!Number.isFinite(hargaJualBaru) || hargaJualBaru < 0)) {
+      return NextResponse.json({ success: false, error: 'Harga jual tidak valid' }, { status: 400 });
+    }
+    const hargaJualBerubah = hargaJualBaru !== undefined && hargaJualBaru !== Number(existing.hargaJual ?? 0);
+    if (hargaJualBerubah && !ROLES_STOCK_ADJUST.includes(userRole)) {
+      return NextResponse.json(
+        { success: false, error: 'Perubahan harga jual hanya untuk pimpinan / Kepala Gudang.' },
+        { status: 403 }
+      );
+    }
+
+    // --- Harga beli / HPP: hanya role yang boleh melihat HPP; lainnya diabaikan ---
+    const hargaBeliBaru = hargaBeli !== undefined && canViewCostPrice(userRole) ? Number(hargaBeli) : undefined;
+    if (hargaBeliBaru !== undefined && (!Number.isFinite(hargaBeliBaru) || hargaBeliBaru < 0)) {
+      return NextResponse.json({ success: false, error: 'Harga beli tidak valid' }, { status: 400 });
+    }
+
     const [updated] = await db
       .update(inventory)
       .set({
@@ -73,9 +118,9 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
         ...(brand !== undefined && { brand: brand?.trim() || null }),
         ...(gramasi !== undefined && { gramasi: gramasi?.trim() || null }),
         ...(varian !== undefined && { varian: varian?.trim() || null }),
-        ...(stok !== undefined && { stok: Number(stok) || 0 }),
-        ...(hargaBeli !== undefined && { hargaBeli: String(hargaBeli) }),
-        ...(hargaJual !== undefined && { hargaJual: String(hargaJual) }),
+        ...(stokDelta !== 0 && { stok: sql`greatest(0, ${inventory.stok} + ${stokDelta})` }),
+        ...(hargaBeliBaru !== undefined && { hargaBeli: String(hargaBeliBaru) }),
+        ...(hargaJualBaru !== undefined && { hargaJual: String(hargaJualBaru) }),
         ...(supplier !== undefined && { supplier: supplier?.trim() || null }),
         ...(settingPcs !== undefined && { settingPcs: Math.max(1, Number(settingPcs) || 1) }),
         ...(pakaiKarton !== undefined && { pakaiKarton: Boolean(pakaiKarton) }),
@@ -85,6 +130,19 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
       })
       .where(eq(inventory.sku, decodedSku))
       .returning();
+
+    if (stokDelta !== 0 || hargaJualBerubah) {
+      await db.insert(logs).values({
+        user: actor,
+        aksi: 'KOREKSI_INVENTORY',
+        detail: `Edit master ${decodedSku}${stokDelta !== 0 ? `: koreksi stok ${stokDelta > 0 ? '+' : ''}${stokDelta} (jadi ${updated.stok})` : ''}${hargaJualBerubah ? `; harga jual ${existing.hargaJual} -> ${hargaJualBaru}` : ''}`,
+      });
+    }
+
+    // HPP rahasia tidak dikirim ke role yang tidak berhak melihatnya
+    if (!canViewCostPrice(userRole)) {
+      updated.hargaBeli = null;
+    }
 
     return NextResponse.json({
       success: true,
