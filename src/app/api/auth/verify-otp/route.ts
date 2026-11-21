@@ -1,16 +1,22 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/shared/lib/db';
 import { users, otpCodes, logs } from '@/shared/lib/db/schema';
-import { and, eq, gt } from 'drizzle-orm';
-import crypto from 'crypto';
+import { and, desc, eq, gt, sql } from 'drizzle-orm';
+import { hashPassword, tokenHashEquals } from '@/shared/lib/auth/password';
+import { OTP_FAIL_ACTION, OTP_MAX_FAILS, normalizeEmail, recentOtpFails } from '@/shared/lib/auth/otp';
 
-function sha256(str: string): string {
-  return crypto.createHash('sha256').update(str).digest('hex');
-}
+const invalidOtp = () =>
+  NextResponse.json(
+    { success: false, message: 'Kode OTP tidak valid atau telah kadaluarsa' },
+    { status: 400 }
+  );
 
 export async function POST(req: Request) {
   try {
-    const { email, otp, newPassword } = await req.json();
+    const body = await req.json();
+    const email = normalizeEmail(body?.email);
+    const otp = typeof body?.otp === 'string' ? body.otp.trim() : String(body?.otp ?? '').trim();
+    const newPassword = typeof body?.newPassword === 'string' ? body.newPassword : '';
 
     if (!email || !otp || !newPassword) {
       return NextResponse.json(
@@ -26,60 +32,82 @@ export async function POST(req: Request) {
       );
     }
 
-    const hashedInputOtp = sha256(otp);
-    const now = new Date();
-
-    // Verifikasi OTP di tabel
-    const [validOtp] = await db
-      .select()
-      .from(otpCodes)
-      .where(
-        and(
-          eq(otpCodes.email, email.trim().toLowerCase()),
-          eq(otpCodes.otpHash, hashedInputOtp),
-          eq(otpCodes.used, false),
-          gt(otpCodes.expiresAt, now)
-        )
-      )
-      .limit(1);
-
-    if (!validOtp) {
+    // Kunci sementara setelah terlalu banyak tebakan salah
+    if ((await recentOtpFails(email)) >= OTP_MAX_FAILS) {
+      await db
+        .update(otpCodes)
+        .set({ used: true })
+        .where(and(eq(otpCodes.email, email), eq(otpCodes.used, false)));
       return NextResponse.json(
-        { success: false, message: 'Kode OTP tidak valid atau telah kadaluarsa' },
-        { status: 400 }
+        { success: false, message: 'Terlalu banyak percobaan. Minta kode OTP baru setelah 15 menit.' },
+        { status: 429 }
       );
     }
 
-    const passwordHash = sha256(newPassword);
+    // Hanya kode terbaru yang masih berlaku
+    const [activeOtp] = await db
+      .select()
+      .from(otpCodes)
+      .where(and(eq(otpCodes.email, email), eq(otpCodes.used, false), gt(otpCodes.expiresAt, new Date())))
+      .orderBy(desc(otpCodes.createdAt))
+      .limit(1);
 
-    await db.transaction(async (tx) => {
-      // Tandai OTP used
-      await tx
+    if (!activeOtp || !/^\d{6}$/.test(otp) || !tokenHashEquals(otp, activeOtp.otpHash)) {
+      await db.insert(logs).values({
+        user: email.slice(0, 50),
+        aksi: OTP_FAIL_ACTION,
+        detail: 'Verifikasi OTP reset password gagal',
+      });
+      return invalidOtp();
+    }
+
+    // Reset hanya untuk tepat satu akun pemilik email
+    const matches = await db
+      .select({ id: users.id, username: users.username })
+      .from(users)
+      .where(sql`lower(${users.email}) = ${email}`)
+      .limit(2);
+
+    if (matches.length !== 1) {
+      return invalidOtp();
+    }
+    const target = matches[0];
+
+    const passwordHash = await hashPassword(newPassword);
+
+    const consumed = await db.transaction(async (tx) => {
+      // Tandai OTP terpakai secara atomik: request ganda hanya satu yang lolos
+      const used = await tx
         .update(otpCodes)
         .set({ used: true })
-        .where(eq(otpCodes.id, validOtp.id));
+        .where(and(eq(otpCodes.id, activeOtp.id), eq(otpCodes.used, false)))
+        .returning({ id: otpCodes.id });
+      if (used.length === 0) return false;
 
-      // Update password pengguna
       await tx
         .update(users)
-        .set({
-          passwordHash,
-          updatedAt: new Date(),
-        })
-        .where(eq(users.email, email.trim().toLowerCase()));
+        .set({ passwordHash, updatedAt: new Date() })
+        .where(eq(users.id, target.id));
 
       await tx.insert(logs).values({
-        user: email.trim().toLowerCase(),
+        user: target.username,
         aksi: 'RESET_PASSWORD',
-        detail: `Pengguna me-reset password via OTP email`,
+        detail: 'Pengguna me-reset password via OTP email',
       });
+      return true;
     });
+
+    if (!consumed) return invalidOtp();
 
     return NextResponse.json({
       success: true,
       message: 'Password berhasil direset! Silakan login kembali.',
     });
-  } catch (err: any) {
-    return NextResponse.json({ success: false, message: err.message }, { status: 500 });
+  } catch (err) {
+    console.error('[AUTH OTP] verify-otp error', err);
+    return NextResponse.json(
+      { success: false, message: 'Terjadi kesalahan server. Coba lagi nanti.' },
+      { status: 500 }
+    );
   }
 }

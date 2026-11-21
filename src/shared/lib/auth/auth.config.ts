@@ -6,7 +6,9 @@ import type { NextAuthConfig } from 'next-auth';
 // ============================================================
 
 export const authConfig = {
-  secret: process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET || 'gudang-manufaktur-hk-secret-2026-change-in-production',
+  // Tanpa fallback: bila secret kosong, NextAuth menolak berjalan (MissingSecret)
+  // alih-alih menandatangani sesi dengan kunci yang tertulis di repo publik.
+  secret: process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET,
   pages: {
     signIn: '/login',
     error: '/login',
