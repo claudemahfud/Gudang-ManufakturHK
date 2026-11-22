@@ -21,7 +21,7 @@ export async function GET(req: Request) {
     const user = session.user as any;
     const userRole = user?.role;
     const userCabang = user?.cabang || 'Pusat';
-    const isExecutive = ['Administrator', 'Direktur Utama', 'Manager'].includes(userRole);
+    const isExecutive = ['Administrator', 'Direktur Utama', 'Manager', 'Manager Umum'].includes(userRole);
 
     const { searchParams } = new URL(req.url);
     const divisiParam = searchParams.get('divisi');

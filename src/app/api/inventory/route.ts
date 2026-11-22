@@ -31,7 +31,7 @@ export async function GET(req: NextRequest) {
     const user = session?.user as any;
     const userRole = user?.role;
     const userCabang = user?.cabang || 'Pusat';
-    const isExecutive = ['Administrator', 'Direktur Utama', 'Manager'].includes(userRole);
+    const isExecutive = ['Administrator', 'Direktur Utama', 'Manager', 'Manager Umum'].includes(userRole);
 
     const offset = (page - 1) * limit;
 
@@ -136,7 +136,7 @@ export async function POST(req: NextRequest) {
     const user = session?.user as any;
     const userRole = user?.role;
     const userCabang = user?.cabang || 'Pusat';
-    const isExecutive = ['Administrator', 'Direktur Utama', 'Manager'].includes(userRole);
+    const isExecutive = ['Administrator', 'Direktur Utama', 'Manager', 'Manager Umum'].includes(userRole);
 
     const body = await req.json();
     const {

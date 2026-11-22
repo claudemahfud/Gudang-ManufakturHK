@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/shared/lib/db';
 import { biayaOperasional, logs } from '@/shared/lib/db/schema';
-import { requireAuthRole, ROLES_EXECUTIVE } from '@/shared/lib/auth/rbac';
+import { requireAuthRole, ROLES_FINANCE } from '@/shared/lib/auth/rbac';
 import { eq } from 'drizzle-orm';
 
 export async function DELETE(
@@ -9,7 +9,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const authResult = await requireAuthRole(ROLES_EXECUTIVE);
+    const authResult = await requireAuthRole(ROLES_FINANCE);
     if (!authResult.authorized) return authResult.response;
 
     const { id } = await params;

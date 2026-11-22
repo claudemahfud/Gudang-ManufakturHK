@@ -4,7 +4,7 @@
 // PAGE: Manajemen Pengguna & Hak Akses
 // Route: /users
 // Fitur:
-// 1. Kelola akun pengguna & 14 tingkatan role
+// 1. Kelola akun pengguna & 19 tingkatan role
 // 2. Penetapan Divisi (MANUFAKTUR vs FNB vs ALL)
 // 3. Penempatan Cabang (Pusat vs Cabang Regional)
 // 4. Karyawan Cabang terisolasi ke cabangnya masing-masing
@@ -53,15 +53,20 @@ const ROLES: UserRole[] = [
   'Administrator',
   'Direktur Utama',
   'Manager',
+  'Manager Umum',
+  'Finance & Accounting',
   'Kepala Gudang',
   'Wakil Gudang',
   'Staff Gudang',
   'Kepala Expedisi',
   'Staff Expedisi',
   'Salesman',
+  'Sales Canvas',
+  'Sales Motoris',
   'Admin Salesman',
   'Staff Admin Salesman',
   'Agen',
+  'Sales Agent',
   'Admin Agen',
   'Staff Admin Agen',
 ];
@@ -119,7 +124,7 @@ export default function Users() {
   };
 
   const handleRoleChange = (selectedRole: UserRole) => {
-    const isExec = ['Administrator', 'Direktur Utama', 'Manager'].includes(selectedRole);
+    const isExec = ['Administrator', 'Direktur Utama', 'Manager', 'Manager Umum', 'Finance & Accounting'].includes(selectedRole);
     setForm((prev) => ({
       ...prev,
       role: selectedRole,
@@ -215,7 +220,7 @@ export default function Users() {
                 Manajemen Pengguna & Penempatan Cabang
               </h1>
               <p className="text-xs sm:text-sm text-gray-500 font-medium">
-                Atur 14 tingkatan role akses, penugasan divisi operasional, dan lokasi cabang penempatan karyawan.
+                Atur 19 tingkatan role akses, penugasan divisi operasional, dan lokasi cabang penempatan karyawan.
               </p>
             </div>
           </div>
@@ -262,7 +267,7 @@ export default function Users() {
               <div className="text-[11px] text-gray-500 mt-0.5 flex items-center gap-2">
                 <span>Status Kartu: <strong className={isUserCardCollapsed ? "text-amber-700" : "text-emerald-700"}>{isUserCardCollapsed ? "Terciut (Minimized)" : "Terbuka (Expanded)"}</strong></span>
                 <span>•</span>
-                <span>RBAC 14 Level Role</span>
+                <span>RBAC 19 Level Role</span>
               </div>
             </div>
           </div>
@@ -350,7 +355,7 @@ export default function Users() {
                 </tr>
               ) : (
                 data.map((row) => {
-                  const isExec = ['Administrator', 'Direktur Utama', 'Manager'].includes(row.role);
+                  const isExec = ['Administrator', 'Direktur Utama', 'Manager', 'Manager Umum', 'Finance & Accounting'].includes(row.role);
                   const isLocked = !isExec && row.cabang && row.cabang !== 'Pusat' && row.cabang !== 'ALL';
 
                   return (

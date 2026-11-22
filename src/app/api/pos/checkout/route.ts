@@ -52,7 +52,7 @@ export async function POST(req: Request) {
     };
 
     // Isolasi Cabang: Karyawan cabang otomatis dikunci ke cabang penempatannya
-    const isExecutive = ['Administrator', 'Direktur Utama', 'Manager'].includes(userRole as any);
+    const isExecutive = ['Administrator', 'Direktur Utama', 'Manager', 'Manager Umum'].includes(userRole as any);
     const userCabang = (user as any)?.cabang;
     const finalCabang = (!isExecutive && userCabang && userCabang !== 'ALL' && userCabang !== 'Pusat')
       ? userCabang
