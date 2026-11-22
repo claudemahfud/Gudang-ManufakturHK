@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useSyncExternalStore } from 'react';
 import { SessionProvider } from 'next-auth/react';
 import Sidebar from '@/shared/components/layout/Sidebar';
 import Header from '@/shared/components/layout/Header';
@@ -13,17 +13,59 @@ import { ShieldCheck, HeartPulse } from 'lucide-react';
 // LAYOUT: Dashboard (semua halaman authenticated)
 // ============================================================
 
+// Preferensi buka/tutup sidebar desktop di localStorage (server render: terbuka)
+const SIDEBAR_PREF_KEY = 'sidebar_desktop_open';
+const SIDEBAR_PREF_EVENT = 'sidebar-pref-change';
+
+function readSidebarPref(): boolean {
+  try {
+    return localStorage.getItem(SIDEBAR_PREF_KEY) !== '0';
+  } catch {
+    return true;
+  }
+}
+
+function writeSidebarPref(open: boolean) {
+  try {
+    localStorage.setItem(SIDEBAR_PREF_KEY, open ? '1' : '0');
+  } catch {
+    // storage diblokir: perubahan hanya berlaku sampai reload
+  }
+  window.dispatchEvent(new Event(SIDEBAR_PREF_EVENT));
+}
+
+function subscribeSidebarPref(onChange: () => void) {
+  window.addEventListener(SIDEBAR_PREF_EVENT, onChange);
+  window.addEventListener('storage', onChange);
+  return () => {
+    window.removeEventListener(SIDEBAR_PREF_EVENT, onChange);
+    window.removeEventListener('storage', onChange);
+  };
+}
+
 function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
   const { data: session } = useSession();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  // Sidebar desktop bisa disembunyikan; pilihan diingat per perangkat
+  const desktopSidebarOpen = useSyncExternalStore(subscribeSidebarPref, readSidebarPref, () => true);
   const userRole = (session?.user as any)?.role as UserRole | undefined;
+
+  const toggleSidebar = () => {
+    if (window.matchMedia('(min-width: 1024px)').matches) {
+      writeSidebarPref(!desktopSidebarOpen);
+    } else {
+      setSidebarOpen((open) => !open);
+    }
+  };
 
   return (
     <div className="flex h-screen overflow-hidden bg-gray-50 relative">
       {/* 1. Holy Grail Layout: Left Semantic <aside> for Navigation */}
-      <aside aria-label="Sidebar Navigasi Desktop" className="hidden lg:flex flex-shrink-0">
-        <Sidebar userRole={userRole} />
-      </aside>
+      {desktopSidebarOpen && (
+        <aside aria-label="Sidebar Navigasi Desktop" className="hidden lg:flex flex-shrink-0">
+          <Sidebar userRole={userRole} />
+        </aside>
+      )}
 
       {/* Sidebar Mobile Overlay */}
       {sidebarOpen && (
@@ -40,7 +82,7 @@ function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
 
       {/* 2. Main Column: Semantic <header>, <main>, and <footer> */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        <Header onMenuClick={() => setSidebarOpen(true)} />
+        <Header onMenuClick={toggleSidebar} />
         
         <main className="flex-1 overflow-y-auto flex flex-col justify-between">
           <div className="p-4 md:p-6 flex-1">
