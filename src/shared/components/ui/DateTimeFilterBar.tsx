@@ -260,7 +260,7 @@ export default function DateTimeFilterBar({
         <div
           role="dialog"
           aria-label="Pilih periode"
-          className="absolute left-0 top-full z-50 mt-2 w-[min(860px,calc(100vw-2rem))] rounded-2xl border border-gray-200 bg-white shadow-xl"
+          className="absolute left-0 top-full z-50 mt-2 w-[min(860px,calc(100vw-2rem))] origin-top-left rounded-2xl border border-gray-200 bg-white shadow-xl animate-in fade-in zoom-in-95 duration-200"
         >
           <div className="flex flex-col md:flex-row">
             {/* Preset cepat */}

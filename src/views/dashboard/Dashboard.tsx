@@ -260,7 +260,7 @@ export default function Dashboard() {
           <article>
             <Link
               href={ROUTES.BARANG_MASUK}
-              className="group flex flex-col p-4 rounded-2xl bg-emerald-50/70 hover:bg-emerald-100/80 border border-emerald-200/80 transition-all hover:shadow-sm h-full"
+              className="group flex flex-col p-4 rounded-2xl bg-emerald-50/70 hover:bg-emerald-100/80 border border-emerald-200/80 hover-lift h-full"
             >
               <div className="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center mb-3 shadow-xs group-hover:scale-105 transition-transform">
                 <ArrowDownToLine className="w-5 h-5" />
@@ -278,7 +278,7 @@ export default function Dashboard() {
           <article>
             <Link
               href={ROUTES.BARANG_KELUAR}
-              className="group flex flex-col p-4 rounded-2xl bg-blue-50/70 hover:bg-blue-100/80 border border-blue-200/80 transition-all hover:shadow-sm h-full"
+              className="group flex flex-col p-4 rounded-2xl bg-blue-50/70 hover:bg-blue-100/80 border border-blue-200/80 hover-lift h-full"
             >
               <div className="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center mb-3 shadow-xs group-hover:scale-105 transition-transform">
                 <Truck className="w-5 h-5" />
@@ -298,7 +298,7 @@ export default function Dashboard() {
               href={ROUTES.POS}
               target="_blank"
               rel="noopener noreferrer"
-              className="group flex flex-col p-4 rounded-2xl bg-purple-50/70 hover:bg-purple-100/80 border border-purple-200/80 transition-all hover:shadow-sm h-full"
+              className="group flex flex-col p-4 rounded-2xl bg-purple-50/70 hover:bg-purple-100/80 border border-purple-200/80 hover-lift h-full"
             >
               <div className="flex items-center justify-between mb-3">
                 <div className="w-10 h-10 rounded-xl bg-purple-600 text-white flex items-center justify-center shadow-xs group-hover:scale-105 transition-transform">
@@ -319,7 +319,7 @@ export default function Dashboard() {
           <article>
             <Link
               href={ROUTES.LAPORAN_RUSAK_RETUR}
-              className="group flex flex-col p-4 rounded-2xl bg-rose-50/70 hover:bg-rose-100/80 border border-rose-200/80 transition-all hover:shadow-sm h-full"
+              className="group flex flex-col p-4 rounded-2xl bg-rose-50/70 hover:bg-rose-100/80 border border-rose-200/80 hover-lift h-full"
             >
               <div className="w-10 h-10 rounded-xl bg-rose-600 text-white flex items-center justify-center mb-3 shadow-xs group-hover:scale-105 transition-transform">
                 <ShieldAlert className="w-5 h-5" />

@@ -311,7 +311,7 @@ export default function CreativeMegaMenu({ userRole, isOpen, onClose }: MegaMenu
                   <Link
                     href={item.href}
                     onClick={onClose}
-                    className="group block p-2 rounded-2xl hover:bg-slate-50 border border-transparent hover:border-slate-200 transition"
+                    className="group block p-2 rounded-2xl hover:bg-slate-50 border border-transparent hover:border-slate-200 hover-lift"
                   >
                     <div className="flex items-start gap-2.5">
                       <div className="w-7 h-7 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0 group-hover:bg-blue-600 group-hover:text-white transition mt-0.5">
@@ -359,7 +359,7 @@ export default function CreativeMegaMenu({ userRole, isOpen, onClose }: MegaMenu
                     href={item.href}
                     target={item.newTab ? '_blank' : undefined}
                     onClick={onClose}
-                    className="group block p-2 rounded-2xl hover:bg-slate-50 border border-transparent hover:border-slate-200 transition"
+                    className="group block p-2 rounded-2xl hover:bg-slate-50 border border-transparent hover:border-slate-200 hover-lift"
                   >
                     <div className="flex items-start gap-2.5">
                       <div className="w-7 h-7 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0 group-hover:bg-emerald-600 group-hover:text-white transition mt-0.5">
@@ -406,7 +406,7 @@ export default function CreativeMegaMenu({ userRole, isOpen, onClose }: MegaMenu
                   <Link
                     href={item.href}
                     onClick={onClose}
-                    className="group block p-2 rounded-2xl hover:bg-slate-50 border border-transparent hover:border-slate-200 transition"
+                    className="group block p-2 rounded-2xl hover:bg-slate-50 border border-transparent hover:border-slate-200 hover-lift"
                   >
                     <div className="flex items-start gap-2.5">
                       <div className="w-7 h-7 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0 group-hover:bg-amber-600 group-hover:text-white transition mt-0.5">
@@ -434,7 +434,7 @@ export default function CreativeMegaMenu({ userRole, isOpen, onClose }: MegaMenu
                     <Link
                       href={item.href}
                       onClick={onClose}
-                      className="group block p-2 rounded-2xl hover:bg-slate-50 border border-transparent hover:border-slate-200 transition"
+                      className="group block p-2 rounded-2xl hover:bg-slate-50 border border-transparent hover:border-slate-200 hover-lift"
                     >
                       <div className="flex items-start gap-2.5">
                         <div className="w-7 h-7 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0 group-hover:bg-indigo-600 group-hover:text-white transition mt-0.5">

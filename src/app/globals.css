@@ -60,3 +60,97 @@ body {
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
+
+/* ============================================================
+   MOTION SYSTEM
+   Token easing + utilitas masuk (animate-in, fade-in, zoom-in-*,
+   slide-in-from-*-*) yang dipakai modal, dropdown, toast, popover.
+   Semua gerakan dihormati oleh prefers-reduced-motion (tinggal fade).
+   ============================================================ */
+@theme {
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1); /* masuk/keluar UI: cepat di awal */
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1); /* perpindahan di layar */
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1); /* drawer / sidebar */
+}
+
+@keyframes enter {
+  from {
+    opacity: var(--tw-enter-opacity, 1);
+    transform: translate3d(var(--tw-enter-translate-x, 0), var(--tw-enter-translate-y, 0), 0)
+      scale(var(--tw-enter-scale, 1));
+  }
+}
+
+@keyframes enter-fade {
+  from { opacity: var(--tw-enter-opacity, 0); }
+}
+
+@utility animate-in {
+  animation: enter var(--tw-animation-duration, var(--tw-duration, 200ms)) var(--ease-out) both;
+}
+@utility fade-in {
+  --tw-enter-opacity: 0;
+}
+@utility zoom-in-* {
+  --tw-enter-scale: calc(--value(integer) * 1%);
+}
+@utility slide-in-from-top-* {
+  --tw-enter-translate-y: calc(--value(integer) * var(--spacing) * -1);
+}
+@utility slide-in-from-bottom-* {
+  --tw-enter-translate-y: calc(--value(integer) * var(--spacing));
+}
+@utility slide-in-from-left-* {
+  --tw-enter-translate-x: calc(--value(integer) * var(--spacing) * -1);
+}
+@utility slide-in-from-right-* {
+  --tw-enter-translate-x: calc(--value(integer) * var(--spacing));
+}
+@utility slide-in-from-left {
+  --tw-enter-translate-x: -100%;
+}
+
+/* Kartu / tautan menu: terangkat halus saat hover (hanya perangkat ber-mouse) */
+@utility hover-lift {
+  transition:
+    translate 200ms var(--ease-out),
+    box-shadow 200ms var(--ease-out),
+    background-color 150ms ease,
+    border-color 150ms ease;
+  @media (hover: hover) and (pointer: fine) {
+    &:hover {
+      translate: 0 -2px;
+      box-shadow: 0 10px 24px -14px rgb(15 23 42 / 0.25);
+    }
+  }
+}
+
+@layer base {
+  /* Umpan balik tekan pada semua tombol */
+  button {
+    transition-property: color, background-color, border-color, box-shadow, opacity, scale;
+    transition-duration: 160ms;
+    transition-timing-function: var(--ease-out);
+  }
+  button:not(:disabled):active {
+    scale: 0.97;
+  }
+
+  /* Baris tabel: warna hover berpindah halus, tidak berkedip */
+  tbody tr {
+    transition: background-color 150ms ease;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* Tetap fade (membantu pemahaman), tanpa perpindahan posisi / skala */
+  .animate-in {
+    animation-name: enter-fade;
+  }
+  .hover-lift:hover {
+    translate: none;
+  }
+  button:not(:disabled):active {
+    scale: none;
+  }
+}
