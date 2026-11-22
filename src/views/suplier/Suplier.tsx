@@ -641,7 +641,7 @@ export default function SuplierView() {
               <div className="mt-3 p-3 rounded-xl bg-amber-50 border border-amber-200 text-[11px] text-amber-800 text-left flex items-start gap-2">
                 <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
                 <span>
-                  Suplier hanya dapat dihapus jika tidak ada kewajiban hutang yang belum lunas dan tidak ada master barang aktif yang terhubung.
+                  Suplier hanya dapat dihapus jika tidak ada hutang yang belum lunas dan semua barang dari suplier ini sudah habis (stok 0).
                 </span>
               </div>
             </div>

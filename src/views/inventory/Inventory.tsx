@@ -300,12 +300,7 @@ export default function Inventory() {
         brand: form.brand.trim() || null,
         gramasi: form.gramasi.trim() || null,
         varian: form.varian.trim() || null,
-        stok: Number(form.stok) || 0,
-        // Stok saat form dibuka: server hanya menerapkan selisihnya agar
-        // penjualan yang terjadi selama form terbuka tidak tertimpa.
-        ...(modalMode !== 'create' && {
-          stokAwal: Number(items.find((it) => it.sku === form.sku)?.stok ?? form.stok) || 0,
-        }),
+        // Stok tidak dikirim: hanya berubah lewat Barang Masuk / Barang Keluar
         hargaBeli: Number(form.hargaBeli) || 0,
         hargaJual: Number(form.hargaJual) || 0,
         settingPcs: Math.max(1, Number(form.settingPcs) || 1),
@@ -849,7 +844,7 @@ export default function Inventory() {
                   {modalMode === 'create' ? 'Tambah Master Barang Baru' : `Edit Barang: ${form.sku}`}
                 </h3>
                 <p className="text-xs text-gray-500 mt-0.5">
-                  Lengkapi data atribut produk, stok fisik awal, dan pengaturan karton.
+                  Lengkapi data atribut produk, harga, dan pengaturan karton. Stok diisi lewat Barang Masuk.
                 </p>
               </div>
               <button
@@ -1107,12 +1102,11 @@ export default function Inventory() {
                         </label>
                         <input
                           type="number"
-                          min={0}
-                          disabled={submitting}
-                          value={form.stok}
-                          onChange={(e) => setForm((p) => ({ ...p, stok: e.target.value }))}
-                          className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 outline-none transition text-sm font-semibold"
+                          readOnly
+                          value={modalMode === 'create' ? 0 : form.stok}
+                          className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 bg-gray-50 text-gray-500 cursor-not-allowed outline-none text-sm font-semibold"
                         />
+                        <p className="text-[10px] text-gray-400 mt-0.5">Hanya berubah lewat Barang Masuk / Keluar.</p>
                       </div>
 
                       <div>
