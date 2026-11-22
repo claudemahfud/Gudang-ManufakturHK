@@ -5,6 +5,7 @@ import { requireAuthRole, ROLES_POS } from '@/shared/lib/auth/rbac';
 import { eq } from 'drizzle-orm';
 import { decrementStock, errorResponse, normalizeSku, parsePositiveInt } from '@/shared/lib/stock';
 import { generateTrxId } from '@/shared/lib/utils';
+import { assertSupervisorPin, getPengaturan } from '@/shared/lib/pengaturan';
 
 // ============================================================
 // API: /api/pos/checkout
@@ -37,7 +38,9 @@ export async function POST(req: Request) {
       catatan = '',
       divisi = 'MANUFAKTUR',
       cabang = 'Pusat',
+      supervisorPin,
     } = body as {
+      supervisorPin?: string;
       items: CartItemInput[];
       pelanggan?: string;
       metodePembayaran?: 'Tunai' | 'Transfer' | 'QRIS';
@@ -99,6 +102,13 @@ export async function POST(req: Request) {
 
     // 2. Kalkulasi Nilai Transaksi (diskon dibatasi 0-100%)
     const diskon = Math.min(100, Math.max(0, Number(diskonPct) || 0));
+
+    // Diskon di atas batas wajib PIN supervisor bila Direktur mewajibkannya
+    const pengaturan = await getPengaturan();
+    const butuhPin = pengaturan.wajibPin && diskon > pengaturan.maxDiskonTanpaPin;
+    if (butuhPin) {
+      await assertSupervisorPin(pengaturan, supervisorPin, user.username, `diskon POS ${diskon}%`);
+    }
     const subtotal = roundRp(lines.reduce((acc, l) => acc + l.hargaJual * l.qty, 0));
     const nominalDiskon = roundRp((subtotal * diskon) / 100);
     const grandTotal = Math.max(0, roundRp(subtotal - nominalDiskon));
@@ -168,7 +178,7 @@ export async function POST(req: Request) {
       await tx.insert(logs).values({
         user: cashierName,
         aksi: 'POS_CHECKOUT',
-        detail: `Transaksi POS #${trxId} berhasil senilai Rp ${grandTotal.toLocaleString('id-ID')} (${items.length} item) ke ${pelanggan}`,
+        detail: `Transaksi POS #${trxId} berhasil senilai Rp ${grandTotal.toLocaleString('id-ID')} (${items.length} item) ke ${pelanggan}${butuhPin ? ` — diskon ${diskon}% disetujui PIN supervisor` : ''}`,
       });
     });
 

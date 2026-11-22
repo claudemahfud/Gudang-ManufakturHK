@@ -4,6 +4,7 @@ import { barangKeluar, keuangan, logs } from '@/shared/lib/db/schema';
 import { requireAuthRole, ROLES_EXECUTIVE } from '@/shared/lib/auth/rbac';
 import { eq } from 'drizzle-orm';
 import { BusinessError, errorResponse, incrementStock } from '@/shared/lib/stock';
+import { assertSupervisorPin, getPengaturan } from '@/shared/lib/pengaturan';
 
 // ============================================================
 // API: /api/barang-keluar/[id]
@@ -21,6 +22,13 @@ export async function DELETE(
 
     const { id } = await params;
     const user = authResult.user?.name || authResult.user?.username || 'System';
+
+    // Hapus transaksi wajib PIN supervisor bila Direktur mewajibkannya
+    const pengaturan = await getPengaturan();
+    if (pengaturan.wajibPin && pengaturan.pinHapusTransaksi) {
+      const body = await req.json().catch(() => ({}));
+      await assertSupervisorPin(pengaturan, body?.supervisorPin, authResult.user?.username || 'unknown', `hapus barang keluar ${id}`);
+    }
 
     await db.transaction(async (tx) => {
       // Hapus dulu & ambil barisnya: bila dua request hapus bersamaan,

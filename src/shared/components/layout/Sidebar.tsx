@@ -257,6 +257,12 @@ export const MENU_HIERARCHY: ParentMenuItem[] = [
         roles: ['Administrator'],
       },
       {
+        label: 'Pengaturan Perusahaan',
+        icon: ShieldAlert,
+        href: ROUTES.PENGATURAN_PERUSAHAAN,
+        roles: ['Direktur Utama'],
+      },
+      {
         label: 'Manajemen Cabang',
         icon: Building2,
         href: ROUTES.CABANG,

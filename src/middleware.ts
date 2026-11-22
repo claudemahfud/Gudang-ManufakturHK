@@ -14,6 +14,7 @@ const PUBLIC_ROUTES = [ROUTES.LOGIN, ROUTES.FORGOT_PASSWORD, '/api/public'];
 const ROUTE_ROLES: Record<string, string[]> = {
   // Page routes
   [ROUTES.USERS]: ['Administrator'],
+  [ROUTES.PENGATURAN_PERUSAHAAN]: ['Direktur Utama'],
   [ROUTES.LOGS]: ['Administrator', 'Manager', 'Direktur Utama'],
   [ROUTES.KEUANGAN]: ['Administrator', 'Manager', 'Direktur Utama', 'Kepala Gudang'],
   [ROUTES.BIAYA_OPERASIONAL]: ['Administrator', 'Manager', 'Direktur Utama'],

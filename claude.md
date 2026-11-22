@@ -29,9 +29,10 @@ Aplikasi ini sudah memiliki **25+ modul lengkap** yang siap pakai:
   * Layar penuh mandiri terpisah dari BackOffice (tanpa sidebar).
   * Optimasi smartphone, tablet, dan desktop.
   * Fitur **Setting POS Terpisah** (modal konfigurasi toko, printer, audio beep, footer nota, dan **Proteksi Anti-Fraud PIN Supervisor**).
-  * **Proteksi PIN Supervisor (Anti-Fraud)**:
-    * Otorisasi diskon khusus: diskon di atas batas normal kasir (default > 15%) wajib memasukkan PIN Supervisor (default `1234` atau configurable).
-    * Otorisasi pembatalan keranjang (*Void Cart*): mengosongkan keranjang yang sudah terisi item wajib otorisasi PIN Supervisor.
+  * **Proteksi PIN Supervisor (Anti-Fraud)** — opsional, diatur **Direktur Utama** di **Pengaturan Perusahaan** (`/pengaturan-perusahaan`, tabel `pengaturan_perusahaan`, API `/api/pengaturan`):
+    * Direktur memilih wajib PIN atau tanpa PIN. Default: tanpa PIN.
+    * Bila wajib: diskon di atas batas (default 15%), kosongkan keranjang (*Void Cart*), dan hapus transaksi barang keluar dapat diwajibkan PIN.
+    * PIN disimpan ter-hash (scrypt) dan **diverifikasi di server** (`/api/pos/checkout`, `/api/barang-keluar/[id]`, `/api/pengaturan/verifikasi-pin`), maks 5 PIN salah / pengguna / 15 menit. Tidak ada lagi PIN di localStorage.
     * Dilengkapi On-Screen Numeric Keypad touch-friendly untuk mesin kasir touchscreen.
   * Cetak Nota Thermal **58mm** otomatis via `@media print`.
   * Multi-role: dapat digunakan oleh Direktur Utama, Manager, Admin, Gudang, Salesman, dan Agen.
