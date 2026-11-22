@@ -29,7 +29,7 @@ export async function DELETE(
 
       // Rollback stok; ditolak bila barangnya sudah terjual/terpakai
       try {
-        await decrementStock(tx, item.sku, item.qty);
+        await decrementStock(tx, item.sku, item.qty, item.cabang);
       } catch (e) {
         if (e instanceof BusinessError && e.status === 400) {
           throw new BusinessError(

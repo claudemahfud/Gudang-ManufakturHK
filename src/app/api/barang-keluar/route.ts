@@ -152,7 +152,7 @@ export async function POST(req: Request) {
         const subtotal = Math.round(qty * hargaJual * (1 - diskon / 100) * 100) / 100;
 
         // Kurangi stok hanya bila masih cukup (aman dari transaksi bersamaan)
-        const inv = await decrementStock(tx, it.sku, qty);
+        const inv = await decrementStock(tx, it.sku, qty, cabangToSave);
 
         const [row] = await tx
           .insert(barangKeluar)

@@ -137,7 +137,7 @@ export async function POST(req: Request) {
         const itemNetTotal = roundRp(itemSubtotal - (itemSubtotal * diskon) / 100);
 
         // Kurangi stok hanya bila masih cukup (aman dari checkout bersamaan)
-        await decrementStock(tx, item.sku, item.qty);
+        await decrementStock(tx, item.sku, item.qty, finalCabang);
 
         // Catat ke barang_keluar
         await tx
