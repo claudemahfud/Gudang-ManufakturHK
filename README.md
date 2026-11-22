@@ -14,7 +14,7 @@ Sistem ini merekonstruksi seluruh fungsionalitas sistem pergudangan lama (Fireba
 3. **Barang Masuk (`/barang-masuk`)**: Penerimaan kiriman stok supplier (otomatis menambah stok inventory & audit trail).
 4. **Barang Keluar & Loading (`/barang-keluar`)**: Surat loading muatan penjualan multi-item (otomatis memotong stok & cetak invoice/faktur).
 5. **Barang Rusak / Kadaluarsa (`/barang-rusak`)**: Pencatatan barang cacat/rusak dengan pemotongan stok otomatis.
-6. **Mutasi Barang (`/mutasi-barang`)**: Pencatatan perpindahan stok antar lokasi gudang/rak.
+6. **Mutasi Barang (`/mutasi-barang`)**: Perpindahan stok antar cabang (stok per cabang di tabel `stok_cabang`).
 7. **Monitor Stok Kritis (`/stok-kritis`)**: Peringatan dini otomatis untuk barang dengan stok di bawah batas minimum (Restock quick-action).
 8. **Surat Jalan (`/surat-jalan`)**: Dokumen legal pengiriman logistik, data armada/nopol, dan template cetak serah terima barang.
 9. **PO Loading (`/po-loading`)**: Purchase order ke pabrik produsen dan fitur 1-klik "Terima Barang & Tambah Stok".

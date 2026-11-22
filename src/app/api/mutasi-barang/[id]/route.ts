@@ -1,12 +1,13 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/shared/lib/db';
-import { mutasiBarang, logs } from '@/shared/lib/db/schema';
+import { mutasiBarang, masterCabang, logs } from '@/shared/lib/db/schema';
 import { requireAuthRole, ROLES_WAREHOUSE } from '@/shared/lib/auth/rbac';
-import { eq } from 'drizzle-orm';
+import { eq, inArray } from 'drizzle-orm';
+import { BusinessError, decrementStock, errorResponse, incrementStock } from '@/shared/lib/stock';
 
 // ============================================================
 // API: /api/mutasi-barang/[id]
-// DELETE mutasi barang
+// DELETE mutasi barang = batalkan: stok kembali dari cabang tujuan ke asal
 // Hak Akses: Divisi Gudang & Eksekutif
 // ============================================================
 
@@ -19,31 +20,35 @@ export async function DELETE(
     if (!authResult.authorized) return authResult.response;
 
     const { id } = await params;
-
-    const [item] = await db
-      .select()
-      .from(mutasiBarang)
-      .where(eq(mutasiBarang.id, id))
-      .limit(1);
-
-    if (!item) {
-      return NextResponse.json(
-        { success: false, message: 'Data tidak ditemukan' },
-        { status: 404 }
-      );
-    }
-
-    await db.delete(mutasiBarang).where(eq(mutasiBarang.id, id));
-
     const user = authResult.user?.name || authResult.user?.username || 'System';
-    await db.insert(logs).values({
-      user,
-      aksi: 'HAPUS_MUTASI',
-      detail: `Menghapus riwayat mutasi ID: ${id} SKU: ${item.sku}`,
+
+    await db.transaction(async (tx) => {
+      // Hapus & ambil barisnya dalam satu langkah (aman dari klik ganda)
+      const [item] = await tx.delete(mutasiBarang).where(eq(mutasiBarang.id, id)).returning();
+      if (!item) throw new BusinessError('Data tidak ditemukan', 404);
+
+      // Riwayat lama (lokasi rak, sebelum stok per cabang) tidak memindahkan stok
+      const cabang = await tx
+        .select({ nama: masterCabang.namaCabang })
+        .from(masterCabang)
+        .where(inArray(masterCabang.namaCabang, [item.dari, item.ke]));
+      const pindahStok = item.dari !== item.ke && cabang.length === 2;
+
+      if (pindahStok) {
+        // Gagal bila stok di cabang tujuan sudah terpakai
+        await decrementStock(tx, item.sku, item.qty, item.ke);
+        await incrementStock(tx, item.sku, item.qty, item.dari);
+      }
+
+      await tx.insert(logs).values({
+        user,
+        aksi: 'HAPUS_MUTASI',
+        detail: `Membatalkan mutasi ID: ${id} SKU: ${item.sku}${pindahStok ? ` (${item.qty} pcs kembali dari [${item.ke}] ke [${item.dari}])` : ''}`,
+      });
     });
 
-    return NextResponse.json({ success: true, message: 'Data berhasil dihapus' });
-  } catch (err: any) {
-    return NextResponse.json({ success: false, message: err.message }, { status: 500 });
+    return NextResponse.json({ success: true, message: 'Mutasi dibatalkan' });
+  } catch (err) {
+    return errorResponse(err, 'MUTASI_DELETE');
   }
 }

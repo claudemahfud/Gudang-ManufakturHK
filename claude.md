@@ -52,7 +52,7 @@ Aplikasi ini sudah memiliki **25+ modul lengkap** yang siap pakai:
 * **Master Inventory** (`/inventory`): Master data SKU, nama barang, brand, gramasi, varian, harga beli, harga jual, setting karton/pcs, dan stok minimum.
 * **Barang Masuk** (`/barang-masuk`): Penerimaan stok supplier & nomor faktur.
 * **Barang Keluar** (`/barang-keluar`): Pengiriman/penjualan grosir & cetak invoice. Dilengkapi proteksi **PIN Supervisor Anti-Fraud** saat menghapus data riwayat transaksi penjualan/pengeluaran untuk melindungi integritas laporan omset tunai.
-* **Mutasi Barang** (`/mutasi-barang`): Pemindahan stok antar rak/gudang.
+* **Mutasi Barang** (`/mutasi-barang`): Pemindahan stok antar **cabang** (stok cabang asal berkurang, cabang tujuan bertambah, atomik). Stok per cabang di tabel `stok_cabang`; `inventory.stok` = total semua cabang. Semua perubahan stok wajib lewat `src/shared/lib/stock.ts` (`decrementStock` / `incrementStock` dengan parameter cabang).
 * **Stok Kritis** (`/stok-kritis`): Peringatan dini barang yang mendekati limit minimum.
 * *(Catatan: Fitur Barang Rusak lama `/barang-rusak` telah digabungkan satu pintu ke `/laporan-rusak-retur` agar tidak duplikat).*
 

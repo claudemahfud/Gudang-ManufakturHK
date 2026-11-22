@@ -3,7 +3,8 @@ import { db } from '@/shared/lib/db';
 import { barangMasuk, inventory, logs, keuangan, hutangSupplier, kontak } from '@/shared/lib/db/schema';
 import { auth } from '@/shared/lib/auth/config';
 import { requireAuthRole, ROLES_WAREHOUSE } from '@/shared/lib/auth/rbac';
-import { eq, desc, and, gte, lte, sql, or } from 'drizzle-orm';
+import { eq, desc, and, gte, lte, or } from 'drizzle-orm';
+import { incrementStock } from '@/shared/lib/stock';
 
 // ============================================================
 // API: /api/barang-masuk
@@ -201,7 +202,6 @@ export async function POST(req: Request) {
         await tx
           .update(inventory)
           .set({
-            stok: sql`${inventory.stok} + ${parsedQty}`,
             hargaBeli: String(finalHargaBeli),
             supplier: supplier.trim(),
             updatedAt: new Date(),
@@ -213,7 +213,7 @@ export async function POST(req: Request) {
           .values({
             sku: sku.trim().toUpperCase(),
             namaBarang: namaBarang.trim(),
-            stok: parsedQty,
+            stok: 0, // diisi incrementStock di bawah
             hargaBeli: String(unitPrice),
             hargaJual: '0',
             supplier: supplier.trim(),
@@ -222,6 +222,9 @@ export async function POST(req: Request) {
             tipeItem: divisiToSave === 'FNB' ? 'bahan_baku' : 'barang_jadi',
           });
       }
+
+      // Stok masuk ke cabang penerima (stok_cabang + total inventory)
+      await incrementStock(tx, sku.trim().toUpperCase(), parsedQty, cabangToSave);
 
       // 3. Alur Kas & Neraca Otomatis
       if (totalBeli > 0) {

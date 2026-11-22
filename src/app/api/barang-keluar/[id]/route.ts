@@ -37,7 +37,7 @@ export async function DELETE(
       if (!item) throw new BusinessError('Data pengeluaran tidak ditemukan', 404);
 
       // Rollback stok inventory (+ qty)
-      await incrementStock(tx, item.sku, item.qty);
+      await incrementStock(tx, item.sku, item.qty, item.cabang);
 
       // Penjualan POS sudah tercatat sebagai kas masuk: buat jurnal pembalik
       // agar buku kas tetap sesuai dengan barang yang benar-benar terjual.
