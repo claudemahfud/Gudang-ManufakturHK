@@ -4,13 +4,12 @@ import { poLoading, poLoadingItems, logs } from '@/shared/lib/db/schema';
 import { auth } from '@/shared/lib/auth/config';
 import { requireAuthRole, ROLES_WAREHOUSE } from '@/shared/lib/auth/rbac';
 import { eq } from 'drizzle-orm';
-import { BusinessError, errorResponse, incrementStock, normalizeSku } from '@/shared/lib/stock';
-
-const PO_SELESAI = 'selesai';
+import { BusinessError, errorResponse } from '@/shared/lib/stock';
+import { PO_STATUS } from '@/shared/lib/po-status';
 
 // ============================================================
 // API: /api/po-loading/[id]
-// GET, PUT (update status/terima barang), DELETE
+// GET (detail + items), PUT (batalkan PO), DELETE (hanya bila belum ada barang diterima)
 // ============================================================
 
 export async function GET(
@@ -46,6 +45,9 @@ export async function GET(
   }
 }
 
+// PO hanya dokumen pemesanan: tidak menambah stok. Penerimaan barang lewat
+// Barang Masuk > "Barang Datang" (POST /api/po-loading/[id]/faktur).
+// PUT di sini hanya untuk membatalkan PO yang belum selesai.
 export async function PUT(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -56,60 +58,39 @@ export async function PUT(
 
     const { id } = await params;
     const body = await req.json();
-    const { status, receiveAll } = body;
     const user = authResult.user?.name || authResult.user?.username || 'System';
 
-    if (typeof status !== 'string' || !status.trim()) {
-      return NextResponse.json({ success: false, message: 'Status PO wajib diisi' }, { status: 400 });
+    if (body.status !== PO_STATUS.BATAL) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: 'Status PO hanya bisa diubah menjadi dibatalkan. Penerimaan barang dilakukan di menu Barang Masuk > Barang Datang.',
+        },
+        { status: 400 }
+      );
     }
 
-    const updatedResult = await db.transaction(async (tx) => {
-      // Kunci header PO agar penerimaan ganda (klik ulang / retry) antre
+    const updated = await db.transaction(async (tx) => {
       const [current] = await tx.select().from(poLoading).where(eq(poLoading.id, id)).for('update').limit(1);
       if (!current) throw new BusinessError('PO tidak ditemukan', 404);
+      if (current.status === PO_STATUS.SELESAI) throw new BusinessError('PO sudah selesai diterima dan tidak bisa dibatalkan.');
+      if (current.status === PO_STATUS.BATAL) return current;
 
-      if (current.status === PO_SELESAI) {
-        if (receiveAll || status === PO_SELESAI) return current; // idempoten: tidak menambah stok lagi
-        throw new BusinessError('PO sudah selesai diterima dan tidak bisa diubah statusnya.');
-      }
-
-      const finalStatus = receiveAll ? PO_SELESAI : status;
-      const [updated] = await tx
+      const [row] = await tx
         .update(poLoading)
-        .set({ status: finalStatus, updatedAt: new Date() })
+        .set({ status: PO_STATUS.BATAL, updatedAt: new Date() })
         .where(eq(poLoading.id, id))
         .returning();
-
-      // Jika receiveAll: tambahkan hanya sisa yang belum diterima ke inventory
-      if (receiveAll) {
-        const items = await tx
-          .select()
-          .from(poLoadingItems)
-          .where(eq(poLoadingItems.poLoadingId, id));
-
-        for (const it of items) {
-          const sisa = (it.qtyOrder ?? 0) - (it.qtyTerima ?? 0);
-          if (sisa <= 0) continue;
-
-          await incrementStock(tx, normalizeSku(it.sku), sisa, current.cabang);
-
-          await tx
-            .update(poLoadingItems)
-            .set({ qtyTerima: it.qtyOrder })
-            .where(eq(poLoadingItems.id, it.id));
-        }
-      }
 
       await tx.insert(logs).values({
         user,
         aksi: 'UPDATE_PO_LOADING',
-        detail: `Update PO ID: ${id} status: ${current.status} -> ${finalStatus}${receiveAll ? ' (Sisa barang diterima ke stok)' : ''}`,
+        detail: `Batalkan ${current.noPo}: status ${current.status} -> ${PO_STATUS.BATAL}`,
       });
-
-      return updated;
+      return row;
     });
 
-    return NextResponse.json({ success: true, data: updatedResult });
+    return NextResponse.json({ success: true, data: updated });
   } catch (err) {
     return errorResponse(err, 'PO_LOADING_PUT');
   }
@@ -127,19 +108,29 @@ export async function DELETE(
     const user = authResult.user?.name || authResult.user?.username || 'System';
 
     await db.transaction(async (tx) => {
-      // Hapus child items terlebih dahulu
+      const [po] = await tx.select().from(poLoading).where(eq(poLoading.id, id)).for('update').limit(1);
+      if (!po) throw new BusinessError('PO tidak ditemukan', 404);
+
+      // Barang PO yang sudah diterima tercatat di Barang Masuk & stok: PO-nya wajib tetap ada
+      const items = await tx.select().from(poLoadingItems).where(eq(poLoadingItems.poLoadingId, id));
+      if (items.some((it) => it.qtyTerima > 0)) {
+        throw new BusinessError(
+          `${po.noPo} tidak bisa dihapus karena sebagian/semua barangnya sudah diterima lewat Faktur Pembelian. Batalkan PO bila sisa barang tidak akan datang.`
+        );
+      }
+
       await tx.delete(poLoadingItems).where(eq(poLoadingItems.poLoadingId, id));
       await tx.delete(poLoading).where(eq(poLoading.id, id));
 
       await tx.insert(logs).values({
         user,
         aksi: 'HAPUS_PO_LOADING',
-        detail: `Menghapus PO & Loading sheet ID: ${id}`,
+        detail: `Menghapus ${po.noPo} (${po.supplier || '-'})`,
       });
     });
 
     return NextResponse.json({ success: true, message: 'PO berhasil dihapus' });
-  } catch (err: any) {
-    return NextResponse.json({ success: false, message: err.message }, { status: 500 });
+  } catch (err) {
+    return errorResponse(err, 'PO_LOADING_DELETE');
   }
 }

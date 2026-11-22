@@ -81,6 +81,35 @@ export default function LaporanRusakReturView() {
     }));
   };
 
+  // Dari Faktur Pembelian (Barang Masuk > Barang Datang): "Ada barang cacat/rusak? Ya"
+  // -> buka formulir Return terisi suplier & faktur, barang pertama dari faktur terpilih.
+  useEffect(() => {
+    const p = new URLSearchParams(window.location.search);
+    const faktur = p.get('returFaktur');
+    if (!faktur) return;
+    const supplier = p.get('supplier') || '-';
+    const skus = (p.get('skus') || '').split(',').filter(Boolean);
+    window.history.replaceState(null, '', window.location.pathname);
+    fetch(`/api/inventory?divisi=${division}&limit=500`)
+      .then((r) => r.json())
+      .then((json) => {
+        const list = json.success ? json.data || [] : [];
+        setInventoryList(list);
+        const first = list.find((i: { sku: string }) => i.sku === skus[0]);
+        setActiveTab('rusak');
+        setForm((prev) => ({
+          ...prev,
+          sku: first ? first.sku : '',
+          namaBarang: first ? first.namaBarang : '',
+          qty: '',
+          keterangan: `Return ke suplier ${supplier}, faktur ${faktur}: barang cacat/rusak saat diterima.`,
+        }));
+        setIsInputModalOpen(true);
+      })
+      .catch(() => setIsInputModalOpen(true));
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- sekali saat halaman dibuka dari faktur
+  }, []);
+
   const handleSubmitRusak = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.sku || !form.qty || parseInt(form.qty, 10) <= 0) {
