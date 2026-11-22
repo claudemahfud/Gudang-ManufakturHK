@@ -55,10 +55,13 @@ export default function Header({ onMenuClick, title }: HeaderProps) {
 
   return (
     <header className="h-16 bg-white border-b border-gray-200 flex items-center px-4 md:px-6 gap-3 sticky top-0 z-30 select-none">
-      {/* Mobile menu button */}
+      {/* Tombol garis 3: buka/tutup sidebar (desktop & mobile) */}
       <button
+        type="button"
         onClick={onMenuClick}
-        className="lg:hidden p-2 rounded-xl hover:bg-gray-100 text-gray-700 transition"
+        aria-label="Buka/tutup sidebar"
+        title="Buka/tutup sidebar"
+        className="p-2 rounded-xl hover:bg-gray-100 text-gray-700 transition"
       >
         <Menu className="w-5 h-5" />
       </button>
