@@ -5,18 +5,37 @@ import { auth } from '@/shared/lib/auth/config';
 import { requireAuthRole, ROLES_WAREHOUSE } from '@/shared/lib/auth/rbac';
 import { generateTrxId } from '@/shared/lib/utils';
 import { resolveRequestCabang } from '@/shared/lib/stock';
-import { desc, eq } from 'drizzle-orm';
+import { desc, inArray } from 'drizzle-orm';
+import { PO_STATUS } from '@/shared/lib/po-status';
 
 // ============================================================
 // API: /api/po-loading
 // GET (list PO) + POST (buat PO Loading & items)
 // ============================================================
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
     const session = await auth();
     if (!session) {
       return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
+    }
+
+    // ?terbuka=1: PO yang menunggu barang datang (untuk Barang Masuk), lengkap dengan item
+    if (new URL(req.url).searchParams.get('terbuka') === '1') {
+      const open = await db
+        .select()
+        .from(poLoading)
+        .where(inArray(poLoading.status, [PO_STATUS.PROSES, PO_STATUS.SEBAGIAN]))
+        .orderBy(desc(poLoading.tanggal))
+        .limit(200);
+      const items = open.length
+        ? await db
+            .select()
+            .from(poLoadingItems)
+            .where(inArray(poLoadingItems.poLoadingId, open.map((p) => p.id)))
+        : [];
+      const data = open.map((p) => ({ ...p, items: items.filter((it) => it.poLoadingId === p.id) }));
+      return NextResponse.json({ success: true, data });
     }
 
     const list = await db
@@ -60,7 +79,7 @@ export async function POST(req: Request) {
           tanggal: tanggal ? new Date(tanggal) : new Date(),
           supplier,
           armada: armada || null,
-          status: 'dipesan',
+          status: PO_STATUS.PROSES,
           cabang,
           catatan: catatan || null,
           createdBy: user,

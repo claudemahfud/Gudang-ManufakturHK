@@ -10,6 +10,7 @@ import { ToastFloater, ToastData } from '@/shared/components/ui/ToastFloater';
 import DocumentModalViewer, { DocumentData } from '@/shared/components/documents/DocumentModalViewer';
 import { exportToCsv, exportRekapToPdfA4Landscape } from '@/shared/lib/exportDoc';
 import DateTimeFilterBar from '@/shared/components/ui/DateTimeFilterBar';
+import PoDalamProses from './PoDalamProses';
 
 // ============================================================
 // PAGE: Barang Masuk (Purchasing & Penerimaan Stok)
@@ -528,6 +529,12 @@ export default function BarangMasuk() {
           </button>
         </div>
       </header>
+
+      {/* PO Dalam Proses: "Barang Datang" -> Faktur Pembelian -> stok masuk */}
+      <PoDalamProses
+        onReceived={fetchData}
+        notify={(type, message, penyebab) => showToast(type, message, penyebab)}
+      />
 
       {/* 2. Filter Periode Custom Fleksibel: Jam, Hari, Minggu, Bulan, Tahun */}
       <DateTimeFilterBar

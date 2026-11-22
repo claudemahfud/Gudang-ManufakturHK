@@ -6,6 +6,16 @@ import { FileText, Download, Plus, Trash2, Search, RefreshCw } from 'lucide-reac
 import DocumentModalViewer, { DocumentData } from '@/shared/components/documents/DocumentModalViewer';
 import { exportToCsv, exportRekapToPdfA4Landscape } from '@/shared/lib/exportDoc';
 import DateTimeFilterBar from '@/shared/components/ui/DateTimeFilterBar';
+import { isPoTerbuka, PO_STATUS, PO_STATUS_LABEL } from '@/shared/lib/po-status';
+
+const statusBadge = (status: string) =>
+  status === PO_STATUS.SELESAI
+    ? 'bg-emerald-100 text-emerald-800'
+    : status === PO_STATUS.BATAL
+      ? 'bg-gray-100 text-gray-600'
+      : status === PO_STATUS.SEBAGIAN
+        ? 'bg-sky-100 text-sky-800'
+        : 'bg-amber-100 text-amber-800';
 
 // ============================================================
 // PAGE: PO & Loading Sheet
@@ -276,22 +286,37 @@ export default function PoLoading() {
     }
   };
 
-  const receiveAllItems = async (id: string) => {
-    if (!confirm('Terima semua barang pada PO ini? Stok akan otomatis ditambahkan ke inventory.')) return;
+  // Cetak formulir PO dengan daftar barang asli (detail diambil dari server)
+  const printPo = async (id: string) => {
+    try {
+      const res = await fetch(`/api/po-loading/${id}`);
+      const json = await res.json();
+      if (json.success) openPoDocument(json.data);
+      else showToast(json.message || 'Gagal memuat PO', 'error');
+    } catch {
+      showToast('Gagal memuat PO', 'error');
+    }
+  };
+
+  // PO hanya dokumen pemesanan: penerimaan barang lewat Barang Masuk > Barang Datang
+  const cancelPo = async (id: string) => {
+    if (!confirm('Batalkan PO ini? Sisa barang yang belum datang tidak akan ditunggu lagi.')) return;
     try {
       const res = await fetch(`/api/po-loading/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: 'selesai', receiveAll: true }),
+        body: JSON.stringify({ status: PO_STATUS.BATAL }),
       });
       const json = await res.json();
       if (json.success) {
-        showToast('Semua barang diterima dan stok diperbarui!', 'success');
+        showToast('PO dibatalkan', 'success');
         setSelectedDetail(null);
         fetchData();
+      } else {
+        showToast(json.message || 'Gagal membatalkan PO', 'error');
       }
     } catch {
-      showToast('Gagal memproses penerimaan', 'error');
+      showToast('Gagal membatalkan PO', 'error');
     }
   };
 
@@ -303,6 +328,8 @@ export default function PoLoading() {
       if (json.success) {
         showToast('PO dihapus', 'success');
         fetchData();
+      } else {
+        showToast(json.message || 'Gagal menghapus PO', 'error');
       }
     } catch {
       showToast('Gagal menghapus', 'error');
@@ -447,38 +474,15 @@ export default function PoLoading() {
                     </td>
                     <td className="py-3.5 px-4 text-xs text-gray-600">{row.armada || '-'}</td>
                     <td className="py-3.5 px-4 whitespace-nowrap">
-                      <span
-                        className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
-                          row.status === 'selesai'
-                            ? 'bg-emerald-100 text-emerald-800'
-                            : 'bg-amber-100 text-amber-800'
-                        }`}
-                      >
-                        {row.status.toUpperCase()}
+                      <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${statusBadge(row.status)}`}>
+                        {PO_STATUS_LABEL[row.status] ?? row.status}
                       </span>
                     </td>
                     <td className="py-3.5 px-4 text-center whitespace-nowrap">
                       <div className="inline-flex items-center gap-1">
                         <button
                           type="button"
-                          onClick={() => {
-                            openPoDocument({
-                              noPo: row.noPo,
-                              tanggal: row.tanggal,
-                              supplier: row.supplier,
-                              armada: row.armada,
-                              catatan: row.catatan,
-                              items: [
-                                {
-                                  sku: row.noPo,
-                                  namaBarang: `Muatan Pengadaan PO (${row.supplier || 'Pemasok'})`,
-                                  qtyOrder: 1,
-                                  satuan: 'Lot',
-                                  qtyTerima: row.status === 'selesai' ? 1 : 0,
-                                },
-                              ],
-                            });
-                          }}
+                          onClick={() => printPo(row.id)}
                           className="inline-flex items-center gap-1 px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 rounded-lg text-xs font-semibold border border-emerald-200 transition"
                           title="Buka Formulir PO Loading (Export PDF / PNG A5)"
                         >
@@ -704,7 +708,12 @@ export default function PoLoading() {
               <div>Tanggal: <strong>{formatTanggal(selectedDetail.tanggal)}</strong></div>
               <div>Supplier: <strong>{selectedDetail.supplier}</strong></div>
               <div>Armada: <strong>{selectedDetail.armada || '-'}</strong></div>
-              <div>Status: <span className="font-bold uppercase text-emerald-700">{selectedDetail.status}</span></div>
+              <div>
+                Status:{' '}
+                <span className={`px-2 py-0.5 rounded-full font-semibold ${statusBadge(selectedDetail.status)}`}>
+                  {PO_STATUS_LABEL[selectedDetail.status] ?? selectedDetail.status}
+                </span>
+              </div>
             </div>
 
             <div className="border rounded-xl overflow-hidden text-xs">
@@ -731,14 +740,22 @@ export default function PoLoading() {
               </table>
             </div>
 
+            {isPoTerbuka(selectedDetail.status) && (
+              <p className="text-[11px] text-gray-500 bg-gray-50 border border-gray-100 rounded-lg px-3 py-2">
+                Saat barang tiba, terima lewat menu <strong>Barang Masuk &gt; PO Dalam Proses &gt; Barang Datang</strong>.
+                PO otomatis menjadi Faktur Pembelian dan stok bertambah sesuai barang yang diterima.
+              </p>
+            )}
+
             <div className="flex flex-wrap items-center justify-between gap-2 pt-3 border-t">
               <div className="flex items-center gap-2">
-                {selectedDetail.status !== 'selesai' && (
+                {isPoTerbuka(selectedDetail.status) && (
                   <button
-                    onClick={() => receiveAllItems(selectedDetail.id)}
-                    className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-xl transition"
+                    type="button"
+                    onClick={() => cancelPo(selectedDetail.id)}
+                    className="px-4 py-2 border border-red-200 text-red-600 hover:bg-red-50 text-xs font-semibold rounded-xl transition"
                   >
-                     Terima Barang &amp; Tambah Stok
+                    Batalkan PO
                   </button>
                 )}
                 <button
