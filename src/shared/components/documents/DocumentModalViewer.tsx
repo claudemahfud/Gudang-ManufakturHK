@@ -38,6 +38,8 @@ export interface DocumentData {
   items: DocumentItemLine[];
   // Finansial / Ringkasan
   totalNilai?: number | null;
+  /** Rincian di bawah tabel (mis. Faktur Penjualan: subtotal, diskon, PPN, ongkir, dibayar, sisa). Menggantikan baris total tunggal. */
+  ringkasan?: { label: string; nilai: number; tegas?: boolean }[];
   catatan?: string | null;
   alasanReturn?: string | null;
   tindakanReturn?: string | null;
@@ -262,7 +264,11 @@ export default function DocumentModalViewer({ data, isOpen, onClose }: DocumentM
                     <div className="flex items-center">
                       <span className="w-24 text-gray-500 font-medium">Skema Bayar</span>
                       <span className="font-bold uppercase text-gray-900">
-                        : {data.skemaBayar === 'hutang' ? 'Hutang (Tempo)' : 'Bayar Lunas (Kas)'}
+                        : {data.skemaBayar === 'hutang'
+                          ? 'Hutang (Tempo)'
+                          : data.skemaBayar === 'lunas'
+                            ? 'Bayar Lunas (Kas)'
+                            : data.skemaBayar}
                         {data.jatuhTempo && (
                           <span className="text-[9px] font-normal text-amber-800 ml-1">
                             (Jatuh tempo: {formatTanggal(data.jatuhTempo)})
@@ -350,14 +356,36 @@ export default function DocumentModalViewer({ data, isOpen, onClose }: DocumentM
                   </tbody>
                   {data.totalNilai !== undefined && data.totalNilai !== null && (
                     <tfoot>
-                      <tr className="bg-gray-50 border-t-2 border-gray-300 font-bold text-gray-900">
-                        <td colSpan={5} className="py-1.5 px-2 text-right uppercase text-[9px]">
-                          Total Nilai Transaksi:
-                        </td>
-                        <td className="py-1.5 px-2 text-right text-[10px] text-emerald-800 font-black">
-                          {formatRupiah(data.totalNilai)}
-                        </td>
-                      </tr>
+                      {data.ringkasan?.length ? (
+                        data.ringkasan.map((r, i) => (
+                          <tr
+                            key={r.label}
+                            className={`bg-gray-50 ${i === 0 ? 'border-t-2 border-gray-300' : ''} ${
+                              r.tegas ? 'font-bold text-gray-900' : 'text-gray-700'
+                            }`}
+                          >
+                            <td colSpan={5} className="py-1 px-2 text-right uppercase text-[9px]">
+                              {r.label}:
+                            </td>
+                            <td
+                              className={`py-1 px-2 text-right whitespace-nowrap ${
+                                r.tegas ? 'text-[10px] text-emerald-800 font-black' : 'text-[9px]'
+                              }`}
+                            >
+                              {r.nilai < 0 ? `- ${formatRupiah(-r.nilai)}` : formatRupiah(r.nilai)}
+                            </td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr className="bg-gray-50 border-t-2 border-gray-300 font-bold text-gray-900">
+                          <td colSpan={5} className="py-1.5 px-2 text-right uppercase text-[9px]">
+                            Total Nilai Transaksi:
+                          </td>
+                          <td className="py-1.5 px-2 text-right text-[10px] text-emerald-800 font-black">
+                            {formatRupiah(data.totalNilai)}
+                          </td>
+                        </tr>
+                      )}
                     </tfoot>
                   )}
                 </table>

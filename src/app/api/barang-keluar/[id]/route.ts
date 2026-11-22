@@ -5,6 +5,7 @@ import { requireAuthRole, ROLES_EXECUTIVE } from '@/shared/lib/auth/rbac';
 import { eq } from 'drizzle-orm';
 import { BusinessError, errorResponse, incrementStock } from '@/shared/lib/stock';
 import { assertSupervisorPin, getPengaturan } from '@/shared/lib/pengaturan';
+import { batalkanFakturPenjualan } from '@/shared/lib/faktur-penjualan';
 
 // ============================================================
 // API: /api/barang-keluar/[id]
@@ -30,7 +31,15 @@ export async function DELETE(
       await assertSupervisorPin(pengaturan, body?.supervisorPin, authResult.user?.username || 'unknown', `hapus barang keluar ${id}`);
     }
 
-    await db.transaction(async (tx) => {
+    const batalFaktur = await db.transaction(async (tx) => {
+      // Baris bagian dari Faktur Penjualan: batalkan seluruh faktur
+      // (total, PPN, pembayaran berlaku per faktur, bukan per baris)
+      const [ref] = await tx.select({ trxId: barangKeluar.trxId }).from(barangKeluar).where(eq(barangKeluar.id, id)).limit(1);
+      if (ref) {
+        const batal = await batalkanFakturPenjualan(tx, ref.trxId, user, authResult.user?.username ?? null);
+        if (batal) return batal;
+      }
+
       // Hapus dulu & ambil barisnya: bila dua request hapus bersamaan,
       // hanya satu yang mendapat baris sehingga stok tidak dikembalikan dua kali.
       const [item] = await tx.delete(barangKeluar).where(eq(barangKeluar.id, id)).returning();
@@ -60,8 +69,15 @@ export async function DELETE(
         aksi: 'BATAL_BARANG_KELUAR',
         detail: `Membatalkan item ${item.sku} (${item.qty} ${item.satuan}) dari transaksi ${item.trxId}`,
       });
+      return null;
     });
 
+    if (batalFaktur) {
+      return NextResponse.json({
+        success: true,
+        message: `Faktur ${batalFaktur.faktur.noFaktur} dibatalkan: ${batalFaktur.rows.length} barang dikembalikan ke stok`,
+      });
+    }
     return NextResponse.json({ success: true, message: 'Data berhasil dihapus dan stok dikembalikan' });
   } catch (err) {
     return errorResponse(err, 'BARANG_KELUAR_DELETE');
