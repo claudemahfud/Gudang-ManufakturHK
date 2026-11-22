@@ -29,7 +29,7 @@ export async function GET(req: Request) {
 
     // Isolasi Cabang
     const userCabang = (authResult.user as any)?.cabang || 'Pusat';
-    const isExecutive = ['Administrator', 'Direktur Utama', 'Manager'].includes(authResult.userRole);
+    const isExecutive = ['Administrator', 'Direktur Utama', 'Manager', 'Manager Umum', 'Finance & Accounting'].includes(authResult.userRole);
     let effectiveCabang: string | null = null;
     if (!isExecutive && userCabang !== 'ALL' && userCabang !== 'Pusat') {
       effectiveCabang = userCabang;

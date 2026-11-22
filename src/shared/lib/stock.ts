@@ -95,7 +95,7 @@ export async function incrementStock(tx: Executor, sku: string, qty: number, cab
  * isolasi cabang di route lain).
  */
 export function resolveCabang(user: { role?: string; cabang?: string } | null | undefined, requested?: unknown) {
-  const isExecutive = ['Administrator', 'Direktur Utama', 'Manager'].includes(user?.role ?? '');
+  const isExecutive = ['Administrator', 'Direktur Utama', 'Manager', 'Manager Umum'].includes(user?.role ?? '');
   const userCabang = user?.cabang || 'Pusat';
   if (!isExecutive && userCabang !== 'ALL' && userCabang !== 'Pusat') return userCabang;
   return typeof requested === 'string' && requested.trim() && requested !== 'SEMUA' ? requested.trim() : 'Pusat';

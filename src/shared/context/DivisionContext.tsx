@@ -65,7 +65,7 @@ export function DivisionProvider({ children }: { children: React.ReactNode }) {
   const userCabang = user?.cabang || 'Pusat';
 
   // Hanya Pimpinan (Admin, Direktur Utama, Manager) yang punya izin ganti mode & multi-cabang
-  const isExecutive = ['Administrator', 'Direktur Utama', 'Manager'].includes(userRole as any);
+  const isExecutive = ['Administrator', 'Direktur Utama', 'Manager', 'Manager Umum', 'Finance & Accounting'].includes(userRole as any);
   const canSwitchDivision = isExecutive || divisiAssigned === 'ALL';
   const isBawahan = !canSwitchDivision;
 

@@ -33,7 +33,7 @@ export default function CabangView() {
   const { data: session } = useSession();
   const { refetchCabang, cabang: activeCabang, setCabang } = useDivision();
   const user = session?.user as any;
-  const isExecutive = ['Administrator', 'Direktur Utama', 'Manager'].includes(user?.role);
+  const isExecutive = ['Administrator', 'Direktur Utama', 'Manager', 'Manager Umum'].includes(user?.role);
 
   const [branches, setBranches] = useState<CabangItem[]>([]);
   const [loading, setLoading] = useState(true);

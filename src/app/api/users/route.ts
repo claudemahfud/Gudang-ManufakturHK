@@ -78,7 +78,7 @@ export async function POST(req: Request) {
         role,
         email: email || null,
         passwordHash,
-        divisiAssigned: body.divisiAssigned || (['Administrator', 'Direktur Utama', 'Manager'].includes(role) ? 'ALL' : 'MANUFAKTUR'),
+        divisiAssigned: body.divisiAssigned || (['Administrator', 'Direktur Utama', 'Manager', 'Manager Umum', 'Finance & Accounting'].includes(role) ? 'ALL' : 'MANUFAKTUR'),
         cabang: body.cabang || 'Pusat',
         aktif: true,
       })
