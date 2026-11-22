@@ -55,7 +55,7 @@ export async function PUT(
       if (!updated) throw new BusinessError('Retur sudah diproses oleh pengguna lain.', 409);
 
       if (masukStok) {
-        await incrementStock(tx, current.sku, current.qty);
+        await incrementStock(tx, current.sku, current.qty, current.cabang);
       }
 
       await tx.insert(logs).values({
@@ -90,7 +90,7 @@ export async function DELETE(
 
       // Retur yang sudah masuk stok: tarik kembali qty-nya
       if (item.status === 'disetujui') {
-        await decrementStock(tx, item.sku, item.qty);
+        await decrementStock(tx, item.sku, item.qty, item.cabang);
       }
 
       await tx.insert(logs).values({

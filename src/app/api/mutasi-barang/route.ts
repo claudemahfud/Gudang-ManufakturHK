@@ -1,13 +1,22 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/shared/lib/db';
-import { mutasiBarang, inventory, logs } from '@/shared/lib/db/schema';
+import { mutasiBarang, masterCabang, logs } from '@/shared/lib/db/schema';
 import { auth } from '@/shared/lib/auth/config';
 import { requireAuthRole, ROLES_WAREHOUSE } from '@/shared/lib/auth/rbac';
-import { desc, eq } from 'drizzle-orm';
+import { desc, inArray } from 'drizzle-orm';
+import {
+  decrementStock,
+  errorResponse,
+  incrementStock,
+  normalizeSku,
+  parsePositiveInt,
+  resolveCabang,
+} from '@/shared/lib/stock';
 
 // ============================================================
 // API: /api/mutasi-barang
-// GET (list mutasi) + POST (catat mutasi antar gudang/rak)
+// GET (list mutasi) + POST (pindahkan stok antar cabang)
+// dari / ke = nama cabang di master_cabang.
 // ============================================================
 
 export async function GET() {
@@ -24,8 +33,8 @@ export async function GET() {
       .limit(100);
 
     return NextResponse.json({ success: true, data: items });
-  } catch (err: any) {
-    return NextResponse.json({ success: false, message: err.message }, { status: 500 });
+  } catch (err) {
+    return errorResponse(err, 'MUTASI_GET');
   }
 }
 
@@ -33,66 +42,86 @@ export async function POST(req: Request) {
   try {
     const authResult = await requireAuthRole(ROLES_WAREHOUSE);
     if (!authResult.authorized) return authResult.response;
-    const session = { user: authResult.user };
 
     const body = await req.json();
-    const { tanggal, sku, namaBarang, qty, dari, ke, keterangan } = body;
+    const { tanggal, keterangan } = body;
+    const sku = normalizeSku(body.sku);
+    const qty = parsePositiveInt(body.qty);
+    const dari = typeof body.dari === 'string' ? body.dari.trim() : '';
+    const ke = typeof body.ke === 'string' ? body.ke.trim() : '';
 
-    if (!sku || !qty || !dari || !ke) {
+    if (!sku || !dari || !ke) {
       return NextResponse.json(
-        { success: false, message: 'SKU, Qty, Asal, dan Tujuan wajib diisi' },
+        { success: false, message: 'SKU, Qty, Cabang asal, dan Cabang tujuan wajib diisi' },
+        { status: 400 }
+      );
+    }
+    if (!qty) {
+      return NextResponse.json(
+        { success: false, message: 'Qty harus bilangan bulat lebih dari 0' },
+        { status: 400 }
+      );
+    }
+    if (dari === ke) {
+      return NextResponse.json(
+        { success: false, message: 'Cabang asal dan tujuan tidak boleh sama' },
         { status: 400 }
       );
     }
 
-    const parsedQty = parseInt(qty, 10);
-    if (isNaN(parsedQty) || parsedQty <= 0) {
+    // Karyawan cabang hanya boleh mengirim dari cabangnya sendiri
+    if (resolveCabang(authResult.user, dari) !== dari) {
       return NextResponse.json(
-        { success: false, message: 'Qty harus berupa angka lebih dari 0' },
+        { success: false, message: 'Anda hanya dapat memutasi stok dari cabang tempat Anda ditempatkan' },
+        { status: 403 }
+      );
+    }
+
+    const cabangValid = await db
+      .select({ nama: masterCabang.namaCabang })
+      .from(masterCabang)
+      .where(inArray(masterCabang.namaCabang, [dari, ke]));
+    if (cabangValid.length !== 2) {
+      return NextResponse.json(
+        { success: false, message: 'Cabang asal / tujuan tidak terdaftar di Manajemen Cabang' },
         { status: 400 }
       );
     }
 
-    const [inv] = await db
-      .select()
-      .from(inventory)
-      .where(eq(inventory.sku, sku))
-      .limit(1);
+    const user = authResult.user?.name || authResult.user?.username || 'System';
 
-    if (!inv || (inv.stok ?? 0) < parsedQty) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: `Stok tidak mencukupi untuk mutasi "${namaBarang || sku}". Stok saat ini: ${inv?.stok ?? 0}, diminta: ${parsedQty}`,
-        },
-        { status: 400 }
-      );
-    }
+    // Kurangi stok asal & tambah stok tujuan dalam satu transaksi
+    const row = await db.transaction(async (tx) => {
+      const inv = await decrementStock(tx, sku, qty, dari);
+      await incrementStock(tx, sku, qty, ke);
 
-    const user = (session.user as any)?.name || (session.user as any)?.username || 'System';
+      const [inserted] = await tx
+        .insert(mutasiBarang)
+        .values({
+          tanggal: tanggal ? new Date(tanggal) : new Date(),
+          sku,
+          namaBarang: inv.namaBarang,
+          qty,
+          dari,
+          ke,
+          divisi: body.divisi || 'MANUFAKTUR',
+          cabang: dari,
+          keterangan: keterangan || null,
+          createdBy: user,
+        })
+        .returning();
 
-    const [row] = await db
-      .insert(mutasiBarang)
-      .values({
-        tanggal: tanggal ? new Date(tanggal) : new Date(),
-        sku,
-        namaBarang,
-        qty: parsedQty,
-        dari,
-        ke,
-        keterangan: keterangan || null,
-        createdBy: user,
-      })
-      .returning();
+      await tx.insert(logs).values({
+        user,
+        aksi: 'MUTASI_BARANG',
+        detail: `Mutasi SKU ${sku} (${qty} pcs) dari cabang [${dari}] ke [${ke}]`,
+      });
 
-    await db.insert(logs).values({
-      user,
-      aksi: 'MUTASI_BARANG',
-      detail: `Mutasi SKU ${sku} (${parsedQty} pcs) dari [${dari}] ke [${ke}]`,
+      return inserted;
     });
 
     return NextResponse.json({ success: true, data: row }, { status: 201 });
-  } catch (err: any) {
-    return NextResponse.json({ success: false, message: err.message }, { status: 500 });
+  } catch (err) {
+    return errorResponse(err, 'MUTASI_POST');
   }
 }

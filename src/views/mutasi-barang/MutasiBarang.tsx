@@ -6,6 +6,7 @@ import { FileText, Download, ArrowLeftRight, Search, RefreshCw } from 'lucide-re
 import DocumentModalViewer, { DocumentData } from '@/shared/components/documents/DocumentModalViewer';
 import { exportToCsv, exportRekapToPdfA4Landscape } from '@/shared/lib/exportDoc';
 import DateTimeFilterBar from '@/shared/components/ui/DateTimeFilterBar';
+import { useDivision } from '@/shared/context/DivisionContext';
 
 // ============================================================
 // PAGE: Mutasi Barang
@@ -31,6 +32,10 @@ interface InventoryOption {
 }
 
 export default function MutasiBarang() {
+  // Mutasi memindahkan stok antar cabang (Manajemen Cabang)
+  const { availableCabang, allCabangList, cabang: cabangAktif, isCabangLocked } = useDivision();
+  // Tujuan boleh cabang mana pun; asal dibatasi cabang yang boleh diakses pengguna
+  const allCabangNames = allCabangList.length ? allCabangList.map((c) => c.namaCabang) : availableCabang;
   const [data, setData] = useState<ItemMutasi[]>([]);
   const [inventoryList, setInventoryList] = useState<InventoryOption[]>([]);
   const [loading, setLoading] = useState(true);
@@ -233,7 +238,7 @@ export default function MutasiBarang() {
       });
       const json = await res.json();
       if (json.success) {
-        showToast('Mutasi barang berhasil dicatat!', 'success');
+        showToast(`Stok dipindahkan dari ${form.dari} ke ${form.ke}`, 'success');
         setIsModalOpen(false);
         setForm({
           tanggal: new Date().toISOString().split('T')[0],
@@ -310,7 +315,11 @@ export default function MutasiBarang() {
             <span>PDF (A4 Landscape)</span>
           </button>
           <button
-            onClick={() => setIsModalOpen(true)}
+            onClick={() => {
+              // Default asal = cabang aktif di header
+              setForm((p) => ({ ...p, dari: p.dari || (cabangAktif !== 'SEMUA' ? cabangAktif : '') }));
+              setIsModalOpen(true);
+            }}
             className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs sm:text-sm font-semibold shadow-sm transition"
           >
             <span>＋</span> Catat Mutasi
@@ -503,26 +512,38 @@ export default function MutasiBarang() {
                   <div className="space-y-4">
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div>
-                        <label className="block text-xs font-semibold text-gray-700 mb-1">Dari Lokasi / Rak *</label>
-                        <input
-                          type="text"
+                        <label className="block text-xs font-semibold text-gray-700 mb-1">Dari Cabang *</label>
+                        <select
                           required
-                          placeholder="Contoh: Gudang A / Rak 1"
                           value={form.dari}
+                          disabled={isCabangLocked}
                           onChange={(e) => setForm({ ...form, dari: e.target.value })}
-                          className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm focus:border-blue-500 outline-none"
-                        />
+                          className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm focus:border-blue-500 outline-none bg-white disabled:bg-gray-50"
+                        >
+                          <option value="">Pilih cabang asal</option>
+                          {availableCabang.map((c) => (
+                            <option key={c} value={c}>{c}</option>
+                          ))}
+                        </select>
                       </div>
                       <div>
-                        <label className="block text-xs font-semibold text-gray-700 mb-1">Ke Lokasi / Rak *</label>
-                        <input
-                          type="text"
+                        <label className="block text-xs font-semibold text-gray-700 mb-1">Ke Cabang *</label>
+                        <select
                           required
-                          placeholder="Contoh: Gudang B / Display"
                           value={form.ke}
                           onChange={(e) => setForm({ ...form, ke: e.target.value })}
-                          className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm focus:border-blue-500 outline-none"
-                        />
+                          className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm focus:border-blue-500 outline-none bg-white"
+                        >
+                          <option value="">Pilih cabang tujuan</option>
+                          {allCabangNames.filter((c) => c !== form.dari).map((c) => (
+                            <option key={c} value={c}>{c}</option>
+                          ))}
+                        </select>
+                        {allCabangNames.length < 2 && (
+                          <p className="mt-1 text-[11px] text-amber-700">
+                            Baru ada 1 cabang. Tambah cabang di menu Manajemen Cabang untuk mutasi antar cabang.
+                          </p>
+                        )}
                       </div>
                     </div>
 
