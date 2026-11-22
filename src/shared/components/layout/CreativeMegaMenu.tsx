@@ -16,6 +16,7 @@ import {
   ClipboardList,
   RotateCcw,
   Wallet,
+  HandCoins,
   Receipt,
   Scale,
   Calculator,
@@ -212,6 +213,13 @@ export default function CreativeMegaMenu({ userRole, isOpen, onClose }: MegaMenu
       desc: 'Pencatatan kas masuk dan kas keluar',
       href: ROUTES.KEUANGAN,
       icon: Wallet,
+      restricted: !['Administrator', 'Manager', 'Direktur Utama'].includes(userRole || ''),
+    },
+    {
+      title: 'Piutang Pelanggan',
+      desc: 'Tagihan faktur, cicilan & jatuh tempo',
+      href: ROUTES.PIUTANG,
+      icon: HandCoins,
       restricted: !['Administrator', 'Manager', 'Direktur Utama'].includes(userRole || ''),
     },
     {
