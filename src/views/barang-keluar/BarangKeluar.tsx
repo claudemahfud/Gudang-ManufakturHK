@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { formatTanggal, formatTanggalWaktu, formatRupiah } from '@/shared/lib/utils';
+import { formatTanggal, formatTanggalWaktu, formatRupiah, formatStok } from '@/shared/lib/utils';
 import {
   Truck,
   ShoppingBag,
@@ -23,7 +23,7 @@ import {
 import DocumentModalViewer, { DocumentData } from '@/shared/components/documents/DocumentModalViewer';
 import { exportToCsv, exportRekapToPdfA4Landscape } from '@/shared/lib/exportDoc';
 import DateTimeFilterBar from '@/shared/components/ui/DateTimeFilterBar';
-import FormFakturPenjualan, { type InventoryOption } from './FormFakturPenjualan';
+import FormFakturPenjualan, { isiKarton, type InventoryOption } from './FormFakturPenjualan';
 import { LABEL_METODE, LABEL_STATUS, type MetodeBayar, type StatusFaktur } from '@/shared/lib/faktur-hitung';
 
 // ============================================================
@@ -219,7 +219,17 @@ export default function BarangKeluar() {
             satuan: it.satuan || 'pcs',
             harga: Number(it.hargaJual) || 0,
             total: Number(it.total) || (Number(it.qty) * Number(it.hargaJual || 0)),
-            keterangan: it.diskon && Number(it.diskon) > 0 ? `Diskon: ${it.diskon}%` : undefined,
+            keterangan:
+              [
+                // Rincian karton dari isi per karton di master barang (qty tersimpan dalam pcs)
+                (() => {
+                  const isi = isiKarton(inventoryList.find((p) => p.sku === it.sku));
+                  return isi && it.qty >= isi ? `= ${formatStok(it.qty, true, isi)}` : '';
+                })(),
+                it.diskon && Number(it.diskon) > 0 ? `Diskon: ${it.diskon}%` : '',
+              ]
+                .filter(Boolean)
+                .join(' · ') || undefined,
           })),
           totalNilai: f ? n(f.grandTotal) : Number(json.data.total) || 0,
           catatan: f?.catatan || 'Barang telah diperiksa dan diserahkan dalam kondisi baik & lengkap. Faktur sah B2B.',

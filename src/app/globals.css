@@ -86,7 +86,9 @@ body {
 }
 
 @utility animate-in {
-  animation: enter var(--tw-animation-duration, var(--tw-duration, 200ms)) var(--ease-out) both;
+  /* backwards, bukan both: transform tidak boleh tertinggal setelah animasi,
+     karena transform membuat position:fixed (modal) terkurung di elemen induk. */
+  animation: enter var(--tw-animation-duration, var(--tw-duration, 200ms)) var(--ease-out) backwards;
 }
 @utility fade-in {
   --tw-enter-opacity: 0;
