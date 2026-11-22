@@ -14,6 +14,7 @@ import type { UserRole } from '@/shared/types';
 import { useDivision, DivisionMode } from '@/shared/context/DivisionContext';
 import {
   LayoutDashboard,
+  HandCoins,
   Package,
   ArrowDownToLine,
   ArrowUpFromLine,
@@ -185,6 +186,12 @@ export const MENU_HIERARCHY: ParentMenuItem[] = [
         label: 'Arus Kas Keuangan',
         icon: Wallet,
         href: ROUTES.KEUANGAN,
+        roles: ['Administrator', 'Manager', 'Manager Umum', 'Direktur Utama', 'Finance & Accounting'],
+      },
+      {
+        label: 'Piutang Pelanggan',
+        icon: HandCoins,
+        href: ROUTES.PIUTANG,
         roles: ['Administrator', 'Manager', 'Manager Umum', 'Direktur Utama', 'Finance & Accounting'],
       },
       {

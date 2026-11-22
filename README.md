@@ -20,6 +20,7 @@ Sistem ini merekonstruksi seluruh fungsionalitas sistem pergudangan lama (Fireba
 9. **PO Loading (`/po-loading`)**: Purchase order ke suplier/pabrik: isi formulir, unduh PDF/PNG, kirim manual (email/WhatsApp). PO tidak mengubah stok; penerimaan barang lewat Barang Masuk > Barang Datang.
 10. **Retur Barang (`/retur-barang`)**: Pencatatan pengembalian barang dari pelanggan/toko beserta persetujuan masuk kembali ke stok.
 11. **Arus Kas & Keuangan (`/keuangan`)**: Pencatatan kas masuk & kas keluar dengan rekap saldo berjalan.
+    - **Piutang Pelanggan (`/piutang`)**: Tagihan faktur penjualan yang dihutangkan. Terima pelunasan penuh atau cicilan (sisa bisa diberi jatuh tempo baru), mundurkan jatuh tempo dengan alasan, riwayat per faktur, umur piutang, dan audit otomatis (grand total = dibayar + sisa; dibayar = kas berreferensi faktur). Piutang Usaha tampil di Neraca.
 12. **Biaya Operasional (`/biaya-operasional`)**: Pengeluaran rutin operasional (BBM, tol ekspedisi, servis armada, dll).
 13. **Pengajuan Diskon Khusus (`/pengajuan-diskon`)**: Pengajuan potongan harga dari salesman ke pimpinan dengan workflow persetujuan (Approve/Reject).
 14. **Monitor Salesman (`/monitor-salesman`)**: Papan peringkat salesman, transaksi riil, dan performa omzet penjualan.

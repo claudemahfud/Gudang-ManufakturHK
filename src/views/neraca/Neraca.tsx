@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import {
   Scale,
   Wallet,
+  HandCoins,
   Package,
   Layers,
   ArrowUpRight,
@@ -193,6 +194,20 @@ export default function NeracaView() {
               </div>
               <span className="text-xs font-mono font-bold text-gray-900">
                 {formatRp(data?.aset?.kasBank || 0)}
+              </span>
+            </div>
+
+            {/* Piutang Usaha (Faktur Penjualan belum lunas) */}
+            <div className="flex items-center justify-between p-3 rounded-xl bg-gray-50 border border-gray-100">
+              <div className="flex items-center gap-3">
+                <HandCoins className="w-4 h-4 text-gray-500" />
+                <div>
+                  <div className="text-xs font-bold text-gray-800">Piutang Usaha</div>
+                  <div className="text-[11px] text-gray-400">Sisa tagihan faktur penjualan ke pelanggan</div>
+                </div>
+              </div>
+              <span className="text-xs font-mono font-bold text-gray-900">
+                {formatRp(data?.aset?.piutangUsaha || 0)}
               </span>
             </div>
 
