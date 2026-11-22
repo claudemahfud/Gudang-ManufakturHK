@@ -1,7 +1,7 @@
 import { eq } from 'drizzle-orm';
 import { db } from '@/shared/lib/db';
-import { barangKeluar, fakturPenjualan, keuangan, logs } from '@/shared/lib/db/schema';
-import { decrementStock, incrementStock } from '@/shared/lib/stock';
+import { barangKeluar, fakturPenjualan, inventory, keuangan, logs } from '@/shared/lib/db/schema';
+import { BusinessError, decrementStock, incrementStock } from '@/shared/lib/stock';
 import { hitungFaktur, LABEL_METODE, type MetodeBayar } from '@/shared/lib/faktur-hitung';
 
 // ============================================================
@@ -14,10 +14,10 @@ type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
 export interface BarisInput {
   sku: string; // sudah dinormalisasi
-  qty: number;
-  hargaJual: number;
+  qty: number; // dalam satuan yang dipilih
+  hargaJual: number; // per satuan yang dipilih
   diskon: number;
-  satuan: string;
+  satuan: 'pcs' | 'karton';
 }
 
 export interface FakturPenjualanInput {
@@ -50,8 +50,20 @@ export async function buatFakturPenjualan(tx: Tx, f: FakturPenjualanInput) {
   const rows: (typeof barangKeluar.$inferSelect)[] = [];
   for (let i = 0; i < f.baris.length; i++) {
     const b = f.baris[i];
+    // Beli kartonan: isi per karton diambil dari master barang, bukan dari klien.
+    let isi = 1;
+    if (b.satuan === 'karton') {
+      const [p] = await tx
+        .select({ settingPcs: inventory.settingPcs, pakaiKarton: inventory.pakaiKarton })
+        .from(inventory)
+        .where(eq(inventory.sku, b.sku));
+      if (!p?.pakaiKarton || p.settingPcs <= 1) throw new BusinessError(`Barang ${b.sku} tidak dijual per karton`);
+      isi = p.settingPcs;
+    }
+    // Stok & baris barang_keluar selalu dalam pcs (laporan dan pembatalan bergantung pada ini).
+    const qtyPcs = b.qty * isi;
     // Kurangi stok hanya bila masih cukup (aman dari transaksi bersamaan)
-    const inv = await decrementStock(tx, b.sku, b.qty, f.cabang);
+    const inv = await decrementStock(tx, b.sku, qtyPcs, f.cabang);
     const [row] = await tx
       .insert(barangKeluar)
       .values({
@@ -59,9 +71,9 @@ export async function buatFakturPenjualan(tx: Tx, f: FakturPenjualanInput) {
         tanggal: f.tanggal,
         sku: b.sku,
         namaBarang: inv.namaBarang,
-        qty: b.qty,
-        satuan: b.satuan,
-        hargaJual: String(b.hargaJual),
+        qty: qtyPcs,
+        satuan: 'pcs',
+        hargaJual: String(Math.round((b.hargaJual / isi) * 100) / 100),
         total: String(h.totalBaris[i]),
         pelanggan: f.pelanggan,
         salesman: f.salesman,
