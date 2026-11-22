@@ -4,7 +4,6 @@ import { inventory, kontak, stokCabang } from '@/shared/lib/db/schema';
 import { sql, or, and, ilike, desc, eq, getTableColumns } from 'drizzle-orm';
 import { auth } from '@/shared/lib/auth/config';
 import { canViewCostPrice, requireAuthRole, ROLES_WAREHOUSE } from '@/shared/lib/auth/rbac';
-import { incrementStock } from '@/shared/lib/stock';
 
 // ============================================================
 // API ROUTE: Master Inventory List & Create
@@ -146,7 +145,6 @@ export async function POST(req: NextRequest) {
       brand,
       gramasi,
       varian,
-      stok,
       hargaBeli,
       hargaJual,
       supplier,
@@ -239,11 +237,9 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const stokAwal = Math.max(0, Math.trunc(Number(stok) || 0));
-
-    // Insert ke database; stok awal dicatat di stok_cabang cabang pemilik barang
-    const inserted = await db.transaction(async (tx) => {
-    const [row] = await tx
+    // Master barang hanya mendaftarkan item: stok selalu 0.
+    // Stok hanya bertambah/berkurang lewat Barang Masuk / Barang Keluar.
+    const [inserted] = await db
       .insert(inventory)
       .values({
         sku: normalizedSku,
@@ -268,12 +264,6 @@ export async function POST(req: NextRequest) {
         updatedAt: new Date(),
       })
       .returning();
-      if (stokAwal > 0) {
-        await incrementStock(tx, row.sku, stokAwal, row.cabang);
-        row.stok = stokAwal;
-      }
-      return row;
-    });
 
     return NextResponse.json(
       {

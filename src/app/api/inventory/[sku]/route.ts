@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/shared/lib/db';
 import { inventory, logs } from '@/shared/lib/db/schema';
 import { eq } from 'drizzle-orm';
-import { BusinessError, decrementStock, incrementStock, resolveRequestCabang } from '@/shared/lib/stock';
+import { BusinessError } from '@/shared/lib/stock';
 import {
   canViewCostPrice,
   requireAuthRole,
@@ -37,7 +37,6 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
       .select({
         id: inventory.id,
         sku: inventory.sku,
-        stok: inventory.stok,
         hargaBeli: inventory.hargaBeli,
         hargaJual: inventory.hargaJual,
       })
@@ -52,14 +51,13 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
       );
     }
 
+    // Stok sengaja tidak dibaca: stok hanya berubah lewat Barang Masuk / Barang Keluar
     const body = await req.json();
     const {
       namaBarang,
       brand,
       gramasi,
       varian,
-      stok,
-      stokAwal,
       hargaBeli,
       hargaJual,
       supplier,
@@ -76,22 +74,6 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
       );
     }
 
-    // --- Koreksi stok: hanya selisih terhadap stok saat form dibuka ---
-    let stokDelta = 0;
-    if (stok !== undefined) {
-      const target = Number(stok);
-      if (!Number.isInteger(target) || target < 0) {
-        return NextResponse.json({ success: false, error: 'Stok harus bilangan bulat >= 0' }, { status: 400 });
-      }
-      const base = stokAwal !== undefined ? Number(stokAwal) : existing.stok;
-      stokDelta = Number.isFinite(base) ? target - base : 0;
-    }
-    if (stokDelta !== 0 && !ROLES_STOCK_ADJUST.includes(userRole)) {
-      return NextResponse.json(
-        { success: false, error: 'Koreksi stok hanya untuk pimpinan / Kepala Gudang. Gunakan Barang Masuk / Keluar.' },
-        { status: 403 }
-      );
-    }
 
     // --- Harga jual: hanya pimpinan / Kepala Gudang ---
     const hargaJualBaru = hargaJual !== undefined ? Number(hargaJual) : undefined;
@@ -112,11 +94,7 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ success: false, error: 'Harga beli tidak valid' }, { status: 400 });
     }
 
-    // Koreksi stok berlaku untuk satu cabang (cabang aktif / cabang karyawan)
-    const cabangKoreksi = await resolveRequestCabang(authResult.user, body.cabang);
-
-    const [updated, stokCabangBaru] = await db.transaction(async (tx) => {
-    const [row] = await tx
+    const [updated] = await db
       .update(inventory)
       .set({
         ...(namaBarang !== undefined && { namaBarang: namaBarang.trim() }),
@@ -135,18 +113,11 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
       .where(eq(inventory.sku, decodedSku))
       .returning();
 
-      let stokCabangRow: { stok: number } | null = null;
-      if (stokDelta > 0) stokCabangRow = await incrementStock(tx, decodedSku, stokDelta, cabangKoreksi);
-      if (stokDelta < 0) stokCabangRow = await decrementStock(tx, decodedSku, -stokDelta, cabangKoreksi);
-      row.stok += stokDelta;
-      return [row, stokCabangRow?.stok] as const;
-    });
-
-    if (stokDelta !== 0 || hargaJualBerubah) {
+    if (hargaJualBerubah) {
       await db.insert(logs).values({
         user: actor,
         aksi: 'KOREKSI_INVENTORY',
-        detail: `Edit master ${decodedSku}${stokDelta !== 0 ? `: koreksi stok ${cabangKoreksi} ${stokDelta > 0 ? '+' : ''}${stokDelta} (jadi ${stokCabangBaru})` : ''}${hargaJualBerubah ? `; harga jual ${existing.hargaJual} -> ${hargaJualBaru}` : ''}`,
+        detail: `Edit master ${decodedSku}: harga jual ${existing.hargaJual} -> ${hargaJualBaru}`,
       });
     }
 
