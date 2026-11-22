@@ -10,8 +10,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import {
   BarChart3,
-  Clock,
-  Calendar,
   Filter,
   Search,
   RefreshCw,
@@ -32,6 +30,7 @@ import {
 } from 'recharts';
 import { formatRupiah } from '@/shared/lib/utils';
 import { useDivision } from '@/shared/context/DivisionContext';
+import DateTimeFilterBar from '@/shared/components/ui/DateTimeFilterBar';
 
 interface ProductRow {
   sku: string;
@@ -59,9 +58,15 @@ export default function ProdukTerjualView() {
   const [search, setSearch] = useState('');
 
   // Filters
-  const [presetDate, setPresetDate] = useState<'today' | '7days' | 'month' | 'all'>('month');
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
+  // Default = Bulan Ini (sama dengan initialPreset DateTimeFilterBar di bawah)
+  const [startDate, setStartDate] = useState(() => {
+    const n = new Date();
+    return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}-01`;
+  });
+  const [endDate, setEndDate] = useState(() => {
+    const e = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0);
+    return `${e.getFullYear()}-${String(e.getMonth() + 1).padStart(2, '0')}-${String(e.getDate()).padStart(2, '0')}`;
+  });
   const [startHour, setStartHour] = useState('');
   const [endHour, setEndHour] = useState('');
   const [selectedBrand, setSelectedBrand] = useState('all');
@@ -90,26 +95,6 @@ export default function ProdukTerjualView() {
       setLoading(false);
     }
   };
-
-  useEffect(() => {
-    const now = new Date();
-    if (presetDate === 'today') {
-      const d = now.toISOString().slice(0, 10);
-      setStartDate(d);
-      setEndDate(d);
-    } else if (presetDate === '7days') {
-      const past = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-      setStartDate(past.toISOString().slice(0, 10));
-      setEndDate(now.toISOString().slice(0, 10));
-    } else if (presetDate === 'month') {
-      const first = new Date(now.getFullYear(), now.getMonth(), 1);
-      setStartDate(first.toISOString().slice(0, 10));
-      setEndDate(now.toISOString().slice(0, 10));
-    } else {
-      setStartDate('');
-      setEndDate('');
-    }
-  }, [presetDate]);
 
   useEffect(() => {
     fetchData();
@@ -220,82 +205,18 @@ export default function ProdukTerjualView() {
       {/* Filter Bar with Per Hour selection */}
       <div className="bg-white p-4 rounded-2xl border border-gray-200/80 shadow-sm space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-3 text-xs">
-          {/* Preset Buttons */}
-          <div className="flex items-center gap-1.5">
-            <span className="text-gray-400 mr-1 hidden sm:inline">Periode:</span>
-            {[
-              { id: 'today', label: 'Hari Ini' },
-              { id: '7days', label: '7 Hari' },
-              { id: 'month', label: 'Bulan Ini' },
-              { id: 'all', label: 'Semua' },
-            ].map((p) => (
-              <button
-                key={p.id}
-                onClick={() => setPresetDate(p.id as any)}
-                className={`px-3 py-1.5 rounded-xl font-semibold transition ${
-                  presetDate === p.id
-                    ? 'bg-gray-900 text-white shadow-sm'
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200/80'
-                }`}
-              >
-                {p.label}
-              </button>
-            ))}
-          </div>
-
-          {/* Date Picker Custom */}
-          <div className="flex items-center gap-2">
-            <input
-              type="date"
-              value={startDate}
-              onChange={(e) => {
-                setStartDate(e.target.value);
-                setPresetDate('all');
-              }}
-              className="bg-gray-50 border border-gray-200 rounded-xl px-2.5 py-1.5 text-xs text-gray-700"
-            />
-            <span className="text-gray-400">s/d</span>
-            <input
-              type="date"
-              value={endDate}
-              onChange={(e) => {
-                setEndDate(e.target.value);
-                setPresetDate('all');
-              }}
-              className="bg-gray-50 border border-gray-200 rounded-xl px-2.5 py-1.5 text-xs text-gray-700"
-            />
-          </div>
-
-          {/* Filter Per Jam (00:00 - 23:00) */}
-          <div className="flex items-center gap-2 bg-gray-50 p-1.5 rounded-xl border border-gray-200">
-            <Clock className="w-3.5 h-3.5 text-gray-500" />
-            <span className="text-gray-500 font-medium">Jam:</span>
-            <select
-              value={startHour}
-              onChange={(e) => setStartHour(e.target.value)}
-              className="bg-white border border-gray-200 rounded-lg px-2 py-1 text-xs text-gray-700 font-mono"
-            >
-              <option value="">Semua Jam (00:00)</option>
-              {Array.from({ length: 24 }).map((_, h) => (
-                <option key={h} value={h}>
-                  {String(h).padStart(2, '0')}:00
-                </option>
-              ))}
-            </select>
-            <span className="text-gray-400">-</span>
-            <select
-              value={endHour}
-              onChange={(e) => setEndHour(e.target.value)}
-              className="bg-white border border-gray-200 rounded-lg px-2 py-1 text-xs text-gray-700 font-mono"
-            >
-              <option value="">(23:59)</option>
-              {Array.from({ length: 24 }).map((_, h) => (
-                <option key={h} value={h}>
-                  {String(h).padStart(2, '0')}:59
-                </option>
-              ))}
-            </select>
-          </div>
+          {/* Filter Periode: tanggal + jam harian (Dari/Hingga Pukul) */}
+          <DateTimeFilterBar
+            initialPreset="THIS_MONTH"
+            onFilterChange={(sIso, eIso) => {
+              setStartDate(sIso.slice(0, 10));
+              setEndDate(eIso.slice(0, 10));
+              const sTime = sIso.slice(11, 16);
+              const eTime = eIso.slice(11, 16);
+              setStartHour(sTime && sTime !== '00:00' ? String(Number(sTime.slice(0, 2))) : '');
+              setEndHour(eTime && eTime !== '23:59' ? String(Number(eTime.slice(0, 2))) : '');
+            }}
+          />
 
           {/* Brand Filter */}
           <div className="flex items-center gap-2">
