@@ -91,6 +91,36 @@ export const barangKeluar = pgTable('barang_keluar', {
 });
 
 // ============================================================
+// FAKTUR PENJUALAN (header; baris barang = barang_keluar dengan trx_id = no_faktur)
+// ============================================================
+export const fakturPenjualan = pgTable('faktur_penjualan', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  noFaktur: varchar('no_faktur', { length: 100 }).notNull().unique(),
+  tanggal: timestamp('tanggal').notNull(),
+  jatuhTempo: timestamp('jatuh_tempo'),
+  pelanggan: varchar('pelanggan', { length: 150 }).notNull(),
+  pelangganId: uuid('pelanggan_id').references(() => kontak.id, { onDelete: 'set null' }),
+  telepon: varchar('telepon', { length: 30 }),
+  alamat: text('alamat'),
+  salesman: varchar('salesman', { length: 100 }),
+  subtotal: decimal('subtotal', { precision: 15, scale: 2 }).notNull().default('0'),
+  diskonFaktur: decimal('diskon_faktur', { precision: 15, scale: 2 }).notNull().default('0'),
+  ppnPersen: decimal('ppn_persen', { precision: 5, scale: 2 }).notNull().default('0'),
+  ppn: decimal('ppn', { precision: 15, scale: 2 }).notNull().default('0'),
+  ongkir: decimal('ongkir', { precision: 15, scale: 2 }).notNull().default('0'),
+  grandTotal: decimal('grand_total', { precision: 15, scale: 2 }).notNull().default('0'),
+  metodeBayar: varchar('metode_bayar', { length: 20 }).notNull().default('tunai'), // tunai | transfer | tempo
+  dibayar: decimal('dibayar', { precision: 15, scale: 2 }).notNull().default('0'),
+  sisaPiutang: decimal('sisa_piutang', { precision: 15, scale: 2 }).notNull().default('0'),
+  status: varchar('status', { length: 20 }).notNull().default('lunas'), // lunas | sebagian | belum_lunas
+  divisi: varchar('divisi', { length: 30 }).notNull().default('MANUFAKTUR'),
+  cabang: varchar('cabang', { length: 50 }).notNull().default('Pusat'),
+  catatan: text('catatan'),
+  createdBy: varchar('created_by', { length: 50 }),
+  createdAt: timestamp('created_at').defaultNow(),
+});
+
+// ============================================================
 // SURAT JALAN
 // ============================================================
 export const suratJalan = pgTable('surat_jalan', {

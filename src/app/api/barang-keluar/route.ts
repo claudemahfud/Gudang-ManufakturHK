@@ -1,15 +1,17 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/shared/lib/db';
-import { barangKeluar, logs } from '@/shared/lib/db/schema';
+import { barangKeluar } from '@/shared/lib/db/schema';
 import { auth } from '@/shared/lib/auth/config';
 import { requireAuthRole, ROLES_STOCK_OUT } from '@/shared/lib/auth/rbac';
-import { decrementStock, errorResponse, normalizeSku, parsePositiveInt } from '@/shared/lib/stock';
+import { BusinessError, errorResponse, normalizeSku, parsePositiveInt } from '@/shared/lib/stock';
+import { buatFakturPenjualan, type BarisInput } from '@/shared/lib/faktur-penjualan';
+import type { MetodeBayar } from '@/shared/lib/faktur-hitung';
 import { generateTrxId } from '@/shared/lib/utils';
 import { eq, desc, and, gte, lte } from 'drizzle-orm';
 
 // ============================================================
 // API: /api/barang-keluar
-// GET (list pengeluaran barang) + POST (surat loading/keluar multi-item)
+// GET (list pengeluaran barang) + POST (Faktur Penjualan grosir multi-item)
 // ============================================================
 
 export async function GET(req: Request) {
@@ -94,36 +96,55 @@ export async function GET(req: Request) {
   }
 }
 
+// POST = Faktur Penjualan grosir: header faktur + baris barang (stok berkurang)
+// + kas masuk untuk yang dibayar; sisa menjadi piutang di faktur.
 export async function POST(req: Request) {
   try {
     const authResult = await requireAuthRole(ROLES_STOCK_OUT);
     if (!authResult.authorized) return authResult.response;
-    const session = { user: authResult.user };
+    const sessionUser = authResult.user as { name?: string; username?: string; role?: string; cabang?: string };
 
     const body = await req.json();
-    const { tanggal, pelanggan, salesman, keterangan, items } = body;
+    const { items } = body;
+    const pelanggan = typeof body.pelanggan === 'string' ? body.pelanggan.trim() : '';
+    const str = (v: unknown) => (typeof v === 'string' && v.trim() ? v.trim() : null);
 
+    if (!pelanggan) {
+      return NextResponse.json({ success: false, message: 'Pelanggan wajib diisi' }, { status: 400 });
+    }
     if (!items || !Array.isArray(items) || items.length === 0) {
       return NextResponse.json(
-        { success: false, message: 'Daftar item barang keluar tidak boleh kosong' },
+        { success: false, message: 'Daftar barang faktur tidak boleh kosong' },
         { status: 400 }
       );
     }
 
-    const trxId = generateTrxId('OUT');
-    const sessionUser = session.user as any;
+    const metodeBayar: MetodeBayar = ['tunai', 'transfer', 'tempo'].includes(body.metodeBayar)
+      ? body.metodeBayar
+      : 'tunai';
+    const angka = (v: unknown, nama: string, max = Infinity) => {
+      if (v === undefined || v === null || v === '') return 0;
+      const n = Number(v);
+      if (!Number.isFinite(n) || n < 0 || n > max) throw new BusinessError(`${nama} tidak valid`);
+      return n;
+    };
+
     const user = sessionUser?.name || sessionUser?.username || 'System';
-    const isExecutive = ['Administrator', 'Direktur Utama', 'Manager'].includes(sessionUser?.role);
+    const isExecutive = ['Administrator', 'Direktur Utama', 'Manager'].includes(sessionUser?.role ?? '');
     const userCabang = sessionUser?.cabang || 'Pusat';
     const cabangToSave = (!isExecutive && userCabang !== 'ALL' && userCabang !== 'Pusat')
       ? userCabang
       : (body.cabang || 'Pusat');
-    const trxDate = tanggal ? new Date(tanggal) : new Date();
+    const trxDate = body.tanggal ? new Date(body.tanggal) : new Date();
+    const jatuhTempo = body.jatuhTempo ? new Date(body.jatuhTempo) : null;
+    if (Number.isNaN(trxDate.getTime()) || (jatuhTempo && Number.isNaN(jatuhTempo.getTime()))) {
+      throw new BusinessError('Tanggal faktur / jatuh tempo tidak valid');
+    }
 
     // Validasi bentuk data semua item sebelum menyentuh stok.
     // Harga grosir boleh dinegosiasi per transaksi, tapi wajib angka >= 0
     // dan diskon dibatasi 0-100%.
-    const lines: { sku: string; qty: number; hargaJual: number; diskon: number; satuan: string }[] = [];
+    const baris: BarisInput[] = [];
     for (const it of items) {
       const sku = normalizeSku(it?.sku);
       const qty = parsePositiveInt(it?.qty);
@@ -141,54 +162,42 @@ export async function POST(req: Request) {
           { status: 400 }
         );
       }
-      lines.push({ sku, qty, hargaJual, diskon, satuan: it.satuan || 'pcs' });
+      baris.push({ sku, qty, hargaJual, diskon, satuan: it.satuan || 'pcs' });
     }
 
-    const insertedRows: (typeof barangKeluar.$inferSelect)[] = [];
-
-    await db.transaction(async (tx) => {
-      for (const it of lines) {
-        const { qty, hargaJual, diskon } = it;
-        const subtotal = Math.round(qty * hargaJual * (1 - diskon / 100) * 100) / 100;
-
-        // Kurangi stok hanya bila masih cukup (aman dari transaksi bersamaan)
-        const inv = await decrementStock(tx, it.sku, qty, cabangToSave);
-
-        const [row] = await tx
-          .insert(barangKeluar)
-          .values({
-            trxId,
-            tanggal: trxDate,
-            sku: it.sku,
-            namaBarang: inv.namaBarang,
-            qty,
-            satuan: it.satuan || 'pcs',
-            hargaJual: String(hargaJual),
-            total: String(subtotal),
-            pelanggan: pelanggan || null,
-            salesman: salesman || null,
-            diskon: String(diskon),
-            divisi: body.divisi || 'MANUFAKTUR',
-            cabang: cabangToSave,
-            channel: body.channel || 'GROSIR',
-            keterangan: keterangan || null,
-            createdBy: user,
-          })
-          .returning();
-
-        insertedRows.push(row);
-      }
-
-      // Audit log
-      await tx.insert(logs).values({
+    const noFaktur = generateTrxId('FJ');
+    const hasil = await db.transaction((tx) =>
+      buatFakturPenjualan(tx, {
+        noFaktur,
+        tanggal: trxDate,
+        jatuhTempo,
+        pelanggan,
+        pelangganId: str(body.pelangganId),
+        telepon: str(body.telepon),
+        alamat: str(body.alamat),
+        salesman: str(body.salesman),
+        baris,
+        diskonFaktur: angka(body.diskonFaktur, 'Diskon faktur'),
+        ppnPersen: angka(body.ppnPersen, 'PPN', 100),
+        ongkir: angka(body.ongkir, 'Ongkos kirim'),
+        metodeBayar,
+        dibayar: body.dibayar === undefined || body.dibayar === '' ? undefined : angka(body.dibayar, 'Jumlah dibayar'),
+        divisi: body.divisi || 'MANUFAKTUR',
+        cabang: cabangToSave,
+        catatan: str(body.keterangan),
         user,
-        aksi: 'PENGELUARAN_BARANG',
-        detail: `Mencatat transaksi keluar ${trxId} (${items.length} item) ke ${pelanggan || '-'}`,
-      });
-    });
+      })
+    );
 
     return NextResponse.json(
-      { success: true, trxId, data: insertedRows, message: 'Barang keluar berhasil dicatat' },
+      {
+        success: true,
+        trxId: noFaktur,
+        noFaktur,
+        faktur: hasil.faktur,
+        data: hasil.rows,
+        message: `Faktur penjualan ${noFaktur} berhasil dibuat`,
+      },
       { status: 201 }
     );
   } catch (err) {

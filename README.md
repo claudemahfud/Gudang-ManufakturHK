@@ -12,7 +12,7 @@ Sistem ini merekonstruksi seluruh fungsionalitas sistem pergudangan lama (Fireba
 1. **Dashboard Eksekutif (`/dashboard`)**: Ringkasan omzet, nilai inventory, stok kritis, dan grafik stok per brand.
 2. **Master Inventory (`/inventory`)**: Master produk lengkap (SKU, brand, gramasi, varian, harga beli/jual, setting karton/pcs, filter debounce & pagination).
 3. **Barang Masuk (`/barang-masuk`)**: Penerimaan kiriman stok supplier (otomatis menambah stok inventory & audit trail). Daftar **PO Dalam Proses**: tombol "Barang Datang" mengubah PO menjadi Faktur Pembelian yang bisa direvisi sesuai barang yang benar-benar datang; submit = stok masuk, lalu ditanya apakah ada barang cacat/rusak (Ya = formulir Return).
-4. **Barang Keluar & Loading (`/barang-keluar`)**: Surat loading muatan penjualan multi-item (otomatis memotong stok & cetak invoice/faktur).
+4. **Barang Keluar & Faktur Penjualan (`/barang-keluar`)**: Faktur penjualan grosir multi-item: pelanggan dari daftar kontak, diskon per barang & faktur, PPN, ongkos kirim, metode bayar (tunai/transfer/tempo) dengan uang muka & sisa piutang. Otomatis memotong stok, mencatat kas masuk, dan cetak faktur.
 5. **Barang Rusak / Kadaluarsa (`/barang-rusak`)**: Pencatatan barang cacat/rusak dengan pemotongan stok otomatis.
 6. **Mutasi Barang (`/mutasi-barang`)**: Perpindahan stok antar cabang (stok per cabang di tabel `stok_cabang`).
 7. **Monitor Stok Kritis (`/stok-kritis`)**: Peringatan dini otomatis untuk barang dengan stok di bawah batas minimum (Restock quick-action).
