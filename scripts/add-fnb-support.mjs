@@ -1,6 +1,11 @@
 import postgres from 'postgres';
 
-const sql = postgres('postgresql://postgres.urqnonszxdqzhdbfxzqf:%40Namikaze04@aws-1-ap-southeast-1.pooler.supabase.com:5432/postgres', { prepare: false });
+if (!process.env.DATABASE_URL) {
+  console.error("DATABASE_URL belum di-set. Jalankan: node --env-file=.env.local " + process.argv[1]);
+  process.exit(1);
+}
+
+const sql = postgres(process.env.DATABASE_URL, { prepare: false });
 
 async function runMigration() {
   console.log('Running F&B harmonization migration on Supabase...');
