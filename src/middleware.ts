@@ -18,6 +18,7 @@ const ROUTE_ROLES: Record<string, string[]> = {
   [ROUTES.LOGS]: ['Administrator', 'Manager', 'Direktur Utama'],
   [ROUTES.KEUANGAN]: ['Administrator', 'Manager', 'Direktur Utama', 'Kepala Gudang'],
   [ROUTES.BIAYA_OPERASIONAL]: ['Administrator', 'Manager', 'Direktur Utama'],
+  [ROUTES.PIUTANG]: ['Administrator', 'Manager', 'Direktur Utama'],
   [ROUTES.TARGET_KOMISI]: ['Administrator', 'Manager', 'Direktur Utama', 'Admin Salesman'],
   [ROUTES.MONITOR_SALESMAN]: ['Administrator', 'Manager', 'Direktur Utama', 'Admin Salesman'],
   [ROUTES.PENGAJUAN_DISKON]: ['Administrator', 'Manager', 'Direktur Utama', 'Admin Salesman', 'Salesman', 'Staff Admin Salesman'],
@@ -28,6 +29,7 @@ const ROUTE_ROLES: Record<string, string[]> = {
   '/api/logs': ['Administrator', 'Manager', 'Direktur Utama'],
   '/api/keuangan': ['Administrator', 'Manager', 'Direktur Utama', 'Kepala Gudang'],
   '/api/biaya-operasional': ['Administrator', 'Manager', 'Direktur Utama'],
+  '/api/piutang': ['Administrator', 'Manager', 'Direktur Utama'],
   '/api/target-komisi': ['Administrator', 'Manager', 'Direktur Utama', 'Admin Salesman'],
   '/api/laporan/penjualan': ['Administrator', 'Manager', 'Direktur Utama', 'Kepala Gudang', 'Admin Salesman'],
 };

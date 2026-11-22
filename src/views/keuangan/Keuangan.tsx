@@ -29,7 +29,7 @@ export default function Keuangan() {
   const [form, setForm] = useState({
     tanggal: new Date().toISOString().split('T')[0],
     jenis: 'masuk',
-    kategori: 'Pelunasan Piutang',
+    kategori: 'Pendapatan Lain-lain',
     jumlah: '',
     keterangan: '',
   });
@@ -90,7 +90,7 @@ export default function Keuangan() {
         setForm({
           tanggal: new Date().toISOString().split('T')[0],
           jenis: 'masuk',
-          kategori: 'Pelunasan Piutang',
+          kategori: 'Pendapatan Lain-lain',
           jumlah: '',
           keterangan: '',
         });
@@ -319,6 +319,9 @@ export default function Keuangan() {
                         onChange={(e) => setForm({ ...form, kategori: e.target.value })}
                         className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm focus:border-emerald-500 outline-none"
                       />
+                      <p className="text-[11px] text-gray-400 mt-1">
+                        Pembayaran faktur penjualan dicatat lewat menu Piutang Pelanggan agar sisa tagihannya ikut berkurang.
+                      </p>
                     </div>
                   </div>
 
