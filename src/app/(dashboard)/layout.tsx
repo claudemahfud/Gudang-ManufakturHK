@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useSyncExternalStore } from 'react';
+import { usePathname } from 'next/navigation';
 import { SessionProvider } from 'next-auth/react';
 import Sidebar from '@/shared/components/layout/Sidebar';
 import Header from '@/shared/components/layout/Header';
@@ -45,6 +46,7 @@ function subscribeSidebarPref(onChange: () => void) {
 
 function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
   const { data: session } = useSession();
+  const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   // Sidebar desktop bisa disembunyikan; pilihan diingat per perangkat
   const desktopSidebarOpen = useSyncExternalStore(subscribeSidebarPref, readSidebarPref, () => true);
@@ -71,10 +73,13 @@ function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
       {sidebarOpen && (
         <>
           <div
-            className="fixed inset-0 bg-black/40 z-40 lg:hidden"
+            className="fixed inset-0 bg-black/40 z-40 lg:hidden animate-in fade-in duration-200"
             onClick={() => setSidebarOpen(false)}
           />
-          <aside aria-label="Sidebar Navigasi Mobile" className="fixed inset-y-0 left-0 z-50 lg:hidden">
+          <aside
+            aria-label="Sidebar Navigasi Mobile"
+            className="fixed inset-y-0 left-0 z-50 lg:hidden animate-in slide-in-from-left duration-300 [animation-timing-function:var(--ease-drawer)]"
+          >
             <Sidebar userRole={userRole} onClose={() => setSidebarOpen(false)} />
           </aside>
         </>
@@ -85,7 +90,8 @@ function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
         <Header onMenuClick={toggleSidebar} />
         
         <main className="flex-1 overflow-y-auto flex flex-col justify-between">
-          <div className="p-4 md:p-6 flex-1">
+          {/* key = pathname: konten halaman baru muncul dengan fade halus */}
+          <div key={pathname} className="p-4 md:p-6 flex-1 animate-in fade-in slide-in-from-bottom-1 duration-200">
             {children}
           </div>
 
