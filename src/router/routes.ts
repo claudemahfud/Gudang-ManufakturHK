@@ -35,6 +35,7 @@ export const ROUTES = {
 
   // Keuangan
   KEUANGAN: '/keuangan',
+  PIUTANG: '/piutang',
   BIAYA_OPERASIONAL: '/biaya-operasional',
   NERACA: '/neraca',
 

@@ -120,6 +120,23 @@ export const fakturPenjualan = pgTable('faktur_penjualan', {
   createdAt: timestamp('created_at').defaultNow(),
 });
 
+// Riwayat piutang per faktur: pembayaran (cicilan/pelunasan) & mundur jatuh tempo.
+// Tanpa FK ke faktur agar jejak audit tetap ada walau faktur dibatalkan.
+export const piutangMutasi = pgTable('piutang_mutasi', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  noFaktur: varchar('no_faktur', { length: 100 }).notNull(),
+  jenis: varchar('jenis', { length: 20 }).notNull(), // bayar | ubah_tempo
+  tanggal: timestamp('tanggal').notNull().defaultNow(),
+  jumlah: decimal('jumlah', { precision: 15, scale: 2 }).notNull().default('0'),
+  metode: varchar('metode', { length: 20 }), // tunai | transfer
+  jatuhTempoLama: timestamp('jatuh_tempo_lama'),
+  jatuhTempoBaru: timestamp('jatuh_tempo_baru'),
+  sisaSetelah: decimal('sisa_setelah', { precision: 15, scale: 2 }).notNull().default('0'),
+  catatan: text('catatan'),
+  createdBy: varchar('created_by', { length: 50 }),
+  createdAt: timestamp('created_at').defaultNow(),
+});
+
 // ============================================================
 // SURAT JALAN
 // ============================================================
@@ -268,6 +285,7 @@ export const keuangan = pgTable('keuangan', {
   divisi: varchar('divisi', { length: 30 }).notNull().default('MANUFAKTUR'), // MANUFAKTUR | FNB | HOLDING
   cabang: varchar('cabang', { length: 50 }).notNull().default('Pusat'),
   keterangan: text('keterangan'),
+  referensi: varchar('referensi', { length: 100 }), // no faktur asal kas (audit)
   createdBy: varchar('created_by', { length: 50 }),
   createdAt: timestamp('created_at').defaultNow(),
 });
