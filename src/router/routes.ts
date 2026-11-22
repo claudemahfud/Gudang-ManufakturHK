@@ -55,5 +55,6 @@ export const ROUTES = {
   // Admin
   USERS: '/users',
   CABANG: '/cabang',
+  PENGATURAN_PERUSAHAAN: '/pengaturan-perusahaan',
   LOGS: '/logs',
 } as const;

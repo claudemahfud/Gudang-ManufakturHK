@@ -81,8 +81,8 @@ interface PosSettings {
   gridMode: 'compact' | 'normal';
   defaultMetode: 'Tunai' | 'Transfer' | 'QRIS';
   // Anti-Fraud & Proteksi PIN Supervisor
+  // Tiga nilai di bawah selalu ditimpa dari /api/pengaturan (diatur Direktur)
   enableSupervisorPin: boolean;
-  supervisorPin: string;
   maxDiskonTanpaPin: number;
   requirePinVoidCart: boolean;
 }
@@ -97,8 +97,7 @@ const DEFAULT_POS_SETTINGS: PosSettings = {
   enableSound: true,
   gridMode: 'normal',
   defaultMetode: 'Tunai',
-  enableSupervisorPin: true,
-  supervisorPin: '1234',
+  enableSupervisorPin: false,
   maxDiskonTanpaPin: 15,
   requirePinVoidCart: true,
 };
@@ -211,11 +210,14 @@ export default function PosView() {
   const [pendingDiskon, setPendingDiskon] = useState<number | null>(null);
   const [supervisorPinInput, setSupervisorPinInput] = useState('');
   const [supervisorPinError, setSupervisorPinError] = useState<string | null>(null);
+  // PIN yang sudah lolos verifikasi untuk diskon; dikirim ke server saat checkout
+  const [approvedPin, setApprovedPin] = useState<string | null>(null);
+  const [isVerifyingPin, setIsVerifyingPin] = useState(false);
 
   // POS Settings State (Local to device / independent from backoffice)
   const [posSettings, setPosSettings] = useState<PosSettings>(DEFAULT_POS_SETTINGS);
 
-  // Load POS settings from localStorage
+  // Load POS settings from localStorage, lalu timpa aturan PIN dari server
   useEffect(() => {
     try {
       const saved = localStorage.getItem('gudang_pos_settings_v1');
@@ -225,6 +227,20 @@ export default function PosView() {
     } catch {
       // Fallback to default
     }
+    fetch('/api/pengaturan')
+      .then((r) => r.json())
+      .then((j) => {
+        if (!j?.success) return;
+        setPosSettings((p) => ({
+          ...p,
+          enableSupervisorPin: Boolean(j.data.wajibPin),
+          maxDiskonTanpaPin: Number(j.data.maxDiskonTanpaPin),
+          requirePinVoidCart: Boolean(j.data.pinVoidCart),
+        }));
+      })
+      .catch(() => {
+        // Server tetap menolak diskon di atas batas tanpa PIN
+      });
   }, []);
 
   const saveSettings = (newSettings: PosSettings) => {
@@ -400,17 +416,37 @@ export default function PosView() {
     }
   };
 
-  const handleVerifySupervisorPin = (e?: React.FormEvent) => {
+  const handleVerifySupervisorPin = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    if (supervisorPinInput.trim() !== posSettings.supervisorPin.trim()) {
-      setSupervisorPinError('PIN Supervisor salah! Akses otorisasi ditolak.');
-      if (posSettings.enableSound) playBeep('error');
+    if (isVerifyingPin) return;
+    const pin = supervisorPinInput.trim();
+    setIsVerifyingPin(true);
+    try {
+      const res = await fetch('/api/pengaturan/verifikasi-pin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          pin,
+          aksi: supervisorAction === 'discount' ? `diskon POS ${pendingDiskon}%` : 'kosongkan keranjang POS',
+        }),
+      });
+      const json = await res.json();
+      if (!json.success) {
+        setSupervisorPinError(json.message || 'PIN Supervisor salah! Akses otorisasi ditolak.');
+        if (posSettings.enableSound) playBeep('error');
+        return;
+      }
+    } catch {
+      setSupervisorPinError('Gagal memverifikasi PIN. Periksa koneksi.');
       return;
+    } finally {
+      setIsVerifyingPin(false);
     }
 
     if (posSettings.enableSound) playBeep('success');
     if (supervisorAction === 'discount' && pendingDiskon !== null) {
       setDiskonPct(pendingDiskon);
+      setApprovedPin(pin);
       setPendingDiskon(null);
     } else if (supervisorAction === 'void_cart') {
       setCart([]);
@@ -476,6 +512,7 @@ export default function PosView() {
           catatan,
           divisi: division,
           cabang,
+          supervisorPin: approvedPin ?? undefined,
         }),
       });
 
@@ -485,6 +522,7 @@ export default function PosView() {
       }
 
       if (posSettings.enableSound) playBeep('success');
+      setApprovedPin(null);
       setLastReceipt(json.data);
       setIsCheckoutModalOpen(false);
       setIsReceiptModalOpen(true);
@@ -1371,10 +1409,10 @@ export default function PosView() {
                   enableSound: fd.get('enableSound') === 'on',
                   gridMode: (fd.get('gridMode') as any) || 'normal',
                   defaultMetode: (fd.get('defaultMetode') as any) || 'Tunai',
-                  enableSupervisorPin: fd.get('enableSupervisorPin') === 'on',
-                  supervisorPin: String(fd.get('supervisorPin') || '1234'),
-                  maxDiskonTanpaPin: Math.min(100, Math.max(0, Number(fd.get('maxDiskonTanpaPin') || 15))),
-                  requirePinVoidCart: fd.get('requirePinVoidCart') === 'on',
+                  // Aturan PIN tidak bisa diubah kasir: tetap nilai dari Pengaturan Perusahaan
+                  enableSupervisorPin: posSettings.enableSupervisorPin,
+                  maxDiskonTanpaPin: posSettings.maxDiskonTanpaPin,
+                  requirePinVoidCart: posSettings.requirePinVoidCart,
                 });
               }}
               className="p-5 space-y-4 overflow-y-auto max-h-[70vh]"
@@ -1507,71 +1545,22 @@ export default function PosView() {
                     Keamanan & Anti-Fraud Kasir (PIN Supervisor)
                   </h4>
                 </div>
-                <p className="text-[11px] text-slate-400 leading-relaxed">
-                  Cegah kecurangan kasir, manipulasi harga diskon khusus, dan pembatalan nota sembarangan
-                </p>
-
-                <div className="space-y-2.5 pt-1">
-                  <label className="flex items-center gap-3 p-2.5 rounded-xl bg-slate-950 border border-slate-800 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      name="enableSupervisorPin"
-                      defaultChecked={posSettings.enableSupervisorPin}
-                      className="rounded border-slate-700 text-emerald-500 focus:ring-emerald-500"
-                    />
-                    <div className="text-xs">
-                      <div className="font-semibold text-slate-200">Aktifkan Proteksi PIN Supervisor</div>
-                      <div className="text-[10px] text-slate-400">
-                        Wajibkan otorisasi PIN saat diskon khusus atau batal keranjang
-                      </div>
-                    </div>
-                  </label>
-
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="text-xs font-semibold text-slate-300 block mb-1">
-                        PIN Supervisor (4-6 Digit)
-                      </label>
-                      <input
-                        type="password"
-                        name="supervisorPin"
-                        maxLength={6}
-                        defaultValue={posSettings.supervisorPin}
-                        placeholder="1234"
-                        className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-100 font-mono tracking-widest focus:outline-none focus:border-emerald-500"
-                        required
-                      />
-                    </div>
-                    <div>
-                      <label className="text-xs font-semibold text-slate-300 block mb-1">
-                        Batas Diskon Normal Kasir (%)
-                      </label>
-                      <input
-                        type="number"
-                        min="0"
-                        max="100"
-                        name="maxDiskonTanpaPin"
-                        defaultValue={posSettings.maxDiskonTanpaPin}
-                        className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-100 font-mono focus:outline-none focus:border-emerald-500"
-                        required
-                      />
-                    </div>
+                <div className="p-3 rounded-xl bg-slate-950 border border-slate-800 text-xs text-slate-300 space-y-1">
+                  <div>
+                    PIN supervisor:{' '}
+                    <span className="font-semibold text-slate-100">
+                      {posSettings.enableSupervisorPin ? 'Wajib' : 'Tidak wajib'}
+                    </span>
                   </div>
-
-                  <label className="flex items-center gap-3 p-2.5 rounded-xl bg-slate-950 border border-slate-800 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      name="requirePinVoidCart"
-                      defaultChecked={posSettings.requirePinVoidCart}
-                      className="rounded border-slate-700 text-emerald-500 focus:ring-emerald-500"
-                    />
-                    <div className="text-xs">
-                      <div className="font-semibold text-slate-200">Wajibkan PIN Saat Kosongkan Keranjang (Void)</div>
-                      <div className="text-[10px] text-slate-400">
-                        Mencegah kasir membatalkan belanja yang sudah diinput tanpa izin supervisor
-                      </div>
-                    </div>
-                  </label>
+                  {posSettings.enableSupervisorPin && (
+                    <>
+                      <div>Diskon tanpa PIN maks: <span className="font-mono text-slate-100">{posSettings.maxDiskonTanpaPin}%</span></div>
+                      <div>Kosongkan keranjang: {posSettings.requirePinVoidCart ? 'pakai PIN' : 'tanpa PIN'}</div>
+                    </>
+                  )}
+                  <p className="text-[10px] text-slate-500 pt-1">
+                    Diatur oleh Direktur Utama di menu Pengaturan Perusahaan.
+                  </p>
                 </div>
               </div>
 

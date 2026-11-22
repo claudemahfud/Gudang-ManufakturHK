@@ -413,3 +413,17 @@ export const masterCabang = pgTable('master_cabang', {
   status: varchar('status', { length: 20 }).notNull().default('ACTIVE'),
   createdAt: timestamp('created_at').defaultNow(),
 });
+
+// ============================================================
+// PENGATURAN PERUSAHAAN (1 baris, id = 1) — diatur Direktur Utama
+// ============================================================
+export const pengaturanPerusahaan = pgTable('pengaturan_perusahaan', {
+  id: integer('id').primaryKey().default(1),
+  wajibPin: boolean('wajib_pin').notNull().default(false), // false = semua aksi tanpa PIN supervisor
+  maxDiskonTanpaPin: integer('max_diskon_tanpa_pin').notNull().default(15),
+  pinVoidCart: boolean('pin_void_cart').notNull().default(true),
+  pinHapusTransaksi: boolean('pin_hapus_transaksi').notNull().default(true),
+  pinHash: text('pin_hash'), // scrypt; PIN asli tidak pernah disimpan
+  updatedBy: varchar('updated_by', { length: 50 }),
+  updatedAt: timestamp('updated_at').defaultNow(),
+});
