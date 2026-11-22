@@ -282,12 +282,12 @@ export default function PoDalamProses({ onReceived, notify }: { onReceived: () =
 
       {/* Modal Faktur Pembelian (konversi dari PO) */}
       {po && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
           <div
             role="dialog"
             aria-modal="true"
             aria-labelledby="faktur-title"
-            className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[92vh] flex flex-col border border-gray-100"
+            className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[92vh] flex flex-col border border-gray-100 animate-in fade-in zoom-in-95 duration-200"
           >
             <div className="flex items-start justify-between gap-4 px-6 py-4 border-b border-gray-100">
               <div>
@@ -454,12 +454,12 @@ export default function PoDalamProses({ onReceived, notify }: { onReceived: () =
 
       {/* Pop-up setelah submit: ada barang cacat / rusak? */}
       {hasil && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
           <div
             role="alertdialog"
             aria-modal="true"
             aria-labelledby="cacat-title"
-            className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 text-center space-y-4 border border-gray-100"
+            className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 text-center space-y-4 border border-gray-100 animate-in fade-in zoom-in-95 duration-200"
           >
             <div className="w-14 h-14 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center mx-auto">
               <AlertTriangle className="w-7 h-7" />
