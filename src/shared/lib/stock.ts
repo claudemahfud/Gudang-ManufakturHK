@@ -1,7 +1,8 @@
 import { and, eq, gte, sql } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
 import { db } from '@/shared/lib/db';
-import { inventory } from '@/shared/lib/db/schema';
+import { inventory, stokCabang } from '@/shared/lib/db/schema';
 
 // ============================================================
 // STOCK HELPERS — mutasi stok atomik (server only)
@@ -32,46 +33,78 @@ export function parsePositiveInt(value: unknown): number | null {
   return typeof n === 'number' && Number.isInteger(n) && n > 0 ? n : null;
 }
 
-/** Kurangi stok bila cukup; lempar BusinessError bila SKU tidak ada / stok kurang. */
-export async function decrementStock(tx: Executor, sku: string, qty: number) {
+// Stok disimpan per cabang di tabel stok_cabang; inventory.stok = total semua
+// cabang dan selalu diperbarui di transaksi yang sama (dipakai dashboard/laporan).
+
+/** Kurangi stok cabang bila cukup; lempar BusinessError bila SKU tidak ada / stok kurang. */
+export async function decrementStock(tx: Executor, sku: string, qty: number, cabang: string) {
   const [row] = await tx
-    .update(inventory)
-    .set({ stok: sql`${inventory.stok} - ${qty}`, updatedAt: new Date() })
-    .where(and(eq(inventory.sku, sku), gte(inventory.stok, qty)))
-    .returning({ sku: inventory.sku, stok: inventory.stok, namaBarang: inventory.namaBarang });
-  if (row) return row;
+    .update(stokCabang)
+    .set({ stok: sql`${stokCabang.stok} - ${qty}`, updatedAt: new Date() })
+    .where(and(eq(stokCabang.sku, sku), eq(stokCabang.cabang, cabang), gte(stokCabang.stok, qty)))
+    .returning({ stok: stokCabang.stok });
+
+  if (!row) {
+    const [inv] = await tx
+      .select({ namaBarang: inventory.namaBarang })
+      .from(inventory)
+      .where(eq(inventory.sku, sku))
+      .limit(1);
+    if (!inv) throw new BusinessError(`Barang dengan SKU ${sku} tidak ditemukan`, 404);
+    const [sc] = await tx
+      .select({ stok: stokCabang.stok })
+      .from(stokCabang)
+      .where(and(eq(stokCabang.sku, sku), eq(stokCabang.cabang, cabang)))
+      .limit(1);
+    throw new BusinessError(
+      `Stok "${inv.namaBarang}" di cabang ${cabang} tidak mencukupi (Tersedia: ${sc?.stok ?? 0}, Diminta: ${qty})`
+    );
+  }
 
   const [inv] = await tx
-    .select({ namaBarang: inventory.namaBarang, stok: inventory.stok })
-    .from(inventory)
+    .update(inventory)
+    .set({ stok: sql`${inventory.stok} - ${qty}`, updatedAt: new Date() })
     .where(eq(inventory.sku, sku))
-    .limit(1);
-  if (!inv) throw new BusinessError(`Barang dengan SKU ${sku} tidak ditemukan`, 404);
-  throw new BusinessError(
-    `Stok "${inv.namaBarang}" tidak mencukupi (Tersedia: ${inv.stok}, Diminta: ${qty})`
-  );
+    .returning({ sku: inventory.sku, namaBarang: inventory.namaBarang });
+  return { ...inv, stok: row.stok };
 }
 
-/** Tambah stok; lempar BusinessError bila SKU tidak ada. */
-export async function incrementStock(tx: Executor, sku: string, qty: number) {
-  const [row] = await tx
+/** Tambah stok cabang; lempar BusinessError bila SKU tidak ada di master inventory. */
+export async function incrementStock(tx: Executor, sku: string, qty: number, cabang: string) {
+  const [inv] = await tx
     .update(inventory)
     .set({ stok: sql`${inventory.stok} + ${qty}`, updatedAt: new Date() })
     .where(eq(inventory.sku, sku))
-    .returning({ sku: inventory.sku, stok: inventory.stok });
-  if (!row) throw new BusinessError(`Barang dengan SKU ${sku} tidak ditemukan`, 404);
-  return row;
+    .returning({ sku: inventory.sku, namaBarang: inventory.namaBarang });
+  if (!inv) throw new BusinessError(`Barang dengan SKU ${sku} tidak ditemukan`, 404);
+
+  const [row] = await tx
+    .insert(stokCabang)
+    .values({ sku, cabang, stok: qty })
+    .onConflictDoUpdate({
+      target: [stokCabang.sku, stokCabang.cabang],
+      set: { stok: sql`${stokCabang.stok} + ${qty}`, updatedAt: new Date() },
+    })
+    .returning({ stok: stokCabang.stok });
+  return { ...inv, stok: row.stok };
 }
 
-/** Ambil baris inventory dan kunci (FOR UPDATE) sampai transaksi selesai. */
-export async function lockInventory(tx: Tx, sku: string) {
-  const [inv] = await tx
-    .select()
-    .from(inventory)
-    .where(eq(inventory.sku, sku))
-    .for('update')
-    .limit(1);
-  return inv ?? null;
+/**
+ * Cabang tempat transaksi stok terjadi. Karyawan cabang dikunci ke cabangnya;
+ * pimpinan / pengguna Pusat boleh memilih cabang (aturan yang sama dengan
+ * isolasi cabang di route lain).
+ */
+export function resolveCabang(user: { role?: string; cabang?: string } | null | undefined, requested?: unknown) {
+  const isExecutive = ['Administrator', 'Direktur Utama', 'Manager'].includes(user?.role ?? '');
+  const userCabang = user?.cabang || 'Pusat';
+  if (!isExecutive && userCabang !== 'ALL' && userCabang !== 'Pusat') return userCabang;
+  return typeof requested === 'string' && requested.trim() && requested !== 'SEMUA' ? requested.trim() : 'Pusat';
+}
+
+/** resolveCabang dengan fallback ke cabang aktif di header aplikasi (cookie app_active_cabang). */
+export async function resolveRequestCabang(user: Parameters<typeof resolveCabang>[0], requested?: unknown) {
+  const active = (await cookies()).get('app_active_cabang')?.value;
+  return resolveCabang(user, requested ?? (active ? decodeURIComponent(active) : undefined));
 }
 
 /** Ubah error menjadi respons JSON; error tak terduga tidak membocorkan detail DB. */

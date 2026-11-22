@@ -1,4 +1,4 @@
-import { pgTable, text, integer, boolean, timestamp, decimal, uuid, varchar, serial } from 'drizzle-orm/pg-core';
+import { pgTable, text, integer, boolean, timestamp, decimal, uuid, varchar, serial, primaryKey } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 
 // ============================================================
@@ -128,6 +128,7 @@ export const poLoading = pgTable('po_loading', {
   supplier: varchar('supplier', { length: 150 }),
   armada: varchar('armada', { length: 50 }),
   status: varchar('status', { length: 30 }).notNull().default('draft'),
+  cabang: varchar('cabang', { length: 50 }).notNull().default('Pusat'), // cabang penerima barang
   catatan: text('catatan'),
   createdBy: varchar('created_by', { length: 50 }),
   createdAt: timestamp('created_at').defaultNow(),
@@ -157,6 +158,7 @@ export const returBarang = pgTable('retur_barang', {
   pelanggan: varchar('pelanggan', { length: 150 }),
   divisi: varchar('divisi', { length: 30 }).notNull().default('MANUFAKTUR'),
   status: varchar('status', { length: 30 }).notNull().default('pending'),
+  cabang: varchar('cabang', { length: 50 }).notNull().default('Pusat'),
   createdBy: varchar('created_by', { length: 50 }),
   createdAt: timestamp('created_at').defaultNow(),
 });
@@ -427,3 +429,18 @@ export const pengaturanPerusahaan = pgTable('pengaturan_perusahaan', {
   updatedBy: varchar('updated_by', { length: 50 }),
   updatedAt: timestamp('updated_at').defaultNow(),
 });
+
+// ============================================================
+// STOK PER CABANG — sumber stok tiap cabang.
+// inventory.stok = jumlah stok semua cabang (dijaga oleh src/shared/lib/stock.ts).
+// ============================================================
+export const stokCabang = pgTable(
+  'stok_cabang',
+  {
+    sku: varchar('sku', { length: 50 }).notNull(),
+    cabang: varchar('cabang', { length: 50 }).notNull(),
+    stok: integer('stok').notNull().default(0),
+    updatedAt: timestamp('updated_at').defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.sku, t.cabang] })]
+);

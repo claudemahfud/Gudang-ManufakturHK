@@ -4,6 +4,7 @@ import { poLoading, poLoadingItems, logs } from '@/shared/lib/db/schema';
 import { auth } from '@/shared/lib/auth/config';
 import { requireAuthRole, ROLES_WAREHOUSE } from '@/shared/lib/auth/rbac';
 import { generateTrxId } from '@/shared/lib/utils';
+import { resolveRequestCabang } from '@/shared/lib/stock';
 import { desc, eq } from 'drizzle-orm';
 
 // ============================================================
@@ -48,6 +49,7 @@ export async function POST(req: Request) {
 
     const user = (session.user as any)?.name || (session.user as any)?.username || 'System';
     const noPo = generateTrxId('PO');
+    const cabang = await resolveRequestCabang(session.user, body.cabang);
     let headerResult: any;
 
     await db.transaction(async (tx) => {
@@ -59,6 +61,7 @@ export async function POST(req: Request) {
           supplier,
           armada: armada || null,
           status: 'dipesan',
+          cabang,
           catatan: catatan || null,
           createdBy: user,
         })

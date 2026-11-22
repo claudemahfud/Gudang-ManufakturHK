@@ -4,7 +4,7 @@ import { barangRusak, logs } from '@/shared/lib/db/schema';
 import { auth } from '@/shared/lib/auth/config';
 import { requireAuthRole, ROLES_WAREHOUSE } from '@/shared/lib/auth/rbac';
 import { desc } from 'drizzle-orm';
-import { decrementStock, errorResponse, normalizeSku } from '@/shared/lib/stock';
+import { decrementStock, errorResponse, normalizeSku, resolveRequestCabang } from '@/shared/lib/stock';
 
 // ============================================================
 // API: /api/barang-rusak
@@ -62,10 +62,11 @@ export async function POST(req: Request) {
 
     const normalizedSku = normalizeSku(sku);
     const user = authResult.user?.name || authResult.user?.username || 'System';
+    const cabang = await resolveRequestCabang(authResult.user, body.cabang);
 
     // Potong stok, catat, dan log dalam satu transaksi atomik
     const row = await db.transaction(async (tx) => {
-      const inv = await decrementStock(tx, normalizedSku, parsedQty);
+      const inv = await decrementStock(tx, normalizedSku, parsedQty, cabang);
 
       const [inserted] = await tx
         .insert(barangRusak)
@@ -75,6 +76,7 @@ export async function POST(req: Request) {
           namaBarang: inv.namaBarang || namaBarang,
           qty: parsedQty,
           divisi,
+          cabang,
           keterangan: keterangan || null,
           createdBy: user,
         })
@@ -83,7 +85,7 @@ export async function POST(req: Request) {
       await tx.insert(logs).values({
         user,
         aksi: 'BARANG_RUSAK',
-        detail: `Mencatat barang rusak SKU: ${normalizedSku} (-${parsedQty} pcs). Ket: ${keterangan || '-'}`,
+        detail: `Mencatat barang rusak SKU: ${normalizedSku} (-${parsedQty} pcs) [${cabang}]. Ket: ${keterangan || '-'}`,
       });
 
       return inserted;

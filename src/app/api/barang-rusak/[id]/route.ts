@@ -27,7 +27,7 @@ export async function DELETE(
       const [item] = await tx.delete(barangRusak).where(eq(barangRusak.id, id)).returning();
       if (!item) throw new BusinessError('Data tidak ditemukan', 404);
 
-      await incrementStock(tx, item.sku, item.qty);
+      await incrementStock(tx, item.sku, item.qty, item.cabang);
 
       await tx.insert(logs).values({
         user,

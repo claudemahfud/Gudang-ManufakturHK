@@ -91,7 +91,7 @@ export async function PUT(
           const sisa = (it.qtyOrder ?? 0) - (it.qtyTerima ?? 0);
           if (sisa <= 0) continue;
 
-          await incrementStock(tx, normalizeSku(it.sku), sisa);
+          await incrementStock(tx, normalizeSku(it.sku), sisa, current.cabang);
 
           await tx
             .update(poLoadingItems)

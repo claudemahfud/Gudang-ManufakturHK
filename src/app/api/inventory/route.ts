@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/shared/lib/db';
-import { inventory, kontak } from '@/shared/lib/db/schema';
-import { sql, or, and, ilike, desc, eq } from 'drizzle-orm';
+import { inventory, kontak, stokCabang } from '@/shared/lib/db/schema';
+import { sql, or, and, ilike, desc, eq, getTableColumns } from 'drizzle-orm';
 import { auth } from '@/shared/lib/auth/config';
 import { canViewCostPrice, requireAuthRole, ROLES_WAREHOUSE } from '@/shared/lib/auth/rbac';
+import { incrementStock } from '@/shared/lib/stock';
 
 // ============================================================
 // API ROUTE: Master Inventory List & Create
@@ -60,8 +61,12 @@ export async function GET(req: NextRequest) {
       }
     }
 
+    // Barang tampil di cabang pemiliknya atau di cabang yang punya stoknya (hasil mutasi)
+    const stokDiCabang = effectiveCabang
+      ? sql`from ${stokCabang} where ${stokCabang.sku} = ${inventory.sku} and ${stokCabang.cabang} = ${effectiveCabang}`
+      : undefined;
     const cabangCondition = effectiveCabang
-      ? eq(inventory.cabang, effectiveCabang)
+      ? or(eq(inventory.cabang, effectiveCabang), sql`exists (select 1 ${stokDiCabang})`)
       : undefined;
 
     const conditions = [searchCondition, divisiCondition, cabangCondition].filter(Boolean) as any[];
@@ -77,13 +82,20 @@ export async function GET(req: NextRequest) {
     const totalPages = Math.ceil(total / limit) || 1;
 
     // Ambil data halaman saat ini
-    const items = await db
-      .select()
+    // stok = stok cabang aktif; tanpa filter cabang (SEMUA) = total semua cabang
+    const rows = await db
+      .select({
+        ...getTableColumns(inventory),
+        stokCabang: stokDiCabang
+          ? sql<number>`coalesce((select ${stokCabang.stok} ${stokDiCabang}), 0)`.mapWith(Number)
+          : sql<number | null>`null`,
+      })
       .from(inventory)
       .where(whereClause)
       .orderBy(desc(inventory.updatedAt), desc(inventory.createdAt))
       .limit(limit)
       .offset(offset);
+    const items = rows.map(({ stokCabang: sc, ...item }) => (sc === null ? item : { ...item, stok: sc }));
 
     // Sanitasi data: Akun bawahan (Petugas Gudang, Kasir, Salesman) tidak boleh melihat Harga Beli / HPP
     const allowHpp = canViewCostPrice(userRole);
@@ -227,8 +239,11 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Insert ke database
-    const [inserted] = await db
+    const stokAwal = Math.max(0, Math.trunc(Number(stok) || 0));
+
+    // Insert ke database; stok awal dicatat di stok_cabang cabang pemilik barang
+    const inserted = await db.transaction(async (tx) => {
+    const [row] = await tx
       .insert(inventory)
       .values({
         sku: normalizedSku,
@@ -236,7 +251,7 @@ export async function POST(req: NextRequest) {
         brand: brand?.trim() || null,
         gramasi: gramasi?.trim() || null,
         varian: varian?.trim() || null,
-        stok: Number(stok) || 0,
+        stok: 0,
         hargaBeli: hargaBeli !== undefined && hargaBeli !== '' ? String(hargaBeli) : '0',
         hargaJual: hargaJual !== undefined && hargaJual !== '' ? String(hargaJual) : '0',
         supplier: supplier?.trim() || null,
@@ -253,6 +268,12 @@ export async function POST(req: NextRequest) {
         updatedAt: new Date(),
       })
       .returning();
+      if (stokAwal > 0) {
+        await incrementStock(tx, row.sku, stokAwal, row.cabang);
+        row.stok = stokAwal;
+      }
+      return row;
+    });
 
     return NextResponse.json(
       {
