@@ -16,7 +16,13 @@ export interface InventoryOption {
   namaBarang: string;
   stok: number;
   hargaJual: string | null;
+  settingPcs?: number;
+  pakaiKarton?: boolean;
 }
+
+/** Isi pcs per karton; 0 bila barang tidak dijual per karton. */
+export const isiKarton = (p?: InventoryOption) =>
+  p?.pakaiKarton && (p.settingPcs ?? 1) > 1 ? (p.settingPcs as number) : 0;
 
 interface Kontak {
   id: string;
@@ -31,9 +37,10 @@ interface Baris {
   qty: number;
   hargaJual: number;
   diskon: number;
+  satuan: 'pcs' | 'karton';
 }
 
-const barisKosong = (): Baris => ({ sku: '', qty: 1, hargaJual: 0, diskon: 0 });
+const barisKosong = (): Baris => ({ sku: '', qty: 1, hargaJual: 0, diskon: 0, satuan: 'pcs' });
 const hariIni = () => {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -108,10 +115,18 @@ export default function FormFakturPenjualan({
 
   const pilihProduk = (i: number, sku: string) => {
     const p = invBySku.get(sku);
-    ubahBaris(i, { sku, hargaJual: p?.hargaJual ? parseFloat(p.hargaJual) : 0 });
+    ubahBaris(i, { sku, satuan: 'pcs', hargaJual: p?.hargaJual ? parseFloat(p.hargaJual) : 0 });
   };
 
-  const stokKurang = baris.some((b) => b.sku && b.qty > (invBySku.get(b.sku)?.stok ?? 0));
+  /** Ganti pcs <-> karton; harga ikut dikonversi dari harga jual per pcs master. */
+  const gantiSatuan = (i: number, satuan: Baris['satuan']) => {
+    const p = invBySku.get(baris[i].sku);
+    const hargaPcs = p?.hargaJual ? parseFloat(p.hargaJual) : 0;
+    ubahBaris(i, { satuan, hargaJual: satuan === 'karton' ? hargaPcs * isiKarton(p) : hargaPcs });
+  };
+
+  const qtyPcs = (b: Baris) => (b.satuan === 'karton' ? b.qty * isiKarton(invBySku.get(b.sku)) : b.qty);
+  const stokKurang = baris.some((b) => b.sku && qtyPcs(b) > (invBySku.get(b.sku)?.stok ?? 0));
   const barisTidakLengkap = baris.some((b) => !b.sku || !(b.qty > 0));
 
   const simpan = async (e: React.FormEvent) => {
@@ -134,7 +149,7 @@ export default function FormFakturPenjualan({
           alamat,
           salesman,
           keterangan: catatan,
-          items: baris.map((b) => ({ ...b, satuan: 'pcs' })),
+          items: baris,
           diskonFaktur: Number(diskonFaktur) || 0,
           ppnPersen: Number(ppnPersen) || 0,
           ongkir: Number(ongkir) || 0,
@@ -270,13 +285,14 @@ export default function FormFakturPenjualan({
               </div>
 
               <div className="border border-gray-200 rounded-xl overflow-x-auto">
-                <table className="w-full text-sm min-w-[720px]">
+                <table className="w-full text-sm min-w-[860px]">
                   <thead className="bg-slate-900 text-white text-[11px] uppercase tracking-wider">
                     <tr>
                       <th className="p-2.5 text-left w-8">#</th>
                       <th className="p-2.5 text-left">Produk</th>
                       <th className="p-2.5 text-center w-24">Qty</th>
-                      <th className="p-2.5 text-right w-36">Harga Satuan</th>
+                      <th className="p-2.5 text-left w-32">Beli</th>
+                      <th className="p-2.5 text-right w-36">Harga / Satuan</th>
                       <th className="p-2.5 text-center w-20">Disk %</th>
                       <th className="p-2.5 text-right w-36">Jumlah</th>
                       <th className="p-2.5 w-10" />
@@ -284,8 +300,10 @@ export default function FormFakturPenjualan({
                   </thead>
                   <tbody className="divide-y divide-gray-100">
                     {baris.map((b, i) => {
-                      const stok = invBySku.get(b.sku)?.stok;
-                      const lebih = !!b.sku && b.qty > (stok ?? 0);
+                      const produk = invBySku.get(b.sku);
+                      const stok = produk?.stok;
+                      const isi = isiKarton(produk);
+                      const lebih = !!b.sku && qtyPcs(b) > (stok ?? 0);
                       return (
                         <tr key={i} className="align-top">
                           <td className="p-2.5 text-gray-400 tabular-nums">{i + 1}</td>
@@ -316,7 +334,22 @@ export default function FormFakturPenjualan({
                               onChange={(e) => ubahBaris(i, { qty: parseInt(e.target.value, 10) || 0 })}
                               className={`${input} text-center font-bold tabular-nums ${lebih ? 'border-red-400 bg-red-50' : ''}`}
                             />
-                            {lebih && <div className="text-[10px] text-red-600 mt-0.5 text-center">Stok {stok ?? 0}</div>}
+                            {lebih && <div className="text-[10px] text-red-600 mt-0.5 text-center">Stok {stok ?? 0} pcs</div>}
+                            {!lebih && b.satuan === 'karton' && (
+                              <div className="text-[10px] text-gray-500 mt-0.5 text-center tabular-nums">= {qtyPcs(b)} pcs</div>
+                            )}
+                          </td>
+                          <td className="p-2">
+                            <select
+                              aria-label={`Satuan beli baris ${i + 1}`}
+                              value={b.satuan}
+                              disabled={!isi}
+                              onChange={(e) => gantiSatuan(i, e.target.value as Baris['satuan'])}
+                              className={`${input} disabled:bg-gray-50 disabled:text-gray-500`}
+                            >
+                              <option value="pcs">Satuan (pcs)</option>
+                              {isi > 0 && <option value="karton">Kartonan ({isi} pcs)</option>}
+                            </select>
                           </td>
                           <td className="p-2">
                             <input

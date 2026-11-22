@@ -162,7 +162,7 @@ export async function POST(req: Request) {
           { status: 400 }
         );
       }
-      baris.push({ sku, qty, hargaJual, diskon, satuan: it.satuan || 'pcs' });
+      baris.push({ sku, qty, hargaJual, diskon, satuan: it?.satuan === 'karton' ? 'karton' : 'pcs' });
     }
 
     const noFaktur = generateTrxId('FJ');
