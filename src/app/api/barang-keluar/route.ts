@@ -31,7 +31,7 @@ export async function GET(req: Request) {
     const user = session.user as any;
     const userRole = user?.role;
     const userCabang = user?.cabang || 'Pusat';
-    const isExecutive = ['Administrator', 'Direktur Utama', 'Manager'].includes(userRole);
+    const isExecutive = ['Administrator', 'Direktur Utama', 'Manager', 'Manager Umum'].includes(userRole);
 
     let conditions: any[] = [];
 
@@ -130,7 +130,7 @@ export async function POST(req: Request) {
     };
 
     const user = sessionUser?.name || sessionUser?.username || 'System';
-    const isExecutive = ['Administrator', 'Direktur Utama', 'Manager'].includes(sessionUser?.role ?? '');
+    const isExecutive = ['Administrator', 'Direktur Utama', 'Manager', 'Manager Umum'].includes(sessionUser?.role ?? '');
     const userCabang = sessionUser?.cabang || 'Pusat';
     const cabangToSave = (!isExecutive && userCabang !== 'ALL' && userCabang !== 'Pusat')
       ? userCabang

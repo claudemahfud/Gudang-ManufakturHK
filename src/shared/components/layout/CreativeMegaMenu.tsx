@@ -153,7 +153,7 @@ export default function CreativeMegaMenu({ userRole, isOpen, onClose }: MegaMenu
       desc: 'Analisis omzet, margin & tren sales',
       href: ROUTES.LAPORAN_PENJUALAN,
       icon: TrendingUp,
-      restricted: !['Administrator', 'Manager', 'Direktur Utama'].includes(userRole || ''),
+      restricted: !['Administrator', 'Manager', 'Manager Umum', 'Direktur Utama', 'Finance & Accounting'].includes(userRole || ''),
     },
     {
       title: 'Produk Detil Terjual',
@@ -212,21 +212,21 @@ export default function CreativeMegaMenu({ userRole, isOpen, onClose }: MegaMenu
       desc: 'Pencatatan kas masuk dan kas keluar',
       href: ROUTES.KEUANGAN,
       icon: Wallet,
-      restricted: !['Administrator', 'Manager', 'Direktur Utama'].includes(userRole || ''),
+      restricted: !['Administrator', 'Manager', 'Manager Umum', 'Direktur Utama', 'Finance & Accounting'].includes(userRole || ''),
     },
     {
       title: 'Neraca Keuangan',
       desc: 'Laporan aset, kewajiban & ekuitas',
       href: ROUTES.NERACA,
       icon: Scale,
-      restricted: !['Administrator', 'Manager', 'Direktur Utama'].includes(userRole || ''),
+      restricted: !['Administrator', 'Manager', 'Manager Umum', 'Direktur Utama', 'Finance & Accounting'].includes(userRole || ''),
     },
     {
       title: 'Biaya Operasional',
       desc: 'Beban operasional harian & bulanan',
       href: ROUTES.BIAYA_OPERASIONAL,
       icon: Receipt,
-      restricted: !['Administrator', 'Manager', 'Direktur Utama'].includes(userRole || ''),
+      restricted: !['Administrator', 'Manager', 'Manager Umum', 'Direktur Utama', 'Finance & Accounting'].includes(userRole || ''),
     },
     {
       title: 'Setting Profil Akun',
@@ -239,7 +239,7 @@ export default function CreativeMegaMenu({ userRole, isOpen, onClose }: MegaMenu
       desc: 'Isolasi data & penempatan lokasi cabang',
       href: ROUTES.CABANG,
       icon: Building2,
-      restricted: !['Administrator', 'Manager', 'Direktur Utama'].includes(userRole || ''),
+      restricted: !['Administrator', 'Manager', 'Manager Umum', 'Direktur Utama'].includes(userRole || ''),
     },
     {
       title: 'Manajemen Pengguna',

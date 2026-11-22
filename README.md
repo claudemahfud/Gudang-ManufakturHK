@@ -26,7 +26,7 @@ Sistem ini merekonstruksi seluruh fungsionalitas sistem pergudangan lama (Fireba
 15. **Target & Komisi (`/target-komisi`)**: Penetapan target bulanan sales dan kalkulasi otomatis komisi penjualan.
 16. **Expedisi & Armada (`/expedisi`)**: Manajemen kendaraan angkut barang beserta status operasional (Aktif/Servis).
 17. **Direktori Kontak (`/kontak`)**: Buku telepon pelanggan, toko grosir, dan supplier pabrik.
-18. **Manajemen Pengguna (`/users`)**: Manajemen akun staf dengan 14 tingkatan hak akses role (Administrator, Direktur, Kepala Gudang, Salesman, dll).
+18. **Manajemen Pengguna (`/users`)**: Manajemen akun staf dengan 19 tingkatan hak akses role (Administrator, Direktur, Manager Umum, Finance & Accounting, Kepala Gudang, Salesman, Sales Canvas, Sales Motoris, Sales Agent, dll).
 19. **Audit Trail Logs (`/logs`)**: Rekaman jejak audit seluruh aktivitas sistem gudang secara kronologis.
 20. **Public Stock API (`/api/public/stock`)**: Endpoint publik tanpa auth untuk pengecekan stok live dari aplikasi eksternal/salesman.
 

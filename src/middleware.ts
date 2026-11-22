@@ -15,21 +15,21 @@ const ROUTE_ROLES: Record<string, string[]> = {
   // Page routes
   [ROUTES.USERS]: ['Administrator'],
   [ROUTES.PENGATURAN_PERUSAHAAN]: ['Direktur Utama'],
-  [ROUTES.LOGS]: ['Administrator', 'Manager', 'Direktur Utama'],
-  [ROUTES.KEUANGAN]: ['Administrator', 'Manager', 'Direktur Utama', 'Kepala Gudang'],
-  [ROUTES.BIAYA_OPERASIONAL]: ['Administrator', 'Manager', 'Direktur Utama'],
-  [ROUTES.TARGET_KOMISI]: ['Administrator', 'Manager', 'Direktur Utama', 'Admin Salesman'],
-  [ROUTES.MONITOR_SALESMAN]: ['Administrator', 'Manager', 'Direktur Utama', 'Admin Salesman'],
-  [ROUTES.PENGAJUAN_DISKON]: ['Administrator', 'Manager', 'Direktur Utama', 'Admin Salesman', 'Salesman', 'Staff Admin Salesman'],
-  [ROUTES.LAPORAN_PENJUALAN]: ['Administrator', 'Manager', 'Direktur Utama', 'Kepala Gudang', 'Admin Salesman'],
+  [ROUTES.LOGS]: ['Administrator', 'Manager', 'Manager Umum', 'Direktur Utama'],
+  [ROUTES.KEUANGAN]: ['Administrator', 'Manager', 'Manager Umum', 'Direktur Utama', 'Kepala Gudang', 'Finance & Accounting'],
+  [ROUTES.BIAYA_OPERASIONAL]: ['Administrator', 'Manager', 'Manager Umum', 'Direktur Utama', 'Finance & Accounting'],
+  [ROUTES.TARGET_KOMISI]: ['Administrator', 'Manager', 'Manager Umum', 'Direktur Utama', 'Admin Salesman'],
+  [ROUTES.MONITOR_SALESMAN]: ['Administrator', 'Manager', 'Manager Umum', 'Direktur Utama', 'Admin Salesman'],
+  [ROUTES.PENGAJUAN_DISKON]: ['Administrator', 'Manager', 'Manager Umum', 'Direktur Utama', 'Admin Salesman', 'Salesman', 'Sales Canvas', 'Sales Motoris', 'Staff Admin Salesman'],
+  [ROUTES.LAPORAN_PENJUALAN]: ['Administrator', 'Manager', 'Manager Umum', 'Direktur Utama', 'Kepala Gudang', 'Admin Salesman', 'Finance & Accounting'],
 
   // API endpoints RBAC
   '/api/users': ['Administrator'],
-  '/api/logs': ['Administrator', 'Manager', 'Direktur Utama'],
-  '/api/keuangan': ['Administrator', 'Manager', 'Direktur Utama', 'Kepala Gudang'],
-  '/api/biaya-operasional': ['Administrator', 'Manager', 'Direktur Utama'],
-  '/api/target-komisi': ['Administrator', 'Manager', 'Direktur Utama', 'Admin Salesman'],
-  '/api/laporan/penjualan': ['Administrator', 'Manager', 'Direktur Utama', 'Kepala Gudang', 'Admin Salesman'],
+  '/api/logs': ['Administrator', 'Manager', 'Manager Umum', 'Direktur Utama'],
+  '/api/keuangan': ['Administrator', 'Manager', 'Manager Umum', 'Direktur Utama', 'Kepala Gudang', 'Finance & Accounting'],
+  '/api/biaya-operasional': ['Administrator', 'Manager', 'Manager Umum', 'Direktur Utama', 'Finance & Accounting'],
+  '/api/target-komisi': ['Administrator', 'Manager', 'Manager Umum', 'Direktur Utama', 'Admin Salesman'],
+  '/api/laporan/penjualan': ['Administrator', 'Manager', 'Manager Umum', 'Direktur Utama', 'Kepala Gudang', 'Admin Salesman', 'Finance & Accounting'],
 };
 
 export default auth((req: any) => {
