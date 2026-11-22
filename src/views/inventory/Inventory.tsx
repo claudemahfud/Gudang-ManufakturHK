@@ -301,6 +301,11 @@ export default function Inventory() {
         gramasi: form.gramasi.trim() || null,
         varian: form.varian.trim() || null,
         stok: Number(form.stok) || 0,
+        // Stok saat form dibuka: server hanya menerapkan selisihnya agar
+        // penjualan yang terjadi selama form terbuka tidak tertimpa.
+        ...(modalMode !== 'create' && {
+          stokAwal: Number(items.find((it) => it.sku === form.sku)?.stok ?? form.stok) || 0,
+        }),
         hargaBeli: Number(form.hargaBeli) || 0,
         hargaJual: Number(form.hargaJual) || 0,
         settingPcs: Math.max(1, Number(form.settingPcs) || 1),

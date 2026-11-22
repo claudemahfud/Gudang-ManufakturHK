@@ -1,9 +1,12 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/shared/lib/db';
-import { poLoading, poLoadingItems, inventory, logs } from '@/shared/lib/db/schema';
+import { poLoading, poLoadingItems, logs } from '@/shared/lib/db/schema';
 import { auth } from '@/shared/lib/auth/config';
 import { requireAuthRole, ROLES_WAREHOUSE } from '@/shared/lib/auth/rbac';
-import { eq, sql } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
+import { BusinessError, errorResponse, incrementStock, normalizeSku } from '@/shared/lib/stock';
+
+const PO_SELESAI = 'selesai';
 
 // ============================================================
 // API: /api/po-loading/[id]
@@ -56,18 +59,28 @@ export async function PUT(
     const { status, receiveAll } = body;
     const user = authResult.user?.name || authResult.user?.username || 'System';
 
-    let updatedResult: any;
+    if (typeof status !== 'string' || !status.trim()) {
+      return NextResponse.json({ success: false, message: 'Status PO wajib diisi' }, { status: 400 });
+    }
 
-    await db.transaction(async (tx) => {
+    const updatedResult = await db.transaction(async (tx) => {
+      // Kunci header PO agar penerimaan ganda (klik ulang / retry) antre
+      const [current] = await tx.select().from(poLoading).where(eq(poLoading.id, id)).for('update').limit(1);
+      if (!current) throw new BusinessError('PO tidak ditemukan', 404);
+
+      if (current.status === PO_SELESAI) {
+        if (receiveAll || status === PO_SELESAI) return current; // idempoten: tidak menambah stok lagi
+        throw new BusinessError('PO sudah selesai diterima dan tidak bisa diubah statusnya.');
+      }
+
+      const finalStatus = receiveAll ? PO_SELESAI : status;
       const [updated] = await tx
         .update(poLoading)
-        .set({ status, updatedAt: new Date() })
+        .set({ status: finalStatus, updatedAt: new Date() })
         .where(eq(poLoading.id, id))
         .returning();
 
-      updatedResult = updated;
-
-      // Jika receiveAll: tambah semua qtyOrder ke inventory
+      // Jika receiveAll: tambahkan hanya sisa yang belum diterima ke inventory
       if (receiveAll) {
         const items = await tx
           .select()
@@ -75,13 +88,10 @@ export async function PUT(
           .where(eq(poLoadingItems.poLoadingId, id));
 
         for (const it of items) {
-          await tx
-            .update(inventory)
-            .set({
-              stok: sql`${inventory.stok} + ${it.qtyOrder}`,
-              updatedAt: new Date(),
-            })
-            .where(eq(inventory.sku, it.sku));
+          const sisa = (it.qtyOrder ?? 0) - (it.qtyTerima ?? 0);
+          if (sisa <= 0) continue;
+
+          await incrementStock(tx, normalizeSku(it.sku), sisa);
 
           await tx
             .update(poLoadingItems)
@@ -93,13 +103,15 @@ export async function PUT(
       await tx.insert(logs).values({
         user,
         aksi: 'UPDATE_PO_LOADING',
-        detail: `Update PO ID: ${id} status: ${status}${receiveAll ? ' (Semua barang diterima ke stok)' : ''}`,
+        detail: `Update PO ID: ${id} status: ${current.status} -> ${finalStatus}${receiveAll ? ' (Sisa barang diterima ke stok)' : ''}`,
       });
+
+      return updated;
     });
 
     return NextResponse.json({ success: true, data: updatedResult });
-  } catch (err: any) {
-    return NextResponse.json({ success: false, message: err.message }, { status: 500 });
+  } catch (err) {
+    return errorResponse(err, 'PO_LOADING_PUT');
   }
 }
 

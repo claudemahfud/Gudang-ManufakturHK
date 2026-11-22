@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/shared/lib/db';
-import { barangKeluar, inventory, logs } from '@/shared/lib/db/schema';
+import { barangKeluar, keuangan, logs } from '@/shared/lib/db/schema';
 import { requireAuthRole, ROLES_EXECUTIVE } from '@/shared/lib/auth/rbac';
-import { eq, sql } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
+import { BusinessError, errorResponse, incrementStock } from '@/shared/lib/stock';
 
 // ============================================================
 // API: /api/barang-keluar/[id]
@@ -19,34 +20,32 @@ export async function DELETE(
     if (!authResult.authorized) return authResult.response;
 
     const { id } = await params;
-
-    const [item] = await db
-      .select()
-      .from(barangKeluar)
-      .where(eq(barangKeluar.id, id))
-      .limit(1);
-
-    if (!item) {
-      return NextResponse.json(
-        { success: false, message: 'Data pengeluaran tidak ditemukan' },
-        { status: 404 }
-      );
-    }
-
     const user = authResult.user?.name || authResult.user?.username || 'System';
 
     await db.transaction(async (tx) => {
-      // Rollback stok inventory (+ qty)
-      await tx
-        .update(inventory)
-        .set({
-          stok: sql`${inventory.stok} + ${item.qty}`,
-          updatedAt: new Date(),
-        })
-        .where(eq(inventory.sku, item.sku));
+      // Hapus dulu & ambil barisnya: bila dua request hapus bersamaan,
+      // hanya satu yang mendapat baris sehingga stok tidak dikembalikan dua kali.
+      const [item] = await tx.delete(barangKeluar).where(eq(barangKeluar.id, id)).returning();
+      if (!item) throw new BusinessError('Data pengeluaran tidak ditemukan', 404);
 
-      // Hapus baris pengeluaran
-      await tx.delete(barangKeluar).where(eq(barangKeluar.id, id));
+      // Rollback stok inventory (+ qty)
+      await incrementStock(tx, item.sku, item.qty);
+
+      // Penjualan POS sudah tercatat sebagai kas masuk: buat jurnal pembalik
+      // agar buku kas tetap sesuai dengan barang yang benar-benar terjual.
+      const total = Number(item.total ?? 0);
+      if (item.channel === 'POS' && total > 0) {
+        await tx.insert(keuangan).values({
+          tanggal: new Date(),
+          jenis: 'keluar',
+          kategori: 'Pembatalan Penjualan POS',
+          jumlah: String(total),
+          divisi: item.divisi,
+          cabang: item.cabang,
+          keterangan: `Pembatalan item ${item.sku} x${item.qty} dari transaksi POS #${item.trxId}`,
+          createdBy: authResult.user?.username ?? null,
+        });
+      }
 
       await tx.insert(logs).values({
         user,
@@ -56,7 +55,7 @@ export async function DELETE(
     });
 
     return NextResponse.json({ success: true, message: 'Data berhasil dihapus dan stok dikembalikan' });
-  } catch (err: any) {
-    return NextResponse.json({ success: false, message: err.message }, { status: 500 });
+  } catch (err) {
+    return errorResponse(err, 'BARANG_KELUAR_DELETE');
   }
 }

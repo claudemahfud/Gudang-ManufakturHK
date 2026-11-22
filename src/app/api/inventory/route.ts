@@ -3,7 +3,7 @@ import { db } from '@/shared/lib/db';
 import { inventory, kontak } from '@/shared/lib/db/schema';
 import { sql, or, and, ilike, desc, eq } from 'drizzle-orm';
 import { auth } from '@/shared/lib/auth/config';
-import { canViewCostPrice } from '@/shared/lib/auth/rbac';
+import { canViewCostPrice, requireAuthRole, ROLES_WAREHOUSE } from '@/shared/lib/auth/rbac';
 
 // ============================================================
 // API ROUTE: Master Inventory List & Create
@@ -118,13 +118,9 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const session = await auth();
-    if (!session) {
-      return NextResponse.json(
-        { success: false, error: 'Unauthorized: Harap login terlebih dahulu' },
-        { status: 401 }
-      );
-    }
+    const authResult = await requireAuthRole(ROLES_WAREHOUSE);
+    if (!authResult.authorized) return authResult.response;
+    const session = { user: authResult.user };
 
     const user = session?.user as any;
     const userRole = user?.role;

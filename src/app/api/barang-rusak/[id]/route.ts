@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/shared/lib/db';
-import { barangRusak, inventory, logs } from '@/shared/lib/db/schema';
+import { barangRusak, logs } from '@/shared/lib/db/schema';
 import { requireAuthRole, ROLES_WAREHOUSE } from '@/shared/lib/auth/rbac';
-import { eq, sql } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
+import { BusinessError, errorResponse, incrementStock } from '@/shared/lib/stock';
 
 // ============================================================
 // API: /api/barang-rusak/[id]
@@ -19,33 +20,14 @@ export async function DELETE(
     if (!authResult.authorized) return authResult.response;
 
     const { id } = await params;
-
-    const [item] = await db
-      .select()
-      .from(barangRusak)
-      .where(eq(barangRusak.id, id))
-      .limit(1);
-
-    if (!item) {
-      return NextResponse.json(
-        { success: false, message: 'Data tidak ditemukan' },
-        { status: 404 }
-      );
-    }
-
     const user = authResult.user?.name || authResult.user?.username || 'System';
 
     await db.transaction(async (tx) => {
-      // Kembalikan stok
-      await tx
-        .update(inventory)
-        .set({
-          stok: sql`${inventory.stok} + ${item.qty}`,
-          updatedAt: new Date(),
-        })
-        .where(eq(inventory.sku, item.sku));
+      // Hapus & ambil barisnya dalam satu langkah (aman dari klik ganda)
+      const [item] = await tx.delete(barangRusak).where(eq(barangRusak.id, id)).returning();
+      if (!item) throw new BusinessError('Data tidak ditemukan', 404);
 
-      await tx.delete(barangRusak).where(eq(barangRusak.id, id));
+      await incrementStock(tx, item.sku, item.qty);
 
       await tx.insert(logs).values({
         user,
@@ -55,7 +37,7 @@ export async function DELETE(
     });
 
     return NextResponse.json({ success: true, message: 'Data berhasil dihapus' });
-  } catch (err: any) {
-    return NextResponse.json({ success: false, message: err.message }, { status: 500 });
+  } catch (err) {
+    return errorResponse(err, 'BARANG_RUSAK_DELETE');
   }
 }

@@ -91,6 +91,17 @@ export const ROLES_POS: UserRole[] = [
   'Staff Admin Agen',
 ];
 
+// Pengeluaran barang (grosir/loading): tim gudang + tim penjualan
+export const ROLES_STOCK_OUT: UserRole[] = ROLES_POS;
+
+// Koreksi stok langsung di master inventory (stock opname): pimpinan & kepala gudang
+export const ROLES_STOCK_ADJUST: UserRole[] = [
+  'Administrator',
+  'Direktur Utama',
+  'Manager',
+  'Kepala Gudang',
+];
+
 /**
  * Cek apakah sebuah role berhak melihat Harga Beli / HPP Modal rahasia perusahaan
  */

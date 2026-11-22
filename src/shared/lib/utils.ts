@@ -79,7 +79,11 @@ export function generateTrxId(prefix: string = 'TRX'): string {
   const now = new Date();
   const date = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
   const time = `${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}${String(now.getSeconds()).padStart(2, '0')}`;
-  const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+  // 6 byte acak kriptografis (12 hex): peluang bentrok praktis nol, beda dari
+  // 3 digit Math.random() lama yang mudah bentrok saat transaksi ramai.
+  const bytes = new Uint8Array(6);
+  globalThis.crypto.getRandomValues(bytes);
+  const random = Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('').toUpperCase();
   return `${prefix}-${date}-${time}-${random}`;
 }
 
