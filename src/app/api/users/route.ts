@@ -3,11 +3,7 @@ import { db } from '@/shared/lib/db';
 import { users, logs } from '@/shared/lib/db/schema';
 import { auth } from '@/shared/lib/auth/config';
 import { desc, eq } from 'drizzle-orm';
-import crypto from 'crypto';
-
-function sha256(str: string): string {
-  return crypto.createHash('sha256').update(str).digest('hex');
-}
+import { hashPassword } from '@/shared/lib/auth/password';
 
 // ============================================================
 // API: /api/users
@@ -73,7 +69,7 @@ export async function POST(req: Request) {
       );
     }
 
-    const passwordHash = sha256(password);
+    const passwordHash = await hashPassword(String(password));
     const [newUser] = await db
       .insert(users)
       .values({
