@@ -19,7 +19,7 @@ export async function GET() {
     // Jika sales biasa, hanya boleh melihat target & komisi miliknya sendiri
     let query = db.select().from(targetKomisi);
     let items;
-    if (userRole === 'Salesman' || userRole === 'Agen') {
+    if (userRole === 'Salesman' || userRole === 'Sales Canvas' || userRole === 'Sales Motoris' || userRole === 'Agen' || userRole === 'Sales Agent') {
       items = await db
         .select()
         .from(targetKomisi)
@@ -43,7 +43,7 @@ export async function GET() {
 export async function POST(req: Request) {
   try {
     // Hanya manajemen / admin salesman yang boleh membuat/mengubah target
-    const authResult = await requireAuthRole(['Administrator', 'Direktur Utama', 'Manager', 'Admin Salesman']);
+    const authResult = await requireAuthRole(['Administrator', 'Direktur Utama', 'Manager', 'Manager Umum', 'Admin Salesman']);
     if (!authResult.authorized) return authResult.response;
 
     const body = await req.json();

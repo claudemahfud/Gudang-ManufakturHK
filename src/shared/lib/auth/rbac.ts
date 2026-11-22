@@ -13,6 +13,7 @@ export const ROLES_EXECUTIVE: UserRole[] = [
   'Administrator',
   'Direktur Utama',
   'Manager',
+  'Manager Umum',
 ];
 
 // Keuangan, Neraca & Arus Kas: Khusus pimpinan (Akun bawahan tidak boleh akses)
@@ -20,6 +21,8 @@ export const ROLES_FINANCE: UserRole[] = [
   'Administrator',
   'Direktur Utama',
   'Manager',
+  'Manager Umum',
+  'Finance & Accounting',
 ];
 
 // Laporan Laba Bersih, Margin Profit & HPP: Khusus pimpinan
@@ -27,6 +30,8 @@ export const ROLES_PROFIT_MARGIN: UserRole[] = [
   'Administrator',
   'Direktur Utama',
   'Manager',
+  'Manager Umum',
+  'Finance & Accounting',
 ];
 
 // Manajemen Pengguna & Hak Akses
@@ -43,6 +48,7 @@ export const ROLES_RECIPE_BOM: UserRole[] = [
   'Administrator',
   'Direktur Utama',
   'Manager',
+  'Manager Umum',
   'Kepala Gudang',
 ];
 
@@ -50,6 +56,7 @@ export const ROLES_WAREHOUSE: UserRole[] = [
   'Administrator',
   'Direktur Utama',
   'Manager',
+  'Manager Umum',
   'Kepala Gudang',
   'Wakil Gudang',
   'Staff Gudang',
@@ -59,10 +66,14 @@ export const ROLES_SALES_OPS: UserRole[] = [
   'Administrator',
   'Direktur Utama',
   'Manager',
+  'Manager Umum',
   'Admin Salesman',
   'Staff Admin Salesman',
   'Salesman',
+  'Sales Canvas',
+  'Sales Motoris',
   'Agen',
+  'Sales Agent',
   'Admin Agen',
   'Staff Admin Agen',
 ];
@@ -71,6 +82,7 @@ export const ROLES_EXPEDISI: UserRole[] = [
   'Administrator',
   'Direktur Utama',
   'Manager',
+  'Manager Umum',
   'Kepala Gudang',
   'Kepala Expedisi',
   'Staff Expedisi',
@@ -80,13 +92,17 @@ export const ROLES_POS: UserRole[] = [
   'Administrator',
   'Direktur Utama',
   'Manager',
+  'Manager Umum',
   'Kepala Gudang',
   'Wakil Gudang',
   'Staff Gudang',
   'Salesman',
+  'Sales Canvas',
+  'Sales Motoris',
   'Admin Salesman',
   'Staff Admin Salesman',
   'Agen',
+  'Sales Agent',
   'Admin Agen',
   'Staff Admin Agen',
 ];
@@ -99,6 +115,7 @@ export const ROLES_STOCK_ADJUST: UserRole[] = [
   'Administrator',
   'Direktur Utama',
   'Manager',
+  'Manager Umum',
   'Kepala Gudang',
 ];
 

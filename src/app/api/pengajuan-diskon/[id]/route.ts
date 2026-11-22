@@ -14,7 +14,7 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const authResult = await requireAuthRole(['Administrator', 'Direktur Utama', 'Manager', 'Admin Salesman']);
+    const authResult = await requireAuthRole(['Administrator', 'Direktur Utama', 'Manager', 'Manager Umum', 'Admin Salesman']);
     if (!authResult.authorized) return authResult.response;
 
     const { id } = await params;
@@ -48,7 +48,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const authResult = await requireAuthRole(['Administrator', 'Direktur Utama', 'Manager']);
+    const authResult = await requireAuthRole(['Administrator', 'Direktur Utama', 'Manager', 'Manager Umum']);
     if (!authResult.authorized) return authResult.response;
 
     const { id } = await params;

@@ -16,7 +16,7 @@ export async function GET() {
     if (!authResult.authorized) return authResult.response;
 
     const { user, userRole } = authResult;
-    const isExecutive = ['Administrator', 'Direktur Utama', 'Manager'].includes(userRole);
+    const isExecutive = ['Administrator', 'Direktur Utama', 'Manager', 'Manager Umum'].includes(userRole);
 
     let list = await db.select().from(cashOpname).orderBy(desc(cashOpname.tanggal)).limit(100);
 

@@ -18,7 +18,7 @@ export async function GET() {
 
     // Jika Salesman biasa, hanya tampilkan permohonan diskon miliknya sendiri
     let items;
-    if (userRole === 'Salesman' || userRole === 'Agen') {
+    if (userRole === 'Salesman' || userRole === 'Sales Canvas' || userRole === 'Sales Motoris' || userRole === 'Agen' || userRole === 'Sales Agent') {
       items = await db
         .select()
         .from(diskonRequest)
