@@ -90,8 +90,17 @@ export async function GET(req: NextRequest) {
       totalHutangUsaha = 0;
     }
 
-    // 4. Hitung Komponen Neraca
-    const totalAsetLancar = saldoKasBank + totalPersediaan;
+    // 4. Piutang Usaha: sisa tagihan Faktur Penjualan yang dihutangkan ke pelanggan.
+    //    Barangnya sudah keluar dari persediaan, uangnya belum masuk kas.
+    const piutangRows = (await db.execute(
+      divisiParam && divisiParam !== 'SEMUA'
+        ? sql`SELECT COALESCE(SUM(sisa_piutang), 0) AS total FROM faktur_penjualan WHERE sisa_piutang > 0 AND divisi = ${divisiParam}`
+        : sql`SELECT COALESCE(SUM(sisa_piutang), 0) AS total FROM faktur_penjualan WHERE sisa_piutang > 0`
+    )) as unknown as { total: string | number }[];
+    const totalPiutangUsaha = Number(piutangRows?.[0]?.total || 0);
+
+    // 5. Hitung Komponen Neraca
+    const totalAsetLancar = saldoKasBank + totalPiutangUsaha + totalPersediaan;
     const asetTetap = 0;
     const totalAset = totalAsetLancar + asetTetap;
     const totalKewajiban = totalHutangUsaha;
@@ -103,6 +112,7 @@ export async function GET(req: NextRequest) {
         divisi: divisiParam || 'SEMUA',
         aset: {
           kasBank: saldoKasBank,
+          piutangUsaha: totalPiutangUsaha,
           persediaan: totalPersediaan,
           persediaanBreakdown: {
             manufaktur: nilaiPersediaanManufaktur,

@@ -125,6 +125,7 @@ export async function buatFakturPenjualan(tx: Tx, f: FakturPenjualanInput) {
       divisi: f.divisi,
       cabang: f.cabang,
       keterangan: `${h.status === 'lunas' ? 'Pelunasan' : 'Uang muka'} faktur ${f.noFaktur} (${LABEL_METODE[f.metodeBayar]}) dari ${f.pelanggan}`,
+      referensi: f.noFaktur,
       createdBy: f.user,
     });
   }
@@ -150,6 +151,7 @@ export async function batalkanFakturPenjualan(tx: Tx, noFaktur: string, user: st
   const rows = await tx.delete(barangKeluar).where(eq(barangKeluar.trxId, noFaktur)).returning();
   for (const r of rows) await incrementStock(tx, r.sku, r.qty, r.cabang);
 
+  // dibayar di header sudah termasuk semua cicilan, jadi seluruh kas faktur ikut dibalik
   const dibayar = Number(faktur.dibayar) || 0;
   if (dibayar > 0) {
     await tx.insert(keuangan).values({
@@ -160,6 +162,7 @@ export async function batalkanFakturPenjualan(tx: Tx, noFaktur: string, user: st
       divisi: faktur.divisi,
       cabang: faktur.cabang,
       keterangan: `Pembatalan faktur ${noFaktur} (${faktur.pelanggan}): pengembalian pembayaran`,
+      referensi: noFaktur,
       createdBy: username,
     });
   }
