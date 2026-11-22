@@ -50,7 +50,7 @@ Aplikasi ini sudah memiliki **25+ modul lengkap** yang siap pakai:
 ### 2. Modul Utama & Gudang
 * **Dashboard Utama** (`/dashboard`): Live monitor aset inventory, total master SKU, alert stok kritis, dan grafik stok brand.
 * **Master Inventory** (`/inventory`): Master data SKU, nama barang, brand, gramasi, varian, harga beli, harga jual, setting karton/pcs, dan stok minimum.
-* **Barang Masuk** (`/barang-masuk`): Penerimaan stok supplier & nomor faktur.
+* **Barang Masuk** (`/barang-masuk`): Penerimaan stok supplier & nomor faktur. Pencatatan per barang lewat `src/shared/lib/barang-masuk.ts` (`catatBarangMasuk` + `catatPembayaranPembelian`). Daftar **PO Dalam Proses** (status `dipesan` / `sebagian`): "Barang Datang" = Faktur Pembelian dari PO (`POST /api/po-loading/[id]/faktur`, logika di `src/shared/lib/po-faktur.ts`), qty bisa kurang dari pesanan (PO jadi `sebagian`), lalu pop-up barang cacat/rusak ke formulir Return di `/laporan-rusak-retur`.
 * **Barang Keluar** (`/barang-keluar`): Pengiriman/penjualan grosir & cetak invoice. Dilengkapi proteksi **PIN Supervisor Anti-Fraud** saat menghapus data riwayat transaksi penjualan/pengeluaran untuk melindungi integritas laporan omset tunai.
 * **Mutasi Barang** (`/mutasi-barang`): Pemindahan stok antar **cabang** (stok cabang asal berkurang, cabang tujuan bertambah, atomik). Stok per cabang di tabel `stok_cabang`; `inventory.stok` = total semua cabang. Semua perubahan stok wajib lewat `src/shared/lib/stock.ts` (`decrementStock` / `incrementStock` dengan parameter cabang).
 * **Stok Kritis** (`/stok-kritis`): Peringatan dini barang yang mendekati limit minimum.
@@ -63,7 +63,7 @@ Aplikasi ini sudah memiliki **25+ modul lengkap** yang siap pakai:
 
 ### 3. Modul Dokumen & Logistik
 * **Surat Jalan** (`/surat-jalan`): Pembuatan surat jalan pengiriman, ekspedisi, armada, dan item delivery.
-* **PO Loading** (`/po-loading`): Perintah muat barang ke armada truk/mobil.
+* **PO Loading** (`/po-loading`): Purchase Order ke suplier (formulir, unduh PDF/PNG, kirim manual). PO **tidak mengubah stok**; status di `src/shared/lib/po-status.ts`. PO yang sudah ada barang diterima tidak bisa dihapus (hanya dibatalkan).
 * **Retur Barang** (`/retur-barang`): Manajemen klaim retur barang dari pelanggan.
 
 ### 4. Modul Keuangan & Biaya

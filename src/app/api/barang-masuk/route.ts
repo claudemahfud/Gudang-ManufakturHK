@@ -1,10 +1,10 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/shared/lib/db';
-import { barangMasuk, inventory, logs, keuangan, hutangSupplier, kontak } from '@/shared/lib/db/schema';
+import { barangMasuk, logs, kontak } from '@/shared/lib/db/schema';
 import { auth } from '@/shared/lib/auth/config';
 import { requireAuthRole, ROLES_WAREHOUSE } from '@/shared/lib/auth/rbac';
 import { eq, desc, and, gte, lte, or } from 'drizzle-orm';
-import { incrementStock } from '@/shared/lib/stock';
+import { catatBarangMasuk, catatPembayaranPembelian, resolveJatuhTempo } from '@/shared/lib/barang-masuk';
 
 // ============================================================
 // API: /api/barang-masuk
@@ -134,9 +134,7 @@ export async function POST(req: Request) {
     const totalBeli = parsedQty * unitPrice;
     const paymentScheme = (skemaBayar || 'lunas').toLowerCase() === 'hutang' ? 'hutang' : 'lunas';
     const parsedTanggal = tanggal ? new Date(tanggal) : new Date();
-    const parsedJatuhTempo = paymentScheme === 'hutang'
-      ? (jatuhTempo ? new Date(jatuhTempo) : new Date(parsedTanggal.getTime() + 30 * 24 * 60 * 60 * 1000))
-      : null;
+    const parsedJatuhTempo = resolveJatuhTempo(paymentScheme, parsedTanggal, jatuhTempo);
 
     const sessionUser = session.user as any;
     const user = sessionUser?.name || sessionUser?.username || 'System';
@@ -146,115 +144,44 @@ export async function POST(req: Request) {
       ? userCabang
       : (body.cabang || 'Pusat');
     const divisiToSave = body.divisi || 'MANUFAKTUR';
+    const skuNorm = sku.trim().toUpperCase();
 
     let insertedRecord: any = null;
 
     // Transaksi ACID untuk menjamin konsistensi Barang Masuk, Stok Inventory, Arus Kas, dan Neraca Hutang
     await db.transaction(async (tx) => {
-      // 1. Insert Barang Masuk
-      const [inserted] = await tx
-        .insert(barangMasuk)
-        .values({
-          tanggal: parsedTanggal,
-          sku: sku.trim().toUpperCase(),
-          namaBarang: namaBarang.trim(),
-          qty: parsedQty,
-          satuan: satuan || 'pcs',
-          hargaBeli: String(unitPrice),
-          totalBeli: String(totalBeli),
-          supplier: supplier.trim(),
-          noFaktur: noFaktur?.trim() || null,
-          skemaBayar: paymentScheme,
-          jatuhTempo: parsedJatuhTempo,
-          divisi: divisiToSave,
-          cabang: cabangToSave,
-          keterangan: keterangan || null,
-          createdBy: user,
-        })
-        .returning();
-
-      insertedRecord = inserted;
-
-      // 2. Update atau Insert Stok di Master Inventory
-      // FOR UPDATE: dua penerimaan bersamaan antre, sehingga rata-rata HPP
-      // dihitung dari stok & harga terbaru, bukan nilai basi.
-      const [existingInv] = await tx
-        .select()
-        .from(inventory)
-        .where(eq(inventory.sku, sku.trim().toUpperCase()))
-        .for('update')
-        .limit(1);
-
-      if (existingInv) {
-        // Strategi Akuntansi Persediaan: Moving Weighted Average Cost (Rata-rata Tertimbang)
-        // Jika muatan baru memiliki harga beli berbeda dari suplier, hitung HPP rata-rata tertimbang
-        const curStock = Number(existingInv.stok) || 0;
-        const curPrice = parseFloat(existingInv.hargaBeli as string) || unitPrice;
-        const newStock = curStock + parsedQty;
-
-        let finalHargaBeli = unitPrice;
-        if (newStock > 0 && curStock > 0 && unitPrice > 0) {
-          finalHargaBeli = Math.round(((curStock * curPrice) + (parsedQty * unitPrice)) / newStock);
-        } else if (unitPrice <= 0) {
-          finalHargaBeli = curPrice;
-        }
-
-        await tx
-          .update(inventory)
-          .set({
-            hargaBeli: String(finalHargaBeli),
-            supplier: supplier.trim(),
-            updatedAt: new Date(),
-          })
-          .where(eq(inventory.sku, sku.trim().toUpperCase()));
-      } else {
-        await tx
-          .insert(inventory)
-          .values({
-            sku: sku.trim().toUpperCase(),
-            namaBarang: namaBarang.trim(),
-            stok: 0, // diisi incrementStock di bawah
-            hargaBeli: String(unitPrice),
-            hargaJual: '0',
-            supplier: supplier.trim(),
-            divisi: divisiToSave,
-            cabang: cabangToSave,
-            tipeItem: divisiToSave === 'FNB' ? 'bahan_baku' : 'barang_jadi',
-          });
-      }
-
-      // Stok masuk ke cabang penerima (stok_cabang + total inventory)
-      await incrementStock(tx, sku.trim().toUpperCase(), parsedQty, cabangToSave);
+      // 1-2. Catat barang masuk, HPP rata-rata, dan stok cabang
+      const { row } = await catatBarangMasuk(tx, {
+        tanggal: parsedTanggal,
+        sku: skuNorm,
+        namaBarang: namaBarang.trim(),
+        qty: parsedQty,
+        satuan: satuan || 'pcs',
+        hargaBeli: unitPrice,
+        supplier: supplier.trim(),
+        noFaktur: noFaktur?.trim() || null,
+        skemaBayar: paymentScheme,
+        jatuhTempo: parsedJatuhTempo,
+        divisi: divisiToSave,
+        cabang: cabangToSave,
+        keterangan: keterangan || null,
+        user,
+      });
+      insertedRecord = row;
 
       // 3. Alur Kas & Neraca Otomatis
-      if (totalBeli > 0) {
-        if (paymentScheme === 'lunas') {
-          // Skema Bayar Lunas: Kas berkurang (Kredit), tercatat di Buku Keuangan
-          await tx.insert(keuangan).values({
-            tanggal: parsedTanggal,
-            jenis: 'keluar',
-            kategori: 'Pembelian Barang Supplier',
-            jumlah: String(totalBeli),
-            divisi: divisiToSave,
-            cabang: cabangToSave,
-            keterangan: `Pembelian lunas ${namaBarang} (${sku}) x${parsedQty} ${satuan || 'pcs'} dari suplier ${supplier.trim()}. Faktur: ${noFaktur || '-'}`,
-            createdBy: user,
-          });
-        } else {
-          // Skema Hutang / Credit: Kas tidak berkurang, tercatat di Hutang Supplier (Kewajiban Neraca)
-          await tx.insert(hutangSupplier).values({
-            supplier: supplier.trim(),
-            noFaktur: noFaktur?.trim() || `BM-${Date.now()}`,
-            tanggal: parsedTanggal,
-            jatuhTempo: parsedJatuhTempo,
-            totalHutang: String(totalBeli),
-            sisaHutang: String(totalBeli),
-            status: 'belum_lunas',
-            divisi: divisiToSave,
-            catatan: `Pengadaan barang masuk kredit ${namaBarang} (${sku}) sebanyak ${parsedQty} ${satuan || 'pcs'}`,
-          });
-        }
-      }
+      await catatPembayaranPembelian(tx, {
+        tanggal: parsedTanggal,
+        total: totalBeli,
+        supplier: supplier.trim(),
+        noFaktur: noFaktur?.trim() || null,
+        skemaBayar: paymentScheme,
+        jatuhTempo: parsedJatuhTempo,
+        divisi: divisiToSave,
+        cabang: cabangToSave,
+        uraian: `${namaBarang} (${sku}) x${parsedQty} ${satuan || 'pcs'}`,
+        user,
+      });
 
       // 4. Audit Log
       await tx.insert(logs).values({
