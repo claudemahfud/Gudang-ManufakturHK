@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/shared/lib/db';
-import { barangKeluar } from '@/shared/lib/db/schema';
+import { barangKeluar, fakturPenjualan } from '@/shared/lib/db/schema';
 import { auth } from '@/shared/lib/auth/config';
 import { eq } from 'drizzle-orm';
 
@@ -35,10 +35,17 @@ export async function GET(
 
     const first = items[0];
     const totalSemua = items.reduce((acc, curr) => acc + parseFloat(curr.total || '0'), 0);
+    // Faktur Penjualan (transaksi baru): ringkasan, pembayaran & piutang. Transaksi lama: null.
+    const [faktur] = await db
+      .select()
+      .from(fakturPenjualan)
+      .where(eq(fakturPenjualan.noFaktur, trxId))
+      .limit(1);
 
     return NextResponse.json({
       success: true,
       data: {
+        faktur: faktur ?? null,
         trxId: first.trxId,
         tanggal: first.tanggal,
         pelanggan: first.pelanggan,
