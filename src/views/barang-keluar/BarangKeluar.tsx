@@ -23,9 +23,11 @@ import {
 import DocumentModalViewer, { DocumentData } from '@/shared/components/documents/DocumentModalViewer';
 import { exportToCsv, exportRekapToPdfA4Landscape } from '@/shared/lib/exportDoc';
 import DateTimeFilterBar from '@/shared/components/ui/DateTimeFilterBar';
+import FormFakturPenjualan, { type InventoryOption } from './FormFakturPenjualan';
+import { LABEL_METODE, LABEL_STATUS, type MetodeBayar, type StatusFaktur } from '@/shared/lib/faktur-hitung';
 
 // ============================================================
-// PAGE: Barang Keluar & Loading Penjualan
+// PAGE: Barang Keluar & Faktur Penjualan
 // Route: /barang-keluar
 // ============================================================
 
@@ -46,22 +48,6 @@ interface ItemKeluar {
   createdBy: string | null;
 }
 
-interface InventoryOption {
-  sku: string;
-  namaBarang: string;
-  stok: number;
-  hargaJual: string | null;
-}
-
-interface LineItem {
-  sku: string;
-  namaBarang: string;
-  qty: number;
-  satuan: string;
-  hargaJual: number;
-  diskon: number;
-}
-
 export default function BarangKeluar() {
   // ============================================================
   // SECTION: State & Hooks
@@ -77,17 +63,7 @@ export default function BarangKeluar() {
 
   // Modal Create
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
-  const [tanggal, setTanggal] = useState(new Date().toISOString().split('T')[0]);
-  const [pelanggan, setPelanggan] = useState('');
-  const [salesman, setSalesman] = useState('');
-  const [keterangan, setKeterangan] = useState('');
-  const [items, setItems] = useState<LineItem[]>([
-    { sku: '', namaBarang: '', qty: 1, satuan: 'pcs', hargaJual: 0, diskon: 0 },
-  ]);
 
-  // Modal Invoice View
-  const [invoiceData, setInvoiceData] = useState<any | null>(null);
   const [selectedDocument, setSelectedDocument] = useState<DocumentData | null>(null);
 
   // Supervisor PIN Delete Protection (Anti-Fraud)
@@ -154,88 +130,6 @@ export default function BarangKeluar() {
     setTimeout(() => setToast(null), 3000);
   };
 
-  // ============================================================
-  // SECTION: Line Items Handlers
-  // ============================================================
-  const addItemRow = () => {
-    setItems((prev) => [
-      ...prev,
-      { sku: '', namaBarang: '', qty: 1, satuan: 'pcs', hargaJual: 0, diskon: 0 },
-    ]);
-  };
-
-  const removeItemRow = (index: number) => {
-    if (items.length === 1) return;
-    setItems((prev) => prev.filter((_, idx) => idx !== index));
-  };
-
-  const updateItemRow = (index: number, field: keyof LineItem, value: any) => {
-    setItems((prev) => {
-      const updated = [...prev];
-      if (field === 'sku') {
-        const prod = inventoryList.find((i) => i.sku === value);
-        updated[index] = {
-          ...updated[index],
-          sku: value,
-          namaBarang: prod ? prod.namaBarang : '',
-          hargaJual: prod?.hargaJual ? parseFloat(prod.hargaJual) : 0,
-        };
-      } else {
-        updated[index] = { ...updated[index], [field]: value };
-      }
-      return updated;
-    });
-  };
-
-  // ============================================================
-  // SECTION: Submit Loading Form
-  // ============================================================
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (submitting) return;
-    if (!pelanggan) {
-      showToast('Nama pelanggan wajib diisi', 'error');
-      return;
-    }
-
-    const invalid = items.some((i) => !i.sku || i.qty <= 0);
-    if (invalid) {
-      showToast('Mohon lengkapi SKU dan kuantitas produk', 'error');
-      return;
-    }
-
-    setSubmitting(true);
-    try {
-      const res = await fetch('/api/barang-keluar', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          tanggal,
-          pelanggan,
-          salesman,
-          keterangan,
-          items,
-        }),
-      });
-      const json = await res.json();
-      if (json.success) {
-        showToast(`Transaksi berhasil dicatat: ${json.trxId}`, 'success');
-        setIsModalOpen(false);
-        setPelanggan('');
-        setSalesman('');
-        setKeterangan('');
-        setItems([{ sku: '', namaBarang: '', qty: 1, satuan: 'pcs', hargaJual: 0, diskon: 0 }]);
-        fetchData();
-      } else {
-        showToast(json.message || 'Gagal menyimpan transaksi', 'error');
-      }
-    } catch {
-      showToast('Terjadi kesalahan koneksi', 'error');
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
   const handleRequestDelete = (item: ItemKeluar) => {
     setDeleteTarget(item);
     setDeletePinInput('');
@@ -256,7 +150,8 @@ export default function BarangKeluar() {
       });
       const json = await res.json();
       if (json.success) {
-        showToast('Transaksi berhasil dihapus & stok telah dikembalikan ke inventory', 'success');
+        showToast(json.message || 'Transaksi berhasil dihapus & stok telah dikembalikan ke inventory', 'success');
+        fetchInventory();
         setDeleteTarget(null);
         setDeletePinInput('');
         fetchData();
@@ -275,16 +170,48 @@ export default function BarangKeluar() {
       const res = await fetch(`/api/barang-keluar/invoice/${trxId}`);
       const json = await res.json();
       if (json.success) {
-        setInvoiceData(json.data);
+        // Faktur Penjualan baru: ringkasan, pembayaran & piutang dari header faktur.
+        // Transaksi lama (sebelum faktur): hanya total baris.
+        const f = json.data.faktur as {
+          noFaktur: string;
+          jatuhTempo: string | null;
+          telepon: string | null;
+          alamat: string | null;
+          subtotal: string;
+          diskonFaktur: string;
+          ppnPersen: string;
+          ppn: string;
+          ongkir: string;
+          grandTotal: string;
+          metodeBayar: MetodeBayar;
+          dibayar: string;
+          sisaPiutang: string;
+          status: StatusFaktur;
+          catatan: string | null;
+        } | null;
+        const n = (v: string | null | undefined) => Number(v) || 0;
         setSelectedDocument({
           type: 'faktur_penjualan',
-          nomor: json.data.trxId || `INV-${trxId}`,
+          nomor: f?.noFaktur || json.data.trxId || `INV-${trxId}`,
           tanggal: json.data.tanggal,
           pihakTerkaitLabel: 'Pelanggan / Toko:',
           pihakTerkaitNama: json.data.pelanggan || 'Pelanggan Grosir B2B',
-          kontakInfo: 'Penjualan Saluran B2B / Grosir',
+          kontakInfo: f ? [f.alamat, f.telepon].filter(Boolean).join(' · ') || null : 'Penjualan Saluran B2B / Grosir',
           petugasLabel: 'Salesman / Sales:',
           petugasNama: json.data.salesman || json.data.createdBy || 'Admin Penjualan',
+          skemaBayar: f ? LABEL_METODE[f.metodeBayar] : null,
+          jatuhTempo: f && n(f.sisaPiutang) > 0 ? f.jatuhTempo : null,
+          ringkasan: f
+            ? [
+                { label: 'Subtotal', nilai: n(f.subtotal) },
+                ...(n(f.diskonFaktur) > 0 ? [{ label: 'Diskon Faktur', nilai: -n(f.diskonFaktur) }] : []),
+                ...(n(f.ppn) > 0 ? [{ label: `PPN ${n(f.ppnPersen)}%`, nilai: n(f.ppn) }] : []),
+                ...(n(f.ongkir) > 0 ? [{ label: 'Ongkos Kirim', nilai: n(f.ongkir) }] : []),
+                { label: 'Grand Total', nilai: n(f.grandTotal), tegas: true },
+                { label: 'Dibayar', nilai: n(f.dibayar) },
+                { label: `Sisa Piutang (${LABEL_STATUS[f.status]})`, nilai: n(f.sisaPiutang), tegas: n(f.sisaPiutang) > 0 },
+              ]
+            : undefined,
           items: (json.data.items || []).map((it: any) => ({
             sku: it.sku,
             namaBarang: it.namaBarang,
@@ -294,8 +221,8 @@ export default function BarangKeluar() {
             total: Number(it.total) || (Number(it.qty) * Number(it.hargaJual || 0)),
             keterangan: it.diskon && Number(it.diskon) > 0 ? `Diskon: ${it.diskon}%` : undefined,
           })),
-          totalNilai: Number(json.data.total) || 0,
-          catatan: 'Barang telah diperiksa dan diserahkan dalam kondisi baik & lengkap. Faktur sah B2B.',
+          totalNilai: f ? n(f.grandTotal) : Number(json.data.total) || 0,
+          catatan: f?.catatan || 'Barang telah diperiksa dan diserahkan dalam kondisi baik & lengkap. Faktur sah B2B.',
         });
       } else {
         showToast('Faktur tidak ditemukan', 'error');
@@ -440,9 +367,9 @@ export default function BarangKeluar() {
             <Truck className="w-3.5 h-3.5" />
             <span>Distribusi &amp; Pengeluaran Barang</span>
           </div>
-          <h1 className="text-2xl font-black text-gray-900 tracking-tight">Barang Keluar &amp; Surat Loading</h1>
+          <h1 className="text-2xl font-black text-gray-900 tracking-tight">Barang Keluar &amp; Faktur Penjualan</h1>
           <p className="text-xs sm:text-sm text-gray-500 mt-0.5">
-            Surat loading barang penjualan, ekspedisi ke pelanggan &amp; mutasi keluar
+            Faktur penjualan grosir ke pelanggan: stok keluar, pembayaran &amp; piutang tercatat otomatis
           </p>
         </div>
 
@@ -476,7 +403,7 @@ export default function BarangKeluar() {
             className="inline-flex items-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white rounded-xl text-xs sm:text-sm font-bold shadow-md shadow-emerald-600/20 transition"
           >
             <span className="text-base leading-none">＋</span>
-            <span>Buat Surat Loading / Keluar</span>
+            <span>Buat Faktur Penjualan</span>
           </button>
         </div>
       </header>
@@ -670,349 +597,21 @@ export default function BarangKeluar() {
         </footer>
       </section>
 
-      {/* Modal Buat Surat Loading (Desktop Landscape: Lurus RATA & Proporsional) */}
+      {/* Modal Faktur Penjualan */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl lg:max-w-5xl max-h-[92vh] flex flex-col overflow-hidden border border-gray-100 animate-in fade-in zoom-in-95 duration-200">
-            {/* Modal Header */}
-            <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-white shrink-0">
-              <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold">
-                  <Truck className="w-5 h-5" />
-                </div>
-                <div>
-                  <h2 className="font-bold text-gray-900 text-base sm:text-lg">
-                    Buat Surat Loading / Barang Keluar Grosir
-                  </h2>
-                  <p className="text-xs text-gray-500">
-                    Input daftar muatan barang untuk pelanggan, salesman, atau ekspedisi resmi.
-                  </p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setIsModalOpen(false)}
-                className="text-gray-400 hover:text-gray-600 p-1.5 rounded-lg hover:bg-gray-100 transition"
-                aria-label="Tutup"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            {/* Modal Form Body */}
-            <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-5">
-              {/* Identitas Surat Jalan & Transaksi (Grid 3 Kolom Lurus Rata) */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 bg-gray-50/70 p-4 rounded-xl border border-gray-200/80">
-                <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1.5 uppercase tracking-wider">
-                    Tanggal Transaksi <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="date"
-                    required
-                    value={tanggal}
-                    onChange={(e) => setTanggal(e.target.value)}
-                    className="w-full h-10 px-3.5 py-2 rounded-xl border border-gray-200 text-xs sm:text-sm font-semibold focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 outline-none bg-white transition"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1.5 uppercase tracking-wider">
-                    Pelanggan / Toko Penerima <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="Contoh: Toko Berkah Jaya / Bpk. Rudi"
-                    value={pelanggan}
-                    onChange={(e) => setPelanggan(e.target.value)}
-                    className="w-full h-10 px-3.5 py-2 rounded-xl border border-gray-200 text-xs sm:text-sm font-semibold focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 outline-none bg-white transition"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1.5 uppercase tracking-wider">
-                    Nama Salesman / Driver
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="Contoh: Salesman Ahmad / Driver Agus"
-                    value={salesman}
-                    onChange={(e) => setSalesman(e.target.value)}
-                    className="w-full h-10 px-3.5 py-2 rounded-xl border border-gray-200 text-xs sm:text-sm font-semibold focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 outline-none bg-white transition"
-                  />
-                </div>
-              </div>
-
-              {/* Items Section (Tabel Input Multi-Baris Lurus RATA) */}
-              <div className="space-y-2.5">
-                <div className="flex items-center justify-between pb-1 border-b border-gray-100">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-bold uppercase tracking-wider text-emerald-800">
-                      Daftar Barang Loading ({items.length} Baris)
-                    </span>
-                    <span className="text-[11px] text-gray-400">• Pastikan stok fisik mencukupi</span>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={addItemRow}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-lg text-xs font-bold border border-emerald-200 transition"
-                  >
-                    <Plus className="w-3.5 h-3.5" />
-                    <span>Tambah Baris</span>
-                  </button>
-                </div>
-
-                {/* Table Header Row (Lurus Rata Sempurna) */}
-                <div className="hidden sm:grid grid-cols-12 gap-2.5 px-3.5 py-2 bg-slate-900 text-white rounded-xl text-xs font-bold uppercase tracking-wider items-center">
-                  <div className="col-span-5">Pilih Produk / Item Barang *</div>
-                  <div className="col-span-2 text-center">Jumlah Qty (pcs) *</div>
-                  <div className="col-span-2 text-right">Harga Jual (Rp) *</div>
-                  <div className="col-span-2 text-right">Subtotal (Rp)</div>
-                  <div className="col-span-1 text-center">Aksi</div>
-                </div>
-
-                {/* Rows List */}
-                <div className="space-y-2">
-                  {items.map((row, idx) => {
-                    const subtotal = (Number(row.qty) || 0) * (Number(row.hargaJual) || 0);
-                    return (
-                      <div
-                        key={idx}
-                        className="p-3 bg-gray-50/80 rounded-xl border border-gray-200 hover:border-emerald-300 transition"
-                      >
-                        <div className="grid grid-cols-1 sm:grid-cols-12 gap-2.5 items-start">
-                          {/* Produk */}
-                          <div className="sm:col-span-5">
-                            <label className="sm:hidden block text-[11px] font-bold text-gray-700 mb-1">
-                              Pilih Produk *
-                            </label>
-                            <select
-                              required
-                              value={row.sku}
-                              onChange={(e) => updateItemRow(idx, 'sku', e.target.value)}
-                              className="w-full h-10 px-3 py-2 rounded-xl border border-gray-200 text-xs sm:text-sm font-semibold focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 outline-none bg-white transition"
-                            >
-                              <option value="">-- Pilih Barang dari Master --</option>
-                              {inventoryList.map((i) => (
-                                <option key={i.sku} value={i.sku}>
-                                  {i.sku} - {i.namaBarang} (Stok: {i.stok} pcs)
-                                </option>
-                              ))}
-                            </select>
-                          </div>
-
-                          {/* Qty */}
-                          <div className="sm:col-span-2">
-                            <label className="sm:hidden block text-[11px] font-bold text-gray-700 mb-1">
-                              Jumlah Qty *
-                            </label>
-                            <input
-                              type="number"
-                              required
-                              min="1"
-                              value={row.qty}
-                              onChange={(e) => updateItemRow(idx, 'qty', parseInt(e.target.value) || 0)}
-                              className="w-full h-10 px-2 py-2 rounded-xl border border-gray-200 text-xs sm:text-sm font-extrabold focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 outline-none bg-white text-center transition"
-                            />
-                            {/* Quick Add Pills */}
-                            <div className="flex items-center justify-center gap-1 mt-1.5">
-                              {[1, 5, 10, 20, 50].map((add) => (
-                                <button
-                                  key={add}
-                                  type="button"
-                                  onClick={() => updateItemRow(idx, 'qty', (row.qty || 0) + add)}
-                                  className="text-[9px] px-1.5 py-0.5 bg-gray-200/90 hover:bg-emerald-200 hover:text-emerald-900 text-gray-700 font-bold rounded-md transition"
-                                  title={`Tambah +${add} pcs`}
-                                >
-                                  +{add}
-                                </button>
-                              ))}
-                            </div>
-                          </div>
-
-                          {/* Harga Jual */}
-                          <div className="sm:col-span-2">
-                            <label className="sm:hidden block text-[11px] font-bold text-gray-700 mb-1">
-                              Harga Jual (Rp) *
-                            </label>
-                            <input
-                              type="number"
-                              min="0"
-                              value={row.hargaJual}
-                              onChange={(e) =>
-                                updateItemRow(idx, 'hargaJual', parseFloat(e.target.value) || 0)
-                              }
-                              className="w-full h-10 px-3 py-2 rounded-xl border border-gray-200 text-xs sm:text-sm font-semibold focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 outline-none bg-white text-right transition"
-                            />
-                          </div>
-
-                          {/* Subtotal Preview */}
-                          <div className="sm:col-span-2">
-                            <label className="sm:hidden block text-[11px] font-bold text-gray-700 mb-1">
-                              Subtotal (Rp)
-                            </label>
-                            <div className="w-full h-10 px-3 py-2 rounded-xl border border-gray-200 bg-emerald-50/60 text-xs sm:text-sm font-bold text-emerald-800 flex items-center justify-end font-mono">
-                              {formatRupiah(subtotal)}
-                            </div>
-                          </div>
-
-                          {/* Tombol Hapus Baris */}
-                          <div className="sm:col-span-1 flex items-center justify-center">
-                            <label className="sm:hidden block text-[11px] font-bold text-gray-700 mb-1 invisible">
-                              Aksi
-                            </label>
-                            <button
-                              type="button"
-                              onClick={() => removeItemRow(idx)}
-                              disabled={items.length === 1}
-                              className="w-10 h-10 flex items-center justify-center rounded-xl bg-red-50 hover:bg-red-100 text-red-600 disabled:opacity-25 transition border border-red-200/60"
-                              title="Hapus baris ini"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-
-                {/* Ringkasan Akumulasi Total Loading */}
-                <div className="p-3.5 bg-emerald-50 rounded-xl border border-emerald-200 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs sm:text-sm">
-                  <div className="flex items-center gap-3 text-emerald-900 font-medium">
-                    <span>
-                      Total Macam: <strong className="font-bold">{items.length} Barang</strong>
-                    </span>
-                    <span>&bull;</span>
-                    <span>
-                      Total Qty:{' '}
-                      <strong className="font-bold font-mono">
-                        {items.reduce((acc, r) => acc + (Number(r.qty) || 0), 0)} pcs
-                      </strong>
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-gray-600 font-semibold">Grand Total Muatan:</span>
-                    <span className="text-base sm:text-lg font-black text-emerald-800 font-mono">
-                      {formatRupiah(
-                        items.reduce(
-                          (acc, r) =>
-                            acc + (Number(r.qty) || 0) * (Number(r.hargaJual) || 0),
-                          0
-                        )
-                      )}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Catatan */}
-              <div>
-                <label className="block text-xs font-bold text-gray-700 mb-1.5 uppercase tracking-wider">
-                  Catatan Pengiriman / Ekspedisi
-                </label>
-                <textarea
-                  rows={2}
-                  placeholder="Catatan nomor polisi armada, sopir, atau instruksi serah terima barang..."
-                  value={keterangan}
-                  onChange={(e) => setKeterangan(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 text-xs sm:text-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 outline-none transition resize-none bg-white"
-                />
-              </div>
-
-              {/* Fixed Footer Actions */}
-              <div className="pt-3 border-t border-gray-100 flex items-center justify-end gap-3 shrink-0">
-                <button
-                  type="button"
-                  onClick={() => setIsModalOpen(false)}
-                  className="px-5 py-2.5 border border-gray-200 text-gray-700 rounded-xl text-xs sm:text-sm font-semibold hover:bg-gray-100 transition"
-                >
-                  Batal
-                </button>
-                <button
-                  type="submit"
-                  disabled={submitting}
-                  className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-300 text-white rounded-xl text-xs sm:text-sm font-bold shadow-md shadow-emerald-600/20 transition flex items-center gap-2"
-                >
-                  {submitting && (
-                    <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  )}
-                  <span>Simpan Surat Loading</span>
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
+        <FormFakturPenjualan
+          inventoryList={inventoryList}
+          onClose={() => setIsModalOpen(false)}
+          notify={showToast}
+          onSaved={(noFaktur) => {
+            setIsModalOpen(false);
+            fetchData();
+            fetchInventory();
+            viewInvoice(noFaktur);
+          }}
+        />
       )}
 
-      {/* Modal Invoice View */}
-      {invoiceData && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-xl overflow-hidden border border-gray-100 p-6 space-y-4 animate-in fade-in zoom-in-95 duration-200">
-            <div className="flex items-start justify-between border-b pb-4">
-              <div>
-                <h3 className="font-bold text-lg text-gray-800">SURAT JALAN / INVOICE</h3>
-                <div className="text-xs font-mono text-gray-500">No. Trx: {invoiceData.trxId}</div>
-              </div>
-              <button onClick={() => setInvoiceData(null)} className="text-gray-400 hover:text-gray-600 font-bold">
-                
-              </button>
-            </div>
-
-            <div className="grid grid-cols-2 text-xs gap-2 text-gray-600">
-              <div>Tanggal: <strong>{formatTanggal(invoiceData.tanggal)}</strong></div>
-              <div>Pelanggan: <strong>{invoiceData.pelanggan || '-'}</strong></div>
-              <div>Salesman: <strong>{invoiceData.salesman || '-'}</strong></div>
-              <div>Operator: <strong>{invoiceData.createdBy || '-'}</strong></div>
-            </div>
-
-            <div className="border rounded-xl overflow-hidden text-xs">
-              <table className="w-full text-left">
-                <thead className="bg-gray-50 text-gray-500 font-semibold border-b">
-                  <tr>
-                    <th className="p-2">Item Barang</th>
-                    <th className="p-2 text-center">Qty</th>
-                    <th className="p-2 text-right">Harga</th>
-                    <th className="p-2 text-right">Total</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
-                  {invoiceData.items.map((it: any, i: number) => (
-                    <tr key={i}>
-                      <td className="p-2">
-                        <div className="font-semibold text-gray-800">{it.namaBarang}</div>
-                        <div className="text-[10px] text-gray-400 font-mono">{it.sku}</div>
-                      </td>
-                      <td className="p-2 text-center">{it.qty} {it.satuan}</td>
-                      <td className="p-2 text-right">{formatRupiah(it.hargaJual)}</td>
-                      <td className="p-2 text-right font-semibold">{formatRupiah(it.total)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            <div className="flex justify-between items-center pt-2">
-              <span className="font-bold text-sm text-gray-800">Total Transaksi:</span>
-              <span className="font-bold text-lg text-emerald-600">{formatRupiah(invoiceData.total)}</span>
-            </div>
-
-            <div className="flex justify-end gap-2 pt-3 border-t">
-              <button
-                onClick={() => window.print()}
-                className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-semibold rounded-xl transition"
-              >
-                Cetak / Print
-              </button>
-              <button
-                onClick={() => setInvoiceData(null)}
-                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-xl transition"
-              >
-                Tutup
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
       {/* ============================================================ */}
       {/* 6. MODAL: Otorisasi PIN Supervisor Hapus Transaksi (Anti-Fraud) */}
       {/* ============================================================ */}
@@ -1079,7 +678,17 @@ export default function BarangKeluar() {
               <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 flex items-start gap-2.5 text-xs text-amber-900">
                 <AlertCircle className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" />
                 <p className="leading-relaxed">
-                  Menghapus transaksi ini akan <strong>mengembalikan {deleteTarget.qty} {deleteTarget.satuan} ke stok gudang</strong> dan memotong rekaman omset dari laporan penjualan.
+                  {deleteTarget.trxId.startsWith('FJ-') ? (
+                    <>
+                      Ini bagian dari <strong>Faktur Penjualan {deleteTarget.trxId}</strong>. Menghapus akan{' '}
+                      <strong>membatalkan seluruh faktur</strong>: semua barangnya kembali ke stok dan pembayaran yang
+                      sudah diterima dibalik dari kas.
+                    </>
+                  ) : (
+                    <>
+                      Menghapus transaksi ini akan <strong>mengembalikan {deleteTarget.qty} {deleteTarget.satuan} ke stok gudang</strong> dan memotong rekaman omset dari laporan penjualan.
+                    </>
+                  )}
                 </p>
               </div>
 
