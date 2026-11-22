@@ -1029,7 +1029,7 @@ export default function PosView() {
       {/* 4. MODAL: Checkout & Pembayaran — Desktop Landscape */}
       {/* ============================================================ */}
       {isCheckoutModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-5">
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-5 animate-in fade-in duration-200">
           <div className="bg-slate-900 border border-slate-800 rounded-2xl lg:rounded-3xl w-full max-w-md lg:max-w-4xl max-h-[92vh] overflow-hidden shadow-2xl flex flex-col animate-in zoom-in-95 duration-150">
             <div className="p-5 border-b border-slate-800 flex items-center justify-between shrink-0 bg-slate-900">
               <div>
@@ -1216,8 +1216,8 @@ export default function PosView() {
       {/* 5. MODAL: Nota Thermal 58mm & Print Preview */}
       {/* ============================================================ */}
       {isReceiptModalOpen && lastReceipt && (
-        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-md overflow-hidden shadow-2xl flex flex-col my-auto">
+        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto animate-in fade-in duration-200">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-md overflow-hidden shadow-2xl flex flex-col my-auto animate-in fade-in zoom-in-95 duration-200">
             <div className="p-4 border-b border-slate-800 flex items-center justify-between">
               <div className="flex items-center gap-2 text-emerald-400 font-bold text-sm">
                 <CheckCircle2 className="w-5 h-5" />
@@ -1374,8 +1374,8 @@ export default function PosView() {
       {/* 6. MODAL: Setting POS (Terpisah dari BackOffice Gudang) */}
       {/* ============================================================ */}
       {isSettingsModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl flex flex-col">
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl flex flex-col animate-in fade-in zoom-in-95 duration-200">
             <div className="p-5 border-b border-slate-800 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Sliders className="w-5 h-5 text-emerald-400" />

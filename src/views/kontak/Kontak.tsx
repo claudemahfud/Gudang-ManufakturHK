@@ -246,7 +246,7 @@ export default function Kontak() {
       </div>
 
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/40 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md lg:max-w-3xl max-h-[90vh] flex flex-col overflow-hidden border border-gray-100 animate-in zoom-in-95 duration-150">
             <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between shrink-0 bg-white">
               <h2 className="font-bold text-gray-800 text-base lg:text-lg">Tambah Kontak Baru</h2>

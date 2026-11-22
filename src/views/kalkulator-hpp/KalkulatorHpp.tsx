@@ -308,7 +308,7 @@ export default function KalkulatorHppView() {
 
       {/* Modal: Kelola Resep / BOM — Desktop Landscape */}
       {isAddRecipeOpen && selectedItem && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-5">
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-5 animate-in fade-in duration-200">
           <div className="bg-white rounded-2xl lg:rounded-3xl w-full max-w-xl lg:max-w-4xl max-h-[92vh] overflow-hidden shadow-2xl border border-gray-100 flex flex-col animate-in zoom-in-95 duration-150">
             <div className="p-5 border-b border-gray-100 flex items-center justify-between bg-gray-50/50 shrink-0">
               <div>
