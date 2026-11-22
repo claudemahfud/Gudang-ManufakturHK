@@ -102,6 +102,9 @@ export const ROLES_STOCK_ADJUST: UserRole[] = [
   'Kepala Gudang',
 ];
 
+// Pengaturan Perusahaan (PIN supervisor dll): keputusan Direktur Utama
+export const ROLES_COMPANY_SETTINGS: UserRole[] = ['Direktur Utama'];
+
 /**
  * Cek apakah sebuah role berhak melihat Harga Beli / HPP Modal rahasia perusahaan
  */
