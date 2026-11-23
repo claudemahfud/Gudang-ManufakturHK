@@ -41,6 +41,9 @@ export const ROUTES = {
 
   // F&B & Resto (Harmonisasi Plafon Terpadu)
   KALKULATOR_HPP: '/kalkulator-hpp',
+  PRODUKSI_DAPUR: '/produksi-dapur',
+  ORDER_FRANCHISE: '/order-franchise',
+  MONITOR_FRANCHISE: '/monitor-franchise',
   CASH_OPNAME: '/cash-opname',
 
   // Salesman & Agen
