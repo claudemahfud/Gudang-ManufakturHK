@@ -1,163 +1,90 @@
 import { NextResponse } from 'next/server';
+import { and, eq, ne } from 'drizzle-orm';
 import { db } from '@/shared/lib/db';
-import { inventory, resepItems, logs } from '@/shared/lib/db/schema';
+import { inventory } from '@/shared/lib/db/schema';
 import { requireAuthRole, ROLES_RECIPE_BOM } from '@/shared/lib/auth/rbac';
-import { eq } from 'drizzle-orm';
+import { BusinessError, errorResponse, normalizeSku } from '@/shared/lib/stock';
+import { ambilResep, ringkasanResep, simpanResep } from '@/shared/lib/dapur-pusat';
+import { isTimPusat } from '@/shared/lib/order-franchise';
 
 // ============================================================
-// API: /api/fnb/hpp
-// Kalkulator HPP & Resep (BOM) — F&B & Manufaktur Terpadu
-// Hak Akses: Administrator, Direktur Utama, Manager, Kepala Gudang
+// API: /api/fnb/hpp — Master Resep & HPP Dapur Pusat
+// GET            = ringkasan semua produk F&B + daftar bahan
+// GET ?sku=X     = resep lengkap satu produk
+// PUT            = simpan resep { menuSku, hasilQty, catatan, bahan[], biaya[], hargaFranchise, hargaJual }
+// Hanya tim Dapur Pusat (HPP rahasia, franchise tidak boleh melihat).
 // ============================================================
 
-export async function GET() {
+async function izin() {
+  const auth = await requireAuthRole(ROLES_RECIPE_BOM);
+  if (!auth.authorized) return { auth, tolak: auth.response };
+  if (!isTimPusat(auth.user)) {
+    return {
+      auth,
+      tolak: NextResponse.json({ success: false, message: 'Master Resep hanya untuk tim Dapur Pusat' }, { status: 403 }),
+    };
+  }
+  return { auth, tolak: null };
+}
+
+export async function GET(req: Request) {
   try {
-    const authResult = await requireAuthRole(ROLES_RECIPE_BOM);
-    if (!authResult.authorized) return authResult.response;
+    const { tolak } = await izin();
+    if (tolak) return tolak;
 
-    // Ambil semua menu olahan atau produk yang memiliki resep
-    const items = await db.select().from(inventory);
-    const allResep = await db.select().from(resepItems);
+    const sku = normalizeSku(new URL(req.url).searchParams.get('sku'));
+    if (sku) {
+      const resep = await ambilResep(db, sku);
+      if (!resep) throw new BusinessError('Produk tidak ditemukan', 404);
+      return NextResponse.json({ success: true, data: resep });
+    }
 
-    // Hitung HPP untuk tiap item berdasarkan resepnya
-    const calculated = items.map((item) => {
-      const itemRecipes = allResep.filter((r) => r.menuSku === item.sku);
-
-      let hppBahan = 0;
-      let biayaKemasan = 0;
-
-      for (const r of itemRecipes) {
-        // Cari harga beli per satuan dari bahan baku
-        const bahanMaster = items.find((i) => i.sku === r.bahanSku);
-        const hargaBeliPerUnit = Number(bahanMaster?.hargaBeli || 0);
-        const biayaKomponen = Number(r.takaran) * hargaBeliPerUnit;
-
-        if (r.jenis === 'kemasan') {
-          biayaKemasan += biayaKomponen;
-        } else {
-          hppBahan += biayaKomponen;
-        }
-      }
-
-      // Overhead standar F&B / Manufaktur
-      const persenSusut = 0.03;      // 3% waste
-      const persenUtilitas = 0.05;   // 5% listrik/air/gas
-      const persenTenagaKerja = 0.07;// 7% upah produksi
-      
-      const biayaSusut = hppBahan * persenSusut;
-      const biayaUtilitas = hppBahan * persenUtilitas;
-      const biayaTenagaKerja = hppBahan * persenTenagaKerja;
-
-      // Jika item tidak punya resep, gunakan hargaBeli langsung sebagai HPP dasar
-      const hppTotal =
-        itemRecipes.length > 0
-          ? hppBahan + biayaKemasan + biayaSusut + biayaUtilitas + biayaTenagaKerja
-          : Number(item.hargaBeli || 0);
-
-      const hargaJual = Number(item.hargaJual || 0);
-      const marginRupiah = hargaJual - hppTotal;
-      const marginPersen = hargaJual > 0 ? (marginRupiah / hargaJual) * 100 : 0;
-      const foodCostPersen = hargaJual > 0 ? (hppTotal / hargaJual) * 100 : 0;
-
-      // Rekomendasi harga ideal
-      // Target Food Cost 35% -> Harga = HPP / 0.35
-      const hargaIdealMargin65 = hppTotal > 0 ? Math.round(hppTotal / 0.35) : 0;
-      // Markup 150% -> Harga = HPP * 2.5
-      const hargaIdealMarkup = hppTotal > 0 ? Math.round(hppTotal * 2.5) : 0;
-
-      return {
-        ...item,
-        resepCount: itemRecipes.length,
-        recipes: itemRecipes,
-        breakdown: {
-          hppBahan,
-          biayaKemasan,
-          biayaSusut,
-          biayaUtilitas,
-          biayaTenagaKerja,
-          hppTotal,
-        },
-        evaluasi: {
-          hargaJual,
-          hppTotal,
-          marginRupiah,
-          marginPersen: Number(marginPersen.toFixed(1)),
-          foodCostPersen: Number(foodCostPersen.toFixed(1)),
-          marginTipis: foodCostPersen > 40, // Warning jika modal > 40%
-        },
-        rekomendasi: {
-          hargaIdealMargin65,
-          hargaIdealMarkup,
-        },
-      };
-    });
-
+    const [produk, bahan] = await Promise.all([
+      ringkasanResep(),
+      db
+        .select({
+          sku: inventory.sku,
+          namaBarang: inventory.namaBarang,
+          tipeItem: inventory.tipeItem,
+          hargaBeli: inventory.hargaBeli,
+        })
+        .from(inventory)
+        .where(and(eq(inventory.divisi, 'FNB'), ne(inventory.tipeItem, 'menu_olahan')))
+        .orderBy(inventory.namaBarang),
+    ]);
     return NextResponse.json({
       success: true,
-      data: calculated,
-      rawMaterials: items.filter((i) => i.tipeItem === 'bahan_baku' || i.tipeItem === 'kemasan' || i.divisi === 'FNB'),
+      data: produk,
+      bahan: bahan.map((b) => ({ ...b, hargaBeli: Number(b.hargaBeli ?? 0) })),
     });
-  } catch (err: any) {
-    return NextResponse.json({ success: false, message: err.message }, { status: 500 });
+  } catch (err) {
+    return errorResponse(err, 'RESEP_GET');
   }
 }
 
-export async function POST(req: Request) {
+export async function PUT(req: Request) {
   try {
-    const authResult = await requireAuthRole(ROLES_RECIPE_BOM);
-    if (!authResult.authorized) return authResult.response;
-
+    const { auth, tolak } = await izin();
+    if (tolak) return tolak;
     const body = await req.json();
-    const { menuSku, bahanSku, namaBahan, takaran, satuan, jenis } = body;
 
-    if (!menuSku || !bahanSku || !takaran) {
-      return NextResponse.json(
-        { success: false, message: 'Menu SKU, Bahan SKU, dan Takaran wajib diisi' },
-        { status: 400 }
-      );
-    }
-
-    const [row] = await db
-      .insert(resepItems)
-      .values({
-        menuSku,
-        bahanSku,
-        namaBahan,
-        takaran: String(takaran),
-        satuan: satuan || 'gram',
-        jenis: jenis || 'bahan',
-      })
-      .returning();
-
-    return NextResponse.json({ success: true, data: row });
-  } catch (err: any) {
-    return NextResponse.json({ success: false, message: err.message }, { status: 500 });
-  }
-}
-
-export async function DELETE(req: Request) {
-  try {
-    const authResult = await requireAuthRole(ROLES_RECIPE_BOM);
-    if (!authResult.authorized) return authResult.response;
-
-    const { searchParams } = new URL(req.url);
-    const id = searchParams.get('id');
-
-    if (!id) {
-      return NextResponse.json({ success: false, message: 'ID komponen resep wajib disertakan' }, { status: 400 });
-    }
-
-    await db.delete(resepItems).where(eq(resepItems.id, id));
-
-    const user = authResult.user?.name || authResult.user?.username || 'System';
-    await db.insert(logs).values({
-      user,
-      aksi: 'HAPUS_KOMPONEN_RESEP',
-      detail: `Menghapus komponen resep ID: ${id}`,
-    });
-
-    return NextResponse.json({ success: true, message: 'Komponen resep berhasil dihapus' });
-  } catch (err: any) {
-    return NextResponse.json({ success: false, message: err.message }, { status: 500 });
+    const resep = await db.transaction((tx) =>
+      simpanResep(
+        tx,
+        {
+          menuSku: String(body?.menuSku ?? ''),
+          hasilQty: Number(body?.hasilQty),
+          catatan: typeof body?.catatan === 'string' && body.catatan.trim() ? body.catatan.trim() : null,
+          bahan: Array.isArray(body?.bahan) ? body.bahan : [],
+          biaya: Array.isArray(body?.biaya) ? body.biaya : [],
+          hargaFranchise: Number(body?.hargaFranchise ?? 0),
+          hargaJual: Number(body?.hargaJual ?? 0),
+        },
+        auth.user.username
+      )
+    );
+    return NextResponse.json({ success: true, data: resep, message: 'Resep tersimpan' });
+  } catch (err) {
+    return errorResponse(err, 'RESEP_SIMPAN');
   }
 }

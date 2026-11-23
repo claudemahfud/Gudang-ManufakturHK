@@ -19,6 +19,8 @@ const ROUTE_ROLES: Record<string, string[]> = {
   [ROUTES.KEUANGAN]: ['Administrator', 'Manager', 'Manager Umum', 'Direktur Utama', 'Kepala Gudang', 'Finance & Accounting'],
   [ROUTES.BIAYA_OPERASIONAL]: ['Administrator', 'Manager', 'Manager Umum', 'Direktur Utama', 'Finance & Accounting'],
   [ROUTES.PIUTANG]: ['Administrator', 'Manager', 'Manager Umum', 'Direktur Utama', 'Finance & Accounting'],
+  [ROUTES.MONITOR_FRANCHISE]: ['Administrator', 'Manager', 'Manager Umum', 'Direktur Utama', 'Finance & Accounting'],
+  [ROUTES.PRODUKSI_DAPUR]: ['Administrator', 'Manager', 'Manager Umum', 'Direktur Utama', 'Kepala Gudang'],
   [ROUTES.TARGET_KOMISI]: ['Administrator', 'Manager', 'Manager Umum', 'Direktur Utama', 'Admin Salesman'],
   [ROUTES.MONITOR_SALESMAN]: ['Administrator', 'Manager', 'Manager Umum', 'Direktur Utama', 'Admin Salesman'],
   [ROUTES.PENGAJUAN_DISKON]: ['Administrator', 'Manager', 'Manager Umum', 'Direktur Utama', 'Admin Salesman', 'Salesman', 'Sales Canvas', 'Sales Motoris', 'Staff Admin Salesman'],
@@ -30,6 +32,7 @@ const ROUTE_ROLES: Record<string, string[]> = {
   '/api/keuangan': ['Administrator', 'Manager', 'Manager Umum', 'Direktur Utama', 'Kepala Gudang', 'Finance & Accounting'],
   '/api/biaya-operasional': ['Administrator', 'Manager', 'Manager Umum', 'Direktur Utama', 'Finance & Accounting'],
   '/api/piutang': ['Administrator', 'Manager', 'Manager Umum', 'Direktur Utama', 'Finance & Accounting'],
+  '/api/franchise/monitor': ['Administrator', 'Manager', 'Manager Umum', 'Direktur Utama', 'Finance & Accounting'],
   '/api/target-komisi': ['Administrator', 'Manager', 'Manager Umum', 'Direktur Utama', 'Admin Salesman'],
   '/api/laporan/penjualan': ['Administrator', 'Manager', 'Manager Umum', 'Direktur Utama', 'Kepala Gudang', 'Admin Salesman', 'Finance & Accounting'],
 };

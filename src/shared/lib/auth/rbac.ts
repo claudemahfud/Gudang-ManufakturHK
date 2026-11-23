@@ -107,6 +107,12 @@ export const ROLES_POS: UserRole[] = [
   'Staff Admin Agen',
 ];
 
+// Order Franchise ke Dapur Pusat: tim gudang/kasir outlet + tim pusat + finance.
+// Lingkup franchise (hanya outletnya sendiri) dijaga di src/shared/lib/order-franchise.ts.
+export const ROLES_FRANCHISE_ORDER: UserRole[] = [
+  ...new Set<UserRole>([...ROLES_WAREHOUSE, ...ROLES_POS, 'Finance & Accounting']),
+];
+
 // Pengeluaran barang (grosir/loading): tim gudang + tim penjualan
 export const ROLES_STOCK_OUT: UserRole[] = ROLES_POS;
 

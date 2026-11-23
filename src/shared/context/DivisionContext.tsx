@@ -15,6 +15,7 @@ export interface CabangItem {
   alamat?: string | null;
   telepon?: string | null;
   isPusat: boolean;
+  tipe?: string;
   status: string;
 }
 

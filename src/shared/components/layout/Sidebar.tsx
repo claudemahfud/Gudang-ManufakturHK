@@ -37,7 +37,6 @@ import {
   TrendingUp,
   BarChart3,
   ShieldAlert,
-  Calculator,
   Coins,
   Scale,
   ChevronDown,
@@ -46,6 +45,10 @@ import {
   Factory,
   Coffee,
   Building2,
+  ChefHat,
+  CookingPot,
+  Store,
+  MonitorDot,
   LogOut,
 } from 'lucide-react';
 
@@ -126,12 +129,6 @@ export const MENU_HIERARCHY: ParentMenuItem[] = [
         href: ROUTES.SUPLIER,
       },
       {
-        label: 'Kalkulator HPP & Resep',
-        icon: Calculator,
-        href: ROUTES.KALKULATOR_HPP,
-        division: 'FNB', // Khusus F&B
-      },
-      {
         label: 'Barang Masuk',
         icon: ArrowDownToLine,
         href: ROUTES.BARANG_MASUK,
@@ -150,6 +147,37 @@ export const MENU_HIERARCHY: ParentMenuItem[] = [
         label: 'Stok Kritis',
         icon: AlertTriangle,
         href: ROUTES.STOK_KRITIS,
+      },
+    ],
+  },
+  {
+    id: 'dapur',
+    title: 'Dapur Pusat & Franchise',
+    icon: ChefHat,
+    division: 'FNB', // Khusus F&B
+    items: [
+      {
+        label: 'Master Resep & HPP',
+        icon: ChefHat,
+        href: ROUTES.KALKULATOR_HPP,
+        roles: ['Administrator', 'Manager', 'Manager Umum', 'Direktur Utama', 'Kepala Gudang'],
+      },
+      {
+        label: 'Produksi Dapur',
+        icon: CookingPot,
+        href: ROUTES.PRODUKSI_DAPUR,
+        roles: ['Administrator', 'Manager', 'Manager Umum', 'Direktur Utama', 'Kepala Gudang'],
+      },
+      {
+        label: 'Order Franchise',
+        icon: Store,
+        href: ROUTES.ORDER_FRANCHISE,
+      },
+      {
+        label: 'Monitor Franchise',
+        icon: MonitorDot,
+        href: ROUTES.MONITOR_FRANCHISE,
+        roles: ['Administrator', 'Manager', 'Manager Umum', 'Direktur Utama', 'Finance & Accounting'],
       },
     ],
   },

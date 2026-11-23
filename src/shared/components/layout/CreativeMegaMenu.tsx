@@ -19,7 +19,6 @@ import {
   HandCoins,
   Receipt,
   Scale,
-  Calculator,
   Coins,
   TrendingUp,
   BarChart3,
@@ -37,6 +36,10 @@ import {
   Layers,
   CheckCircle2,
   ShieldCheck,
+  ChefHat,
+  CookingPot,
+  Store,
+  MonitorDot,
 } from 'lucide-react';
 import { ROUTES } from '@/router/routes';
 import { useDivision } from '@/shared/context/DivisionContext';
@@ -119,11 +122,35 @@ export default function CreativeMegaMenu({ userRole, isOpen, onClose }: MegaMenu
     ...(isFnb
       ? [
           {
-            title: 'Kalkulator HPP & Resep',
-            desc: 'BOM resep porsi & food costing',
+            title: 'Master Resep & HPP',
+            desc: 'Resep per batch, HPP & harga franchise',
             href: ROUTES.KALKULATOR_HPP,
-            icon: Calculator,
+            icon: ChefHat,
             fnbOnly: true,
+            restricted: !['Administrator', 'Manager', 'Manager Umum', 'Direktur Utama', 'Kepala Gudang'].includes(userRole || ''),
+          },
+          {
+            title: 'Produksi Dapur',
+            desc: 'Masak batch, potong bahan, tambah produk',
+            href: ROUTES.PRODUKSI_DAPUR,
+            icon: CookingPot,
+            fnbOnly: true,
+            restricted: !['Administrator', 'Manager', 'Manager Umum', 'Direktur Utama', 'Kepala Gudang'].includes(userRole || ''),
+          },
+          {
+            title: 'Order Franchise',
+            desc: 'Order outlet ke Dapur Pusat & penerimaan',
+            href: ROUTES.ORDER_FRANCHISE,
+            icon: Store,
+            fnbOnly: true,
+          },
+          {
+            title: 'Monitor Franchise',
+            desc: 'Omset, stok & tagihan tiap outlet',
+            href: ROUTES.MONITOR_FRANCHISE,
+            icon: MonitorDot,
+            fnbOnly: true,
+            restricted: !['Administrator', 'Manager', 'Manager Umum', 'Direktur Utama', 'Finance & Accounting'].includes(userRole || ''),
           },
         ]
       : []),

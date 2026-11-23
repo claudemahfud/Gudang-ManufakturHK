@@ -39,6 +39,7 @@ export const inventory = pgTable('inventory', {
   divisi: varchar('divisi', { length: 30 }).notNull().default('MANUFAKTUR'), // MANUFAKTUR | FNB
   cabang: varchar('cabang', { length: 50 }).notNull().default('Pusat'),
   tipeItem: varchar('tipe_item', { length: 30 }).notNull().default('barang_jadi'), // barang_jadi | bahan_baku | kemasan | menu_olahan
+  hargaFranchise: decimal('harga_franchise', { precision: 15, scale: 2 }).notNull().default('0'), // harga Dapur Pusat ke franchise
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow(),
 });
@@ -460,6 +461,7 @@ export const masterCabang = pgTable('master_cabang', {
   alamat: text('alamat'),
   telepon: varchar('telepon', { length: 50 }),
   isPusat: boolean('is_pusat').notNull().default(false),
+  tipe: varchar('tipe', { length: 20 }).notNull().default('CABANG'), // PUSAT (Dapur Pusat) | CABANG | FRANCHISE
   status: varchar('status', { length: 20 }).notNull().default('ACTIVE'),
   createdAt: timestamp('created_at').defaultNow(),
 });
@@ -492,3 +494,80 @@ export const stokCabang = pgTable(
   },
   (t) => [primaryKey({ columns: [t.sku, t.cabang] })]
 );
+
+// ============================================================
+// DAPUR PUSAT & FRANCHISE (docs/PRD-dapur-pusat-franchise.md)
+// ============================================================
+
+// Resep per batch: jumlah hasil; bahan di resep_items, biaya lain di resep_biaya.
+export const resepHeader = pgTable('resep_header', {
+  menuSku: varchar('menu_sku', { length: 50 }).primaryKey(),
+  hasilQty: integer('hasil_qty').notNull().default(1),
+  catatan: text('catatan'),
+  updatedBy: varchar('updated_by', { length: 50 }),
+  updatedAt: timestamp('updated_at').defaultNow(),
+});
+
+export const resepBiaya = pgTable('resep_biaya', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  menuSku: varchar('menu_sku', { length: 50 }).notNull(),
+  nama: varchar('nama', { length: 100 }).notNull(),
+  jumlah: decimal('jumlah', { precision: 15, scale: 2 }).notNull().default('0'),
+  createdAt: timestamp('created_at').defaultNow(),
+});
+
+export const produksi = pgTable('produksi', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  noProduksi: varchar('no_produksi', { length: 100 }).notNull().unique(),
+  tanggal: timestamp('tanggal').notNull().defaultNow(),
+  menuSku: varchar('menu_sku', { length: 50 }).notNull(),
+  namaBarang: varchar('nama_barang', { length: 150 }).notNull(),
+  jumlahBatch: integer('jumlah_batch').notNull(),
+  hasilQty: integer('hasil_qty').notNull(),
+  biayaBahan: decimal('biaya_bahan', { precision: 15, scale: 2 }).notNull().default('0'),
+  biayaLain: decimal('biaya_lain', { precision: 15, scale: 2 }).notNull().default('0'),
+  hppTotal: decimal('hpp_total', { precision: 15, scale: 2 }).notNull().default('0'),
+  hppPerUnit: decimal('hpp_per_unit', { precision: 15, scale: 2 }).notNull().default('0'),
+  cabang: varchar('cabang', { length: 50 }).notNull().default('Pusat'),
+  catatan: text('catatan'),
+  createdBy: varchar('created_by', { length: 50 }),
+  createdAt: timestamp('created_at').defaultNow(),
+});
+
+export const produksiBahan = pgTable('produksi_bahan', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  produksiId: uuid('produksi_id').notNull().references(() => produksi.id, { onDelete: 'cascade' }),
+  bahanSku: varchar('bahan_sku', { length: 50 }).notNull(),
+  namaBahan: varchar('nama_bahan', { length: 150 }).notNull(),
+  qty: integer('qty').notNull(),
+  harga: decimal('harga', { precision: 15, scale: 2 }).notNull().default('0'),
+  subtotal: decimal('subtotal', { precision: 15, scale: 2 }).notNull().default('0'),
+});
+
+export const orderFranchise = pgTable('order_franchise', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  noOrder: varchar('no_order', { length: 100 }).notNull().unique(),
+  tanggal: timestamp('tanggal').notNull().defaultNow(),
+  franchise: varchar('franchise', { length: 50 }).notNull(), // nama cabang franchise
+  status: varchar('status', { length: 20 }).notNull().default('diajukan'), // diajukan | dikirim | diterima | ditolak | dibatalkan
+  total: decimal('total', { precision: 15, scale: 2 }).notNull().default('0'),
+  noFaktur: varchar('no_faktur', { length: 100 }),
+  catatan: text('catatan'),
+  alasan: text('alasan'),
+  createdBy: varchar('created_by', { length: 50 }),
+  dikirimBy: varchar('dikirim_by', { length: 50 }),
+  dikirimAt: timestamp('dikirim_at'),
+  diterimaBy: varchar('diterima_by', { length: 50 }),
+  diterimaAt: timestamp('diterima_at'),
+  createdAt: timestamp('created_at').defaultNow(),
+});
+
+export const orderFranchiseItems = pgTable('order_franchise_items', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  orderId: uuid('order_id').notNull().references(() => orderFranchise.id, { onDelete: 'cascade' }),
+  sku: varchar('sku', { length: 50 }).notNull(),
+  namaBarang: varchar('nama_barang', { length: 150 }).notNull(),
+  qty: integer('qty').notNull(),
+  harga: decimal('harga', { precision: 15, scale: 2 }).notNull().default('0'),
+  subtotal: decimal('subtotal', { precision: 15, scale: 2 }).notNull().default('0'),
+});
