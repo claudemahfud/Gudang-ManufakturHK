@@ -1,1 +1,1 @@
-export { default } from './KalkulatorHpp';
+export { default } from './MasterResep';

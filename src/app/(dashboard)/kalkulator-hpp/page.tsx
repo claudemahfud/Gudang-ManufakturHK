@@ -1,11 +1,11 @@
 import type { Metadata } from 'next';
-import KalkulatorHppView from '@/views/kalkulator-hpp';
+import MasterResep from '@/views/kalkulator-hpp';
 
 export const metadata: Metadata = {
-  title: 'Kalkulator HPP & Resep F&B | Gudang Manufaktur',
-  description: 'Hitung HPP otomatis dari takaran resep bahan baku (BOM) & simulasikan margin laba F&B',
+  title: 'Master Resep & HPP | Gudang Manufaktur',
+  description: 'Resep per batch Dapur Pusat: bahan baku, biaya lain-lain, HPP per unit, dan harga franchise',
 };
 
-export default function KalkulatorHppPage() {
-  return <KalkulatorHppView />;
+export default function MasterResepPage() {
+  return <MasterResep />;
 }
