@@ -36,6 +36,7 @@ export async function GET(req: Request) {
         alamat: masterCabang.alamat,
         telepon: masterCabang.telepon,
         isPusat: masterCabang.isPusat,
+        tipe: masterCabang.tipe,
         status: masterCabang.status,
       })
       .from(masterCabang)
@@ -61,6 +62,7 @@ export async function GET(req: Request) {
           alamat: null,
           telepon: null,
           isPusat: false,
+          tipe: 'CABANG',
           status: 'ACTIVE',
         }];
       }
@@ -81,6 +83,8 @@ export async function POST(req: Request) {
 
     const body = await req.json();
     const { kodeCabang, namaCabang, divisi = 'ALL', alamat, telepon } = body;
+    // Franchise = outlet F&B milik mitra yang membeli produk dari Dapur Pusat
+    const tipe = body?.tipe === 'FRANCHISE' ? 'FRANCHISE' : 'CABANG';
 
     if (!kodeCabang || !namaCabang) {
       return NextResponse.json(
@@ -111,7 +115,8 @@ export async function POST(req: Request) {
       .values({
         kodeCabang: cleanKode,
         namaCabang: cleanNama,
-        divisi: divisi || 'ALL',
+        divisi: tipe === 'FRANCHISE' ? 'FNB' : divisi || 'ALL',
+        tipe,
         alamat: alamat || null,
         telepon: telepon || null,
         isPusat: false,
@@ -123,7 +128,7 @@ export async function POST(req: Request) {
     await db.insert(logs).values({
       user: user?.username || 'admin',
       aksi: 'TAMBAH_CABANG',
-      detail: `Tambah Cabang Baru: ${cleanNama} (${cleanKode}) oleh ${user?.namaLengkap || user?.username}`,
+      detail: `Tambah ${tipe === 'FRANCHISE' ? 'Outlet Franchise' : 'Cabang'} Baru: ${cleanNama} (${cleanKode}) oleh ${user?.namaLengkap || user?.username}`,
     });
 
     return NextResponse.json({ success: true, data: created, message: 'Cabang berhasil ditambahkan' });

@@ -57,7 +57,11 @@ Aplikasi ini sudah memiliki **25+ modul lengkap** yang siap pakai:
 * *(Catatan: Fitur Barang Rusak lama `/barang-rusak` telah digabungkan satu pintu ke `/laporan-rusak-retur` agar tidak duplikat).*
 
 ### 3. Modul Harmonisasi F&B & Manufaktur (Satu Plafon)
-* **Kalkulator HPP & Resep / BOM** (`/kalkulator-hpp`): Menghubungkan menu F&B / olahan manufaktur dengan bahan baku dapur & kemasan (gram/ml/pcs). Menghitung HPP otomatis, susut waste %, utilitas %, dan rekomendasi harga jual.
+* **Dapur Pusat & Franchise** (PRD: `docs/PRD-dapur-pusat-franchise.md`). Dapur Pusat = cabang `Pusat`; outlet franchise = `master_cabang.tipe = 'FRANCHISE'`, akun outlet dikunci ke cabangnya (stok & POS sendiri).
+  * **Master Resep & HPP** (`/kalkulator-hpp`, API `/api/fnb/hpp`): resep per batch (`resep_header` hasil, `resep_items` bahan, `resep_biaya` biaya lain-lain), HPP per unit, `inventory.harga_franchise`. Hitung di `src/shared/lib/resep-hitung.ts`, simpan di `src/shared/lib/dapur-pusat.ts`. Hanya tim pusat.
+  * **Produksi Dapur** (`/produksi-dapur`, API `/api/fnb/produksi`): potong bahan & tambah produk jadi di stok Pusat, jejak HPP di `produksi` / `produksi_bahan`.
+  * **Order Franchise** (`/order-franchise`, API `/api/franchise/order`, logika `src/shared/lib/order-franchise.ts`): diajukan, lalu dikirim (Faktur Penjualan tempo ke outlet, tagih di `/piutang`), lalu diterima (stok outlet + barang masuk outlet); atau ditolak / dibatalkan.
+  * **Monitor Franchise** (`/monitor-franchise`, API `/api/franchise/monitor`): omset POS, stok, pembelian & tagihan per outlet.
 * **Cash Opname Laci Kasir** (`/cash-opname`): Rekonsiliasi harian kas fisik di laci kasir POS vs perhitungan sistem untuk mendeteksi selisih lebih/kurang kasir.
 * **Neraca Saldo Posisi Keuangan** (`/neraca`): Posisi aset lancar (kas, bank, persediaan gudang), kewajiban hutang supplier, dan ekuitas konsolidasi satu plafon.
 
