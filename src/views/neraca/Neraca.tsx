@@ -6,7 +6,6 @@ import {
   Wallet,
   HandCoins,
   Package,
-  Layers,
   ArrowUpRight,
   ShieldCheck,
   Building2,
@@ -17,9 +16,11 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import { AksiHeader, GrupIkon, TombolIkon } from '@/shared/components/ui/AksiHeader';
+import { useDivision } from '@/shared/context/DivisionContext';
 
 export default function NeracaView() {
-  const [divisi, setDivisi] = useState<'SEMUA' | 'MANUFAKTUR' | 'FNB'>('SEMUA');
+  // Neraca mengikuti Mode aktif saja (Manufaktur / F&B), tidak dicampur
+  const { division: divisi } = useDivision();
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<any>(null);
 
@@ -72,41 +73,10 @@ export default function NeracaView() {
         </AksiHeader>
       </div>
 
-      {/* Filter Plafon Divisi */}
-      <div className="flex items-center gap-2 bg-gray-100 p-1 rounded-xl w-fit">
-        <button
-          onClick={() => setDivisi('SEMUA')}
-          className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-            divisi === 'SEMUA'
-              ? 'bg-white text-gray-900 shadow-sm'
-              : 'text-gray-600 hover:text-gray-900'
-          }`}
-        >
-          <Layers className="w-3.5 h-3.5" />
-          Konsolidasi (Holding)
-        </button>
-        <button
-          onClick={() => setDivisi('MANUFAKTUR')}
-          className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-            divisi === 'MANUFAKTUR'
-              ? 'bg-white text-gray-900 shadow-sm'
-              : 'text-gray-600 hover:text-gray-900'
-          }`}
-        >
-          <Building2 className="w-3.5 h-3.5" />
-          Divisi Manufaktur
-        </button>
-        <button
-          onClick={() => setDivisi('FNB')}
-          className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-            divisi === 'FNB'
-              ? 'bg-white text-gray-900 shadow-sm'
-              : 'text-gray-600 hover:text-gray-900'
-          }`}
-        >
-          <Coffee className="w-3.5 h-3.5" />
-          Divisi F&B
-        </button>
+      {/* Divisi mengikuti Mode aktif */}
+      <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-gray-100 text-xs font-semibold text-gray-800">
+        {divisi === 'FNB' ? <Coffee className="w-3.5 h-3.5" /> : <Building2 className="w-3.5 h-3.5" />}
+        Neraca Divisi {divisi === 'FNB' ? 'F&B' : 'Manufaktur'}
       </div>
 
       {/* KPI Cards Ringkasan */}
@@ -216,23 +186,7 @@ export default function NeracaView() {
                 </span>
               </div>
 
-              {divisi === 'SEMUA' && data?.aset?.persediaanBreakdown && (
-                <div className="mt-2 pt-2 border-t border-gray-200/60 grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px]">
-                  <div className="flex justify-between gap-2 px-2.5 py-1.5 bg-white rounded-lg border border-gray-200/60">
-                    <span className="text-gray-500">Stok Manufaktur:</span>
-                    <span className="font-mono font-semibold text-gray-800 whitespace-nowrap shrink-0">
-                      {formatRp(data.aset.persediaanBreakdown.manufaktur)}
-                    </span>
-                  </div>
-                  <div className="flex justify-between gap-2 px-2.5 py-1.5 bg-white rounded-lg border border-gray-200/60">
-                    <span className="text-gray-500">Stok Bahan F&B:</span>
-                    <span className="font-mono font-semibold text-gray-800 whitespace-nowrap shrink-0">
-                      {formatRp(data.aset.persediaanBreakdown.fnb)}
-                    </span>
-                  </div>
-                </div>
-              )}
-            </div>
+                          </div>
 
             <div className="pt-2 border-t border-gray-100 flex justify-between items-center text-xs font-bold text-gray-900">
               <span>Total Aset Lancar</span>
