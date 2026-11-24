@@ -22,6 +22,19 @@ export async function GET(req: Request) {
     const salesman = searchParams.get('salesman');
     const divisi = searchParams.get('divisi');
 
+    // Filter periode/divisi/salesman di database (sebelumnya: ambil 500 baris terakhir lalu
+    // disaring di memori, sehingga total salah begitu data > 500 baris).
+    // Batas tanggal dilebarkan 1 hari agar aman untuk zona waktu; halaman menyaring jam persisnya.
+    const syarat = [];
+    if (divisi && divisi !== 'SEMUA') syarat.push(eq(barangKeluar.divisi, divisi));
+    if (salesman && salesman !== 'all') syarat.push(eq(barangKeluar.salesman, salesman));
+    if (startDate && !Number.isNaN(Date.parse(startDate))) {
+      syarat.push(gte(barangKeluar.tanggal, new Date(Date.parse(startDate) - 86_400_000)));
+    }
+    if (endDate && !Number.isNaN(Date.parse(endDate))) {
+      syarat.push(lte(barangKeluar.tanggal, new Date(Date.parse(endDate) + 86_400_000)));
+    }
+
     // Query data barang keluar join inventory untuk mendapatkan harga_beli (HPP)
     const rows = await db
       .select({
@@ -44,8 +57,9 @@ export async function GET(req: Request) {
       })
       .from(barangKeluar)
       .leftJoin(inventory, eq(barangKeluar.sku, inventory.sku))
+      .where(syarat.length ? and(...syarat) : undefined)
       .orderBy(desc(barangKeluar.tanggal))
-      .limit(500);
+      .limit(20000); // pengaman memori; per periode jauh di bawah angka ini
 
     // Filter tanggal, salesman & divisi in-memory
     let filtered = rows;
