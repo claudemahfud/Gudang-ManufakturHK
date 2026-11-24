@@ -25,7 +25,7 @@ export default function AssistivePosButton() {
 
   return (
     <div
-      className="fixed bottom-6 right-6 md:bottom-8 md:right-8 z-50 flex items-center gap-3 select-none"
+      className="fixed bottom-[calc(env(safe-area-inset-bottom)+6.5rem)] right-4 md:bottom-8 md:right-8 z-50 flex items-center gap-3 select-none"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
