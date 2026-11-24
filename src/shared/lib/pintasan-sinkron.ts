@@ -11,10 +11,10 @@ function terlihat(el: HTMLElement) {
   return r.width > 0 && r.height > 0 && getComputedStyle(el).visibility !== 'hidden';
 }
 
-/** Tombol sinkron halaman yang sedang tampil: ikon refresh-cw atau label/aria-label/title bertema muat ulang. */
-export function cariTombolSinkron(): HTMLButtonElement | null {
+/** Semua tombol sinkron yang tampil di halaman: ikon refresh-cw atau label/aria-label/title bertema muat ulang. */
+export function cariTombolSinkron(): HTMLButtonElement[] {
   // Bila ada pop-up terbuka, jangan memicu tombol di balik pop-up
-  if (document.querySelector('[aria-modal="true"], [role="dialog"]')) return null;
+  if (document.querySelector('[aria-modal="true"], [role="dialog"]')) return [];
   const tombol = Array.from(document.querySelectorAll<HTMLButtonElement>('main button:not(:disabled)'));
   const cocok = tombol.filter((b) => {
     if (!terlihat(b)) return false;
@@ -22,11 +22,12 @@ export function cariTombolSinkron(): HTMLButtonElement | null {
     const teks = `${b.getAttribute('aria-label') ?? ''} ${b.title ?? ''} ${b.textContent ?? ''}`;
     return POLA_LABEL.test(teks);
   });
-  return cocok[0] ?? null;
+  return cocok;
 }
 
 /**
- * Alt+R = tekan tombol sinkron halaman aktif. Halaman tanpa tombol sinkron
+ * Alt+R = tekan semua tombol sinkron di halaman aktif (tiap bagian halaman ikut dimuat ulang).
+ * Halaman tanpa tombol sinkron
  * memuat ulang data server-nya (router.refresh) tanpa memuat ulang browser.
  */
 export function usePintasanSinkron() {
@@ -35,10 +36,9 @@ export function usePintasanSinkron() {
     const onKey = (e: KeyboardEvent) => {
       if (!e.altKey || e.ctrlKey || e.metaKey || e.shiftKey || e.code !== 'KeyR' || e.repeat) return;
       e.preventDefault();
-      const b = cariTombolSinkron();
-      if (b) {
-        b.click();
-        b.focus({ preventScroll: true });
+      const daftar = cariTombolSinkron();
+      if (daftar.length) {
+        daftar.forEach((b) => b.click());
       } else if (!document.querySelector('[aria-modal="true"], [role="dialog"]')) {
         router.refresh();
       }
