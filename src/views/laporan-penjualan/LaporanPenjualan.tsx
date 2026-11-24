@@ -27,6 +27,7 @@ import { useDivision } from '@/shared/context/DivisionContext';
 import { exportToCsv } from '@/shared/lib/export';
 import { exportRekapToPdfA4Landscape } from '@/shared/lib/exportDoc';
 import DateTimeFilterBar from '@/shared/components/ui/DateTimeFilterBar';
+import { AksiHeader, GrupIkon, TombolIkon } from '@/shared/components/ui/AksiHeader';
 
 interface PenjualanRow {
   id: string;
@@ -248,36 +249,13 @@ export default function LaporanPenjualanView() {
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2.5">
-          {/* Tombol Ekspor Berpasangan (Toolbar Pill) */}
-          <div className="inline-flex items-center rounded-xl border border-gray-200 bg-gray-50/80 p-1 shadow-xs">
-            <button
-              onClick={handleExportExcel}
-              className="inline-flex items-center gap-1.5 px-3 py-2 bg-white hover:bg-emerald-50 text-emerald-800 hover:text-emerald-900 rounded-lg text-xs font-bold border border-gray-100 transition shadow-xs"
-              title="Ekspor data penjualan ke file CSV / Excel"
-            >
-              <Download className="w-3.5 h-3.5 text-emerald-600" />
-              <span>Rekap Excel</span>
-            </button>
-            <button
-              type="button"
-              onClick={handleExportPdfA4Landscape}
-              className="inline-flex items-center gap-1.5 px-3 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs font-bold transition shadow-xs ml-1"
-              title="Ekspor Rekap Laporan PDF Kertas A4 Landscape dengan KOP Surat Resmi"
-            >
-              <FileText className="w-3.5 h-3.5 text-slate-300" />
-              <span>PDF (A4 Landscape)</span>
-            </button>
-          </div>
-
-          <button
-            onClick={() => window.print()}
-            className="inline-flex items-center gap-2 px-4 py-2.5 bg-gray-900 hover:bg-gray-800 text-white rounded-xl text-xs sm:text-sm font-semibold transition shadow-sm"
-          >
-            <Printer className="w-3.5 h-3.5" />
-            <span>Cetak Laporan</span>
-          </button>
-        </div>
+        <AksiHeader>
+          <GrupIkon>
+            <TombolIkon ikon={Download} label="Rekap Excel" onClick={handleExportExcel} warna="hijau" />
+            <TombolIkon ikon={FileText} label="Ekspor PDF (A4 Landscape)" onClick={handleExportPdfA4Landscape} warna="slate" />
+            <TombolIkon ikon={Printer} label="Cetak laporan" onClick={() => window.print()} />
+          </GrupIkon>
+        </AksiHeader>
       </header>
 
       {/* 2. Filter Periode Custom Fleksibel: Jam, Hari, Minggu, Bulan, Tahun */}

@@ -16,6 +16,7 @@ import {
   Printer,
   ChevronRight,
 } from 'lucide-react';
+import { AksiHeader, GrupIkon, TombolIkon } from '@/shared/components/ui/AksiHeader';
 
 export default function NeracaView() {
   const [divisi, setDivisi] = useState<'SEMUA' | 'MANUFAKTUR' | 'FNB'>('SEMUA');
@@ -63,23 +64,12 @@ export default function NeracaView() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2.5">
-          <button
-            onClick={fetchNeraca}
-            disabled={loading}
-            className="inline-flex items-center gap-2 px-3.5 py-2 border border-gray-300 rounded-xl text-xs font-semibold text-gray-700 bg-white hover:bg-gray-50 shadow-sm transition-all"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-            Segarkan
-          </button>
-          <button
-            onClick={() => window.print()}
-            className="inline-flex items-center gap-2 px-3.5 py-2 bg-gray-900 text-white rounded-xl text-xs font-semibold hover:bg-gray-800 shadow-sm transition-all"
-          >
-            <Printer className="w-3.5 h-3.5" />
-            Cetak Neraca
-          </button>
-        </div>
+        <AksiHeader>
+          <GrupIkon>
+            <TombolIkon ikon={RefreshCw} label="Segarkan data" onClick={fetchNeraca} disabled={loading} putar={loading} />
+            <TombolIkon ikon={Printer} label="Cetak neraca" onClick={() => window.print()} />
+          </GrupIkon>
+        </AksiHeader>
       </div>
 
       {/* Filter Plafon Divisi */}

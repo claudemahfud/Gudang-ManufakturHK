@@ -1,9 +1,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Download } from 'lucide-react';
+import { Download, Plus } from 'lucide-react';
 import { formatTanggal, formatRupiah } from '@/shared/lib/utils';
 import { exportToCsv } from '@/shared/lib/export';
+import { AksiHeader, GrupIkon, TombolIkon, TombolUtama } from '@/shared/components/ui/AksiHeader';
 
 // ============================================================
 // PAGE: Arus Kas & Keuangan
@@ -155,22 +156,14 @@ export default function Keuangan() {
             Monitoring pemasukan penjualan distributor, pembayaran supplier, dan arus kas harian
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={handleExportExcel}
-            className="inline-flex items-center gap-2 px-3.5 py-2.5 bg-white hover:bg-gray-50 border border-gray-200 text-gray-700 rounded-xl text-sm font-semibold shadow-sm transition"
-            title="Ekspor buku kas ke Excel"
-          >
-            <Download className="w-4 h-4 text-emerald-700" />
-            <span>Ekspor Excel</span>
-          </button>
-          <button
-            onClick={() => setIsModalOpen(true)}
-            className="inline-flex items-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-semibold shadow-sm transition"
-          >
-            <span>＋</span> Catat Transaksi Kas
-          </button>
-        </div>
+        <AksiHeader>
+          <GrupIkon>
+            <TombolIkon ikon={Download} label="Ekspor Excel" onClick={handleExportExcel} warna="hijau" />
+          </GrupIkon>
+          <TombolUtama ikon={Plus} onClick={() => setIsModalOpen(true)}>
+            Catat Transaksi Kas
+          </TombolUtama>
+        </AksiHeader>
       </div>
 
       {/* Summary Cards */}

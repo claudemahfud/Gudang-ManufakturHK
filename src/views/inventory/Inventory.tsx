@@ -9,9 +9,10 @@ import { useState, useEffect, useRef } from 'react';
 import { formatRupiah, formatStok } from '@/shared/lib/utils';
 import type { InventoryItem } from '@/shared/types';
 import { useDivision } from '@/shared/context/DivisionContext';
-import { Factory, Coffee, Download, Trash2, AlertCircle, Sparkles, Info } from 'lucide-react';
+import { Factory, Coffee, Download, Trash2, AlertCircle, Sparkles, Info, Plus } from 'lucide-react';
 import { exportToCsv } from '@/shared/lib/export';
 import { ToastFloater, ToastData } from '@/shared/components/ui/ToastFloater';
+import { AksiHeader, GrupIkon, TombolIkon, TombolUtama } from '@/shared/components/ui/AksiHeader';
 
 // ============================================================
 // SECTION: Interfaces & Initial State
@@ -559,23 +560,14 @@ export default function Inventory() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
-          <button
-            onClick={handleExportExcel}
-            className="inline-flex items-center justify-center gap-2 px-4 py-3 bg-white hover:bg-gray-50 border border-gray-200 text-gray-700 font-semibold text-sm rounded-xl shadow-sm transition"
-            title="Ekspor daftar master inventory ke file Excel"
-          >
-            <Download className="w-4 h-4 text-emerald-700" />
-            <span>Ekspor Excel</span>
-          </button>
-          <button
-            onClick={openCreateModal}
-            className="inline-flex items-center justify-center gap-2 px-5 py-3 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-semibold text-sm rounded-xl shadow-md transition"
-          >
-            <span className="text-lg leading-none">+</span>
-            <span>Tambah Barang Baru</span>
-          </button>
-        </div>
+        <AksiHeader>
+          <GrupIkon>
+            <TombolIkon ikon={Download} label="Ekspor Excel" onClick={handleExportExcel} warna="hijau" />
+          </GrupIkon>
+          <TombolUtama ikon={Plus} onClick={openCreateModal}>
+            Tambah Barang Baru
+          </TombolUtama>
+        </AksiHeader>
       </header>
 
       {/* 2. Filter & Search Bar (F-Pattern Second Row) */}

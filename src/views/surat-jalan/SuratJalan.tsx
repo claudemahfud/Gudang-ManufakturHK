@@ -1,7 +1,10 @@
 'use client';
 
+import { Plus } from 'lucide-react';
+
 import { useState, useEffect } from 'react';
 import { formatTanggal } from '@/shared/lib/utils';
+import { AksiHeader, TombolUtama } from '@/shared/components/ui/AksiHeader';
 
 // ============================================================
 // PAGE: Surat Jalan
@@ -226,12 +229,11 @@ export default function SuratJalan() {
             Manajemen dokumen legal pengiriman barang, ekspedisi pengantaran, dan bukti serah terima
           </p>
         </div>
-        <button
-          onClick={() => setIsModalOpen(true)}
-          className="inline-flex items-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-semibold shadow-sm transition"
-        >
-          <span>＋</span> Buat Surat Jalan Baru
-        </button>
+        <AksiHeader>
+          <TombolUtama ikon={Plus} onClick={() => setIsModalOpen(true)}>
+            Buat Surat Jalan Baru
+          </TombolUtama>
+        </AksiHeader>
       </div>
 
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
