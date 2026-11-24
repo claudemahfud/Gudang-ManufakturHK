@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { formatRupiah, formatTanggal } from '@/shared/lib/utils';
+import MemuatProgres from '@/shared/components/ui/MemuatProgres';
 
 // ============================================================
 // PAGE: Retur Barang
@@ -219,7 +220,7 @@ export default function ReturBarang() {
               {loading ? (
                 <tr>
                   <td colSpan={7} className="py-12 text-center text-gray-400">
-                    Memuat data retur...
+                    <MemuatProgres teks="Memuat data retur..." />
                   </td>
                 </tr>
               ) : data.length === 0 ? (

@@ -28,7 +28,11 @@ import {
   ShieldAlert,
   Zap,
   ExternalLink,
+  Wallet,
+  Boxes,
+  AlertTriangle,
 } from 'lucide-react';
+import MemuatProgres from '@/shared/components/ui/MemuatProgres';
 
 // ============================================================
 // SECTION: Interfaces & Types
@@ -176,8 +180,7 @@ export default function Dashboard() {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="flex flex-col items-center gap-3">
-          <div className="w-10 h-10 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin" />
-          <p className="text-sm font-medium text-gray-500">Memuat data dashboard...</p>
+          <p className="text-sm font-medium text-gray-500"><MemuatProgres teks="Memuat data dashboard..." /></p>
         </div>
       </div>
     );
@@ -365,6 +368,7 @@ export default function Dashboard() {
               Total Nilai Inventory
             </span>
             <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold text-lg">
+                <Wallet className="w-5 h-5" aria-hidden="true" />
               </div>
           </div>
           <div className="text-xl font-bold text-gray-900 tracking-tight">
@@ -384,6 +388,7 @@ export default function Dashboard() {
               Total Master SKU
             </span>
             <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold text-lg">
+                <Boxes className="w-5 h-5" aria-hidden="true" />
               </div>
           </div>
           <div className="text-2xl font-bold text-gray-900 tracking-tight">
@@ -407,7 +412,8 @@ export default function Dashboard() {
                 stats.stokKritis > 0 ? 'bg-amber-50 text-amber-600' : 'bg-green-50 text-green-600'
               }`}
             >
-              </div>
+              <AlertTriangle className="w-5 h-5" aria-hidden="true" />
+            </div>
           </div>
           <div className="flex items-baseline gap-2">
             <span
@@ -435,6 +441,7 @@ export default function Dashboard() {
               Barang Masuk (Hari Ini)
             </span>
             <div className="w-10 h-10 rounded-xl bg-teal-50 text-teal-600 flex items-center justify-center font-bold text-lg">
+                <ArrowDownToLine className="w-5 h-5" aria-hidden="true" />
               </div>
           </div>
           <div className="flex items-baseline gap-2">
@@ -457,6 +464,7 @@ export default function Dashboard() {
               Barang Keluar (Hari Ini)
             </span>
             <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold text-lg">
+                <Truck className="w-5 h-5" aria-hidden="true" />
               </div>
           </div>
           <div className="flex items-baseline gap-2">

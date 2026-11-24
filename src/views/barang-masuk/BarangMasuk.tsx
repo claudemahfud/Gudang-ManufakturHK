@@ -13,6 +13,7 @@ import DateTimeFilterBar from '@/shared/components/ui/DateTimeFilterBar';
 import PoDalamProses from './PoDalamProses';
 import FormReturPelanggan from './FormReturPelanggan';
 import { AksiHeader, GrupIkon, TombolIkon, TombolUtama } from '@/shared/components/ui/AksiHeader';
+import MemuatProgres from '@/shared/components/ui/MemuatProgres';
 
 // ============================================================
 // PAGE: Barang Masuk (Purchasing & Penerimaan Stok)
@@ -621,8 +622,7 @@ export default function BarangMasuk() {
                 <tr>
                   <td colSpan={9} className="py-16 text-center text-gray-400">
                     <div className="flex flex-col items-center justify-center gap-2">
-                      <div className="w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin" />
-                      <span className="text-xs font-medium text-gray-500">Memuat data barang masuk...</span>
+                      <span className="text-xs font-medium text-gray-500"><MemuatProgres teks="Memuat data barang masuk..." /></span>
                     </div>
                   </td>
                 </tr>

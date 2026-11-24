@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { formatTanggal } from '@/shared/lib/utils';
+import MemuatProgres from '@/shared/components/ui/MemuatProgres';
 
 // ============================================================
 // PAGE: Pengajuan Diskon Khusus
@@ -170,7 +171,7 @@ export default function PengajuanDiskon() {
               {loading ? (
                 <tr>
                   <td colSpan={7} className="py-12 text-center text-gray-400">
-                    Memuat data pengajuan...
+                    <MemuatProgres teks="Memuat data pengajuan..." />
                   </td>
                 </tr>
               ) : data.length === 0 ? (

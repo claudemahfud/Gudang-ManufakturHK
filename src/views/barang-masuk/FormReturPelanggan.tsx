@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { FileText, Search, Undo2, UserRound } from 'lucide-react';
 import { formatRupiah, formatTanggal } from '@/shared/lib/utils';
+import MemuatProgres from '@/shared/components/ui/MemuatProgres';
 
 // ============================================================
 // Form Barang Masuk jenis "Retur dari Pelanggan".
@@ -245,7 +246,7 @@ export default function FormReturPelanggan({
                   />
                 </div>
                 <ul className="mt-2 max-h-56 overflow-y-auto divide-y divide-gray-100 border border-gray-100 rounded-xl">
-                  {memuatFaktur && <li className="p-3 text-xs text-gray-400">Memuat faktur…</li>}
+                  {memuatFaktur && <li className="p-3 text-xs text-gray-400"><MemuatProgres teks="Memuat faktur…" /></li>}
                   {!memuatFaktur && gagalFaktur && <li className="p-3 text-xs text-red-600">{gagalFaktur}</li>}
                   {!memuatFaktur && !gagalFaktur && daftarFaktur.length === 0 && (
                     <li className="p-3 text-xs text-gray-400">Tidak ada faktur yang cocok.</li>

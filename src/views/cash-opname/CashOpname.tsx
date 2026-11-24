@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { formatRupiah, formatTanggal } from '@/shared/lib/utils';
 import { AksiHeader, GrupIkon, TombolIkon, TombolUtama } from '@/shared/components/ui/AksiHeader';
+import MemuatProgres from '@/shared/components/ui/MemuatProgres';
 
 export default function CashOpnameView() {
   const [data, setData] = useState<any[]>([]);
@@ -204,7 +205,7 @@ export default function CashOpnameView() {
               {loading ? (
                 <tr>
                   <td colSpan={9} className="py-12 text-center text-gray-400">
-                    Memuat riwayat cash opname...
+                    <MemuatProgres teks="Memuat riwayat cash opname..." />
                   </td>
                 </tr>
               ) : data.length === 0 ? (

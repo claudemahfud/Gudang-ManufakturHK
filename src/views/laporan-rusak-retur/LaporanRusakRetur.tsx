@@ -29,6 +29,7 @@ import DocumentModalViewer, { DocumentData } from '@/shared/components/documents
 import { exportRekapToPdfA4Landscape } from '@/shared/lib/exportDoc';
 import DateTimeFilterBar from '@/shared/components/ui/DateTimeFilterBar';
 import { AksiHeader, GrupIkon, TombolIkon, TombolUtama } from '@/shared/components/ui/AksiHeader';
+import MemuatProgres from '@/shared/components/ui/MemuatProgres';
 
 export default function LaporanRusakReturView() {
   const { division, isManufaktur, isFnb } = useDivision();
@@ -584,7 +585,7 @@ export default function LaporanRusakReturView() {
                   {loading ? (
                     <tr>
                       <td colSpan={8} className="py-12 text-center text-gray-400">
-                        Memuat data barang rusak...
+                        <MemuatProgres teks="Memuat data barang rusak..." />
                       </td>
                     </tr>
                   ) : filteredRusak.length === 0 ? (
@@ -659,7 +660,7 @@ export default function LaporanRusakReturView() {
                   {loading ? (
                     <tr>
                       <td colSpan={8} className="py-12 text-center text-gray-400">
-                        Memuat data retur...
+                        <MemuatProgres teks="Memuat data retur..." />
                       </td>
                     </tr>
                   ) : filteredRetur.length === 0 ? (

@@ -5,6 +5,7 @@ import { Download, Plus } from 'lucide-react';
 import { formatTanggal, formatRupiah } from '@/shared/lib/utils';
 import { exportToCsv } from '@/shared/lib/export';
 import { AksiHeader, GrupIkon, TombolIkon, TombolUtama } from '@/shared/components/ui/AksiHeader';
+import MemuatProgres from '@/shared/components/ui/MemuatProgres';
 
 // ============================================================
 // PAGE: Arus Kas & Keuangan
@@ -207,7 +208,7 @@ export default function Keuangan() {
               {loading ? (
                 <tr>
                   <td colSpan={7} className="py-12 text-center text-gray-400">
-                    Memuat arus kas...
+                    <MemuatProgres teks="Memuat arus kas..." />
                   </td>
                 </tr>
               ) : data.length === 0 ? (

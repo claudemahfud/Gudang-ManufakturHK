@@ -56,6 +56,7 @@ import type { InventoryItem } from '@/shared/types';
 import { useDivision, DivisionMode } from '@/shared/context/DivisionContext';
 import { useBarcodeScanner } from '@/shared/hooks/useBarcodeScanner';
 import CameraBarcodeScanner from '@/shared/components/ui/CameraBarcodeScanner';
+import MemuatProgres from '@/shared/components/ui/MemuatProgres';
 
 // ============================================================
 // SECTION: Interfaces & Default Settings
@@ -786,7 +787,7 @@ export default function PosView() {
           <div className="flex-1 overflow-y-auto pr-1">
             {loadingItems ? (
               <div className="flex items-center justify-center h-64 text-slate-500 text-sm">
-                Memuat katalog produk inventory...
+                <MemuatProgres teks="Memuat katalog produk inventory..." />
               </div>
             ) : filteredItems.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-64 text-slate-500 text-sm gap-2">

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { formatTanggal } from '@/shared/lib/utils';
+import MemuatProgres from '@/shared/components/ui/MemuatProgres';
 
 // ============================================================
 // PAGE: Log Aktivitas & Audit Trail
@@ -103,7 +104,7 @@ export default function Logs() {
               {loading ? (
                 <tr>
                   <td colSpan={4} className="py-12 text-center text-gray-400">
-                    Memuat log aktivitas...
+                    <MemuatProgres teks="Memuat log aktivitas..." />
                   </td>
                 </tr>
               ) : data.length === 0 ? (
