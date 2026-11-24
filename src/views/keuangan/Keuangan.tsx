@@ -7,7 +7,8 @@ import { exportToCsv } from '@/shared/lib/export';
 import { AksiHeader, GrupIkon, TombolIkon, TombolUtama } from '@/shared/components/ui/AksiHeader';
 import MemuatProgres from '@/shared/components/ui/MemuatProgres';
 import { useDivision } from '@/shared/context/DivisionContext';
-import { AKUN_KAS, ambil, KotakTerlarang, TIPE_AKUN, type Akun } from '@/views/laporan-keuangan/util';
+import { ambil, KotakTerlarang, type Akun } from '@/views/laporan-keuangan/util';
+import CatatTransaksi from './CatatTransaksi';
 
 // ============================================================
 // PAGE: Kas & Bank
@@ -26,29 +27,6 @@ interface ItemKeuangan {
   createdBy: string | null;
 }
 
-const KODE_KAS = AKUN_KAS.map((a) => a.kode);
-// Akun lawan yang boleh dipilih per jenis transaksi kas
-const TIPE_LAWAN: Record<string, Akun['tipe'][]> = {
-  masuk: ['PENDAPATAN', 'EKUITAS', 'KEWAJIBAN', 'ASET'],
-  keluar: ['BEBAN', 'ASET', 'KEWAJIBAN', 'EKUITAS'],
-};
-const LABEL_TIPE: Record<Akun['tipe'], string> = {
-  ASET: 'Aset (non-kas)',
-  KEWAJIBAN: 'Kewajiban',
-  EKUITAS: 'Ekuitas',
-  PENDAPATAN: 'Pendapatan',
-  BEBAN: 'Beban',
-};
-
-const formAwal = () => ({
-  tanggal: new Date().toISOString().split('T')[0],
-  jenis: 'masuk',
-  akunKode: '',
-  akunKas: '1-1100',
-  jumlah: '',
-  keterangan: '',
-});
-
 export default function Keuangan() {
   const { division, cabang } = useDivision();
   const [akun, setAkun] = useState<Akun[]>([]);
@@ -56,9 +34,6 @@ export default function Keuangan() {
   const [data, setData] = useState<ItemKeuangan[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
-
-  const [form, setForm] = useState(formAwal);
 
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
@@ -88,11 +63,6 @@ export default function Keuangan() {
     });
   }, []);
 
-  const pilihanAkun = TIPE_AKUN.filter((t) => TIPE_LAWAN[form.jenis].includes(t)).map((t) => ({
-    tipe: t,
-    akun: akun.filter((a) => a.posting && a.tipe === t && !KODE_KAS.includes(a.kode)),
-  }));
-
   const showToast = (message: string, type: 'success' | 'error') => {
     setToast({ message, type });
     setTimeout(() => setToast(null), 3000);
@@ -107,37 +77,6 @@ export default function Keuangan() {
     .reduce((acc, curr) => acc + parseFloat(curr.jumlah || '0'), 0);
 
   const saldo = totalMasuk - totalKeluar;
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (submitting) return;
-    if (!form.jumlah || !form.akunKode) {
-      showToast('Akun dan nominal wajib diisi', 'error');
-      return;
-    }
-
-    setSubmitting(true);
-    try {
-      const res = await fetch('/api/keuangan', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...form, jumlah: Number(form.jumlah), divisi: division, cabang }),
-      });
-      const json = await res.json();
-      if (json.success) {
-        showToast('Transaksi keuangan berhasil dicatat!', 'success');
-        setIsModalOpen(false);
-        setForm(formAwal());
-        fetchData();
-      } else {
-        showToast(json.message || 'Gagal menyimpan', 'error');
-      }
-    } catch {
-      showToast('Terjadi kesalahan', 'error');
-    } finally {
-      setSubmitting(false);
-    }
-  };
 
   const handleDelete = async (id: string) => {
     if (!confirm('Hapus transaksi ini?')) return;
@@ -196,7 +135,7 @@ export default function Keuangan() {
             <TombolIkon ikon={Download} label="Ekspor Excel" onClick={handleExportExcel} warna="hijau" />
           </GrupIkon>
           <TombolUtama ikon={Plus} onClick={() => setIsModalOpen(true)}>
-            Catat Transaksi Kas
+            Catat Transaksi
           </TombolUtama>
         </AksiHeader>
       </div>
@@ -305,143 +244,17 @@ export default function Keuangan() {
       </div>
 
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg lg:max-w-4xl max-h-[90vh] flex flex-col overflow-hidden border border-gray-100 animate-in zoom-in-95 duration-150">
-            <div className="px-6 sm:px-8 py-4 border-b border-gray-100 flex items-center justify-between shrink-0 bg-white">
-              <h2 className="font-bold text-gray-800 text-base lg:text-lg">Catat Transaksi Keuangan</h2>
-              <button 
-                type="button"
-                onClick={() => setIsModalOpen(false)} 
-                className="text-gray-400 hover:text-gray-600 font-bold p-1 rounded-lg hover:bg-gray-100 transition"
-                aria-label="Tutup modal"
-              >
-                ✕
-              </button>
-            </div>
-            <form onSubmit={handleSubmit} className="flex-1 flex flex-col overflow-hidden">
-              <div className="flex-1 overflow-y-auto p-6 sm:px-8">
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
-                  {/* Kolom Kiri */}
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <div>
-                        <label className="block text-xs font-semibold text-gray-700 mb-1">Tanggal *</label>
-                        <input
-                          type="date"
-                          required
-                          value={form.tanggal}
-                          onChange={(e) => setForm({ ...form, tanggal: e.target.value })}
-                          className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm focus:border-emerald-500 outline-none"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-semibold text-gray-700 mb-1">Tipe Arus Kas *</label>
-                        <select
-                          value={form.jenis}
-                          onChange={(e) => setForm({ ...form, jenis: e.target.value, akunKode: '' })}
-                          className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm focus:border-emerald-500 outline-none"
-                        >
-                          <option value="masuk">Uang Masuk (Debit)</option>
-                          <option value="keluar">Uang Keluar (Kredit)</option>
-                        </select>
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-semibold text-gray-700 mb-1">
-                        {form.jenis === 'masuk' ? 'Sumber Dana (Akun) *' : 'Keperluan (Akun) *'}
-                      </label>
-                      <select
-                        required
-                        value={form.akunKode}
-                        onChange={(e) => setForm({ ...form, akunKode: e.target.value })}
-                        className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm focus:border-emerald-500 outline-none"
-                      >
-                        <option value="">— Pilih akun —</option>
-                        {pilihanAkun.map((g) =>
-                          g.akun.length ? (
-                            <optgroup key={g.tipe} label={LABEL_TIPE[g.tipe]}>
-                              {g.akun.map((a) => (
-                                <option key={a.kode} value={a.kode}>
-                                  {a.kode} · {a.nama}
-                                </option>
-                              ))}
-                            </optgroup>
-                          ) : null
-                        )}
-                      </select>
-                      <p className="text-[11px] text-gray-400 mt-1">
-                        Pembayaran faktur penjualan dicatat lewat menu Piutang Pelanggan, pembayaran suplier lewat Hutang Suplier.
-                      </p>
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-semibold text-gray-700 mb-1">
-                        {form.jenis === 'masuk' ? 'Diterima ke *' : 'Dibayar dari *'}
-                      </label>
-                      <select
-                        value={form.akunKas}
-                        onChange={(e) => setForm({ ...form, akunKas: e.target.value })}
-                        className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm focus:border-emerald-500 outline-none"
-                      >
-                        {AKUN_KAS.map((k) => (
-                          <option key={k.kode} value={k.kode}>
-                            {k.kode} · {k.nama}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-
-                  {/* Kolom Kanan */}
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-xs font-semibold text-gray-700 mb-1">Nominal (Rp) *</label>
-                      <input
-                        type="number"
-                        required
-                        min="1"
-                        placeholder="0"
-                        value={form.jumlah}
-                        onChange={(e) => setForm({ ...form, jumlah: e.target.value })}
-                        className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm focus:border-emerald-500 outline-none font-semibold text-emerald-800"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-semibold text-gray-700 mb-1">Catatan / Bukti Transfer</label>
-                      <textarea
-                        rows={2}
-                        placeholder="Keterangan tambahan..."
-                        value={form.keterangan}
-                        onChange={(e) => setForm({ ...form, keterangan: e.target.value })}
-                        className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm focus:border-emerald-500 outline-none resize-none"
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Action Buttons (Fixed Footer) */}
-              <div className="px-6 sm:px-8 py-3.5 border-t border-gray-100 bg-gray-50/80 flex justify-end gap-2 shrink-0">
-                <button
-                  type="button"
-                  onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2 border border-gray-200 text-gray-600 rounded-xl text-sm font-medium hover:bg-gray-100 transition"
-                >
-                  Batal
-                </button>
-                <button
-                  type="submit"
-                  disabled={submitting}
-                  className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-semibold transition disabled:opacity-50"
-                >
-                  {submitting ? 'Menyimpan...' : 'Simpan Transaksi'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
+        <CatatTransaksi
+          akun={akun}
+          division={division === 'FNB' ? 'FNB' : 'MANUFAKTUR'}
+          cabang={cabang}
+          onTutup={() => setIsModalOpen(false)}
+          onSelesai={(pesan) => {
+            setIsModalOpen(false);
+            showToast(pesan, 'success');
+            fetchData();
+          }}
+        />
       )}
     </div>
   );

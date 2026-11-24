@@ -5,6 +5,7 @@ import { formatTanggal, formatRupiah } from '@/shared/lib/utils';
 import MemuatProgres from '@/shared/components/ui/MemuatProgres';
 import { useDivision } from '@/shared/context/DivisionContext';
 import { ambil, KotakTerlarang, type Akun } from '@/views/laporan-keuangan/util';
+import { sarankanAkunBiaya } from '@/shared/lib/pemetaan-akuntansi';
 
 // ============================================================
 // PAGE: Biaya Operasional
@@ -41,6 +42,8 @@ export default function BiayaOperasional() {
   const [submitting, setSubmitting] = useState(false);
 
   const [form, setForm] = useState(formAwal);
+  // Akun beban dipilih otomatis dari rincian (pengguna tetap bisa menggantinya)
+  const [akunOtomatis, setAkunOtomatis] = useState(false);
 
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
@@ -257,7 +260,10 @@ export default function BiayaOperasional() {
                       <select
                         required
                         value={form.akunKode}
-                        onChange={(e) => setForm({ ...form, akunKode: e.target.value })}
+                        onChange={(e) => {
+                          setAkunOtomatis(false);
+                          setForm({ ...form, akunKode: e.target.value });
+                        }}
                         className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm focus:border-red-500 outline-none"
                       >
                         <option value="">— Pilih akun beban —</option>
@@ -267,6 +273,9 @@ export default function BiayaOperasional() {
                           </option>
                         ))}
                       </select>
+                      {akunOtomatis && form.akunKode && (
+                        <p className="mt-1 text-[11px] text-emerald-700">Dipilih otomatis dari rincian. Ganti bila kurang tepat.</p>
+                      )}
                     </div>
 
                     <div>
@@ -308,9 +317,19 @@ export default function BiayaOperasional() {
                       <label className="block text-xs font-semibold text-gray-700 mb-1">Rincian / Nota Pembelian</label>
                       <textarea
                         rows={2}
-                        placeholder="Isi rincian pengeluaran..."
+                        placeholder="Isi rincian, mis. bayar listrik PLN (akun dipilih otomatis)"
                         value={form.keterangan}
-                        onChange={(e) => setForm({ ...form, keterangan: e.target.value })}
+                        onChange={(e) => {
+                          const teks = e.target.value;
+                          const saran = sarankanAkunBiaya(teks);
+                          const boleh = !form.akunKode || akunOtomatis;
+                          if (saran && boleh && akunBeban.some((a) => a.kode === saran)) {
+                            setAkunOtomatis(true);
+                            setForm({ ...form, keterangan: teks, akunKode: saran });
+                          } else {
+                            setForm({ ...form, keterangan: teks });
+                          }
+                        }}
                         className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm focus:border-red-500 outline-none resize-none"
                       />
                     </div>
