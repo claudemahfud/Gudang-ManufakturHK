@@ -4,9 +4,9 @@ import { inventory, barangKeluar, keuangan, logs } from '@/shared/lib/db/schema'
 import { requireAuthRole, ROLES_POS } from '@/shared/lib/auth/rbac';
 import { eq } from 'drizzle-orm';
 import { decrementStock, errorResponse, normalizeSku, parsePositiveInt } from '@/shared/lib/stock';
-import { generateTrxId } from '@/shared/lib/utils';
 import { assertSupervisorPin, getPengaturan } from '@/shared/lib/pengaturan';
 import { roleUtamaDi } from '@/shared/lib/auth/roles';
+import { nomorUrut } from '@/shared/lib/nomor-urut';
 
 // ============================================================
 // API: /api/pos/checkout
@@ -126,13 +126,14 @@ export async function POST(req: Request) {
       );
     }
 
-    // 3. Generate Nomor Transaksi Unik
-    const trxId = generateTrxId('POS');
+    // 3. Nomor transaksi POS-BBTT-NNN (urut harian, diambil di dalam transaksi)
+    let trxId = '';
     const tanggalTrx = new Date();
     const cashierName = user.name || user.username || 'Kasir';
 
     // 4. Proses Transaksi Database (Atomic Transaction)
     await db.transaction(async (tx) => {
+      trxId = await nomorUrut(tx, 'POS');
       for (const item of lines) {
         const itemSubtotal = item.hargaJual * item.qty;
         const itemNetTotal = roundRp(itemSubtotal - (itemSubtotal * diskon) / 100);

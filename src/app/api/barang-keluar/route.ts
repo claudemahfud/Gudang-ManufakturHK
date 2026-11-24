@@ -5,9 +5,9 @@ import { requireAuthRole, ROLES_STOCK_OUT } from '@/shared/lib/auth/rbac';
 import { BusinessError, errorResponse, normalizeSku, parsePositiveInt } from '@/shared/lib/stock';
 import { buatFakturPenjualan, type BarisInput } from '@/shared/lib/faktur-penjualan';
 import type { MetodeBayar } from '@/shared/lib/faktur-hitung';
-import { generateTrxId } from '@/shared/lib/utils';
 import { eq, desc, and, gte, lte } from 'drizzle-orm';
 import { roleUtamaDi } from '@/shared/lib/auth/roles';
+import { nomorUrut } from '@/shared/lib/nomor-urut';
 
 // ============================================================
 // API: /api/barang-keluar
@@ -164,9 +164,11 @@ export async function POST(req: Request) {
       baris.push({ sku, qty, hargaJual, diskon, satuan: it?.satuan === 'karton' ? 'karton' : 'pcs' });
     }
 
-    const noFaktur = generateTrxId('FJ');
-    const hasil = await db.transaction((tx) =>
-      buatFakturPenjualan(tx, {
+    // Nomor diambil di dalam transaksi: gagal simpan = nomor tidak terpakai
+    let noFaktur = '';
+    const hasil = await db.transaction(async (tx) => {
+      noFaktur = await nomorUrut(tx, 'FJ');
+      return buatFakturPenjualan(tx, {
         noFaktur,
         tanggal: trxDate,
         jatuhTempo,
@@ -185,8 +187,8 @@ export async function POST(req: Request) {
         cabang: cabangToSave,
         catatan: str(body.keterangan),
         user,
-      })
-    );
+      });
+    });
 
     return NextResponse.json(
       {
