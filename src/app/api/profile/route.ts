@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/shared/lib/db';
 import { users, logs } from '@/shared/lib/db/schema';
-import { auth } from '@/shared/lib/auth/config';
+import { requireAuthRole } from '@/shared/lib/auth/rbac';
 import { and, eq, ne, sql } from 'drizzle-orm';
 import { hashPassword, verifyPassword } from '@/shared/lib/auth/password';
 
@@ -13,10 +13,10 @@ import { hashPassword, verifyPassword } from '@/shared/lib/auth/password';
 
 export async function GET() {
   try {
-    const session = await auth();
-    if (!session?.user) {
-      return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
-    }
+    // Dibaca segar dari DB: akun nonaktif/dihapus langsung ditolak walau token masih berlaku
+    const authResult = await requireAuthRole();
+    if (!authResult.authorized) return authResult.response;
+    const session = { user: authResult.user };
 
     const username = (session.user as any).username;
     if (!username) {
@@ -51,10 +51,10 @@ export async function GET() {
 
 export async function PUT(req: Request) {
   try {
-    const session = await auth();
-    if (!session?.user) {
-      return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
-    }
+    // Dibaca segar dari DB: akun nonaktif/dihapus langsung ditolak walau token masih berlaku
+    const authResult = await requireAuthRole();
+    if (!authResult.authorized) return authResult.response;
+    const session = { user: authResult.user };
 
     const username = (session.user as any).username;
     const body = await req.json();
