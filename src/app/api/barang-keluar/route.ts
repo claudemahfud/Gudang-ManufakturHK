@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/shared/lib/db';
 import { barangKeluar } from '@/shared/lib/db/schema';
-import { auth } from '@/shared/lib/auth/config';
 import { requireAuthRole, ROLES_STOCK_OUT } from '@/shared/lib/auth/rbac';
 import { BusinessError, errorResponse, normalizeSku, parsePositiveInt } from '@/shared/lib/stock';
 import { buatFakturPenjualan, type BarisInput } from '@/shared/lib/faktur-penjualan';
@@ -17,10 +16,10 @@ import { roleUtamaDi } from '@/shared/lib/auth/roles';
 
 export async function GET(req: Request) {
   try {
-    const session = await auth();
-    if (!session) {
-      return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
-    }
+    // Dibaca segar dari DB: akun nonaktif/dihapus langsung ditolak walau token masih berlaku
+    const authResult = await requireAuthRole();
+    if (!authResult.authorized) return authResult.response;
+    const session = { user: authResult.user };
 
     const { searchParams } = new URL(req.url);
     const startDate = searchParams.get('startDate');
