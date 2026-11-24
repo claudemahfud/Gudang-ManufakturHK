@@ -300,13 +300,15 @@ export async function arusKas(entitas: Entitas, dari: string, sampai: string, ex
     const kas = rp(rows.filter((r) => r.arus_kas === 'KAS').reduce((s, r) => s + Number(r.net), 0));
     if (nol(kas)) continue; // pindah antar akun kas
     const asal = rows[0].sumber_asal;
-    let kelas = uraianSumber(asal, kas);
+    // Jurnal pembalik memakai uraian jurnal asalnya (tanda dibalik) agar saling hapus di baris yang sama
+    const tandaUraian = rows[0].sumber === 'PEMBALIK' ? -kas : kas;
+    let kelas = uraianSumber(asal, tandaUraian);
     if (!kelas) {
       const lawan = rows
         .filter((r) => r.arus_kas !== 'KAS')
         .sort((a, b) => Math.abs(Number(b.net)) - Math.abs(Number(a.net)))[0];
       kelas = lawan
-        ? uraianAkun({ kode: lawan.akun_kode, nama: lawan.nama, tipe: lawan.tipe, arus_kas: lawan.arus_kas }, kas)
+        ? uraianAkun({ kode: lawan.akun_kode, nama: lawan.nama, tipe: lawan.tipe, arus_kas: lawan.arus_kas }, tandaUraian)
         : { seksi: 'OPERASI', uraian: 'Mutasi kas lain' };
     }
     const m = seksi[kelas.seksi];
