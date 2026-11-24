@@ -18,6 +18,7 @@ export const authConfig = {
       if (user) {
         token.username = (user as any).username;
         token.role = (user as any).role;
+        token.roles = (user as any).roles ?? [(user as any).role];
         token.divisiAssigned = (user as any).divisiAssigned || 'ALL';
         token.cabang = (user as any).cabang || 'Pusat';
       }
@@ -27,6 +28,7 @@ export const authConfig = {
       if (token && session.user) {
         (session.user as any).username = token.username;
         (session.user as any).role = token.role;
+        (session.user as any).roles = token.roles ?? [token.role];
         (session.user as any).divisiAssigned = token.divisiAssigned || 'ALL';
         (session.user as any).cabang = token.cabang || 'Pusat';
       }

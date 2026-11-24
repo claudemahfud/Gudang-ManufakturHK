@@ -8,7 +8,8 @@ export const users = pgTable('users', {
   id: uuid('id').primaryKey().defaultRandom(),
   username: varchar('username', { length: 50 }).notNull().unique(),
   namaLengkap: varchar('nama_lengkap', { length: 100 }).notNull(),
-  role: varchar('role', { length: 50 }).notNull(),
+  role: varchar('role', { length: 50 }).notNull(), // role utama
+  rolesTambahan: text('roles_tambahan').array().notNull().default([]), // ditetapkan Direktur Utama (migrasi 008)
   email: varchar('email', { length: 100 }),
   passwordHash: text('password_hash').notNull(),
   aktif: boolean('aktif').notNull().default(true),

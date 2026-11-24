@@ -7,6 +7,7 @@ import { eq, desc, and, gte, lte, or } from 'drizzle-orm';
 import { catatBarangMasuk, catatPembayaranPembelian, resolveJatuhTempo } from '@/shared/lib/barang-masuk';
 import { catatReturPelanggan } from '@/shared/lib/retur-pelanggan';
 import { errorResponse, normalizeSku, parsePositiveInt, resolveRequestCabang } from '@/shared/lib/stock';
+import { roleUtamaDi } from '@/shared/lib/auth/roles';
 
 // ============================================================
 // API: /api/barang-masuk
@@ -27,9 +28,8 @@ export async function GET(req: Request) {
     const divisi = searchParams.get('divisi');
 
     const user = session.user as any;
-    const userRole = user?.role;
     const userCabang = user?.cabang || 'Pusat';
-    const isExecutive = ['Administrator', 'Direktur Utama', 'Manager', 'Manager Umum'].includes(userRole);
+    const isExecutive = roleUtamaDi(user, ['Administrator', 'Direktur Utama', 'Manager', 'Manager Umum']);
 
     let conditions: any[] = [];
 
@@ -146,7 +146,7 @@ export async function POST(req: Request) {
 
     const sessionUser = session.user as any;
     const user = sessionUser?.name || sessionUser?.username || 'System';
-    const isExecutive = ['Administrator', 'Direktur Utama', 'Manager', 'Manager Umum'].includes(sessionUser?.role);
+    const isExecutive = roleUtamaDi(sessionUser, ['Administrator', 'Direktur Utama', 'Manager', 'Manager Umum']);
     const userCabang = sessionUser?.cabang || 'Pusat';
     const cabangToSave = (!isExecutive && userCabang !== 'ALL' && userCabang !== 'Pusat')
       ? userCabang
@@ -220,7 +220,7 @@ export async function POST(req: Request) {
   }
 }
 
-type SesiUser = { name?: string | null; username?: string; role?: string; cabang?: string } | undefined;
+type SesiUser = { name?: string | null; username?: string; role?: string; roles?: string[]; cabang?: string } | undefined;
 
 async function postReturPelanggan(body: Record<string, unknown>, sessionUser: SesiUser) {
   try {

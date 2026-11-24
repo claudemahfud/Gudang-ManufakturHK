@@ -2,6 +2,7 @@ import NextAuth from 'next-auth';
 import { authConfig } from '@/shared/lib/auth/auth.config';
 import { NextResponse } from 'next/server';
 import { ROUTES } from '@/router/routes';
+import { punyaRole } from '@/shared/lib/auth/roles';
 
 // ============================================================
 // MIDDLEWARE — Edge-compatible Auth Guard + Role Based
@@ -13,7 +14,7 @@ const PUBLIC_ROUTES = [ROUTES.LOGIN, ROUTES.FORGOT_PASSWORD, '/api/public'];
 
 const ROUTE_ROLES: Record<string, string[]> = {
   // Page routes
-  [ROUTES.USERS]: ['Administrator'],
+  [ROUTES.USERS]: ['Administrator', 'Direktur Utama'], // Direktur: atur multi-role (API dijaga terpisah)
   [ROUTES.PENGATURAN_PERUSAHAAN]: ['Direktur Utama'],
   [ROUTES.LOGS]: ['Administrator', 'Manager', 'Manager Umum', 'Direktur Utama'],
   [ROUTES.KEUANGAN]: ['Administrator', 'Manager', 'Manager Umum', 'Direktur Utama', 'Kepala Gudang', 'Finance & Accounting'],
@@ -62,12 +63,13 @@ export default auth((req: any) => {
 
   // Cek otorisasi role (prefix matching untuk nested route)
   const userRole = (session.user as any)?.role;
+  const sesiUser = session.user as { role?: string; roles?: string[] };
   const matchedRoute = Object.keys(ROUTE_ROLES).find(
     (route) => pathname === route || pathname.startsWith(route + '/')
   );
   const allowedRoles = matchedRoute ? ROUTE_ROLES[matchedRoute] : null;
 
-  if (allowedRoles && allowedRoles.length > 0 && !allowedRoles.includes(userRole)) {
+  if (allowedRoles && allowedRoles.length > 0 && !punyaRole(sesiUser, allowedRoles)) {
     if (isApiRoute) {
       return NextResponse.json(
         {

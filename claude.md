@@ -178,6 +178,9 @@ Berdasarkan audit komprehensif sistem (20 November 2026), seluruh modul dan API 
      * Master Inventory, Barang Keluar: `ROLES_EXECUTIVE`.
      * Barang Masuk, Barang Rusak, Mutasi Barang, Retur, PO Loading: `ROLES_WAREHOUSE`.
      * Surat Jalan, Armada: `ROLES_EXPEDISI`.
+   * **Multi-role** (migrasi 008, `src/shared/lib/auth/roles.ts`): `users.role` = role utama (diatur Administrator), `users.roles_tambahan` = role tambahan yang hanya bisa ditetapkan **Direktur Utama** (`PUT /api/users/[username]/roles`, tombol "Atur Role" di `/users`). Sesi membawa `roles`.
+     * Hak menu & fitur = gabungan semua role: cek dengan `punyaRole(user, DAFTAR)`, jangan `DAFTAR.includes(user.role)`. `requireAuthRole` membaca role terbaru dari DB (pencabutan & akun nonaktif langsung berlaku di API); menu/sidebar ikut setelah login ulang.
+     * Ruang lingkup data (Mode Manufaktur/F&B, cabang, batas data sendiri sales) mengikuti **role utama** saja: `roleUtamaDi(user, DAFTAR)`. Role tambahan tidak membuka ganti Mode atau akses semua cabang.
 3. **Pencegahan Stok Negatif & Validasi Stok Kritis**:
    * Setiap API pengeluaran barang (`/api/barang-keluar`), mutasi (`/api/mutasi-barang`), dan pencatatan rusak (`/api/barang-rusak`) wajib memverifikasi ketersediaan stok fisik di `inventory` (`inv.stok >= requestedQty`) sebelum eksekusi pemotongan dilakukan.
 4. **Auto-Sinkronisasi Master SKU**:

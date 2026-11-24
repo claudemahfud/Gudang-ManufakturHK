@@ -4,6 +4,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 import { useSession, signOut } from 'next-auth/react';
 import type { UserRole } from '@/shared/types';
 import { ROUTES } from '@/router/routes';
+import { roleUtamaDi } from '@/shared/lib/auth/roles';
 
 export type DivisionMode = 'MANUFAKTUR' | 'FNB';
 
@@ -61,12 +62,11 @@ const CABANG_COOKIE_NAME = 'app_active_cabang';
 export function DivisionProvider({ children }: { children: React.ReactNode }) {
   const { data: session } = useSession();
   const user = session?.user as any;
-  const userRole = user?.role as UserRole | undefined;
   const divisiAssigned = user?.divisiAssigned as 'ALL' | 'MANUFAKTUR' | 'FNB' | undefined;
   const userCabang = user?.cabang || 'Pusat';
 
   // Hanya Pimpinan (Admin, Direktur Utama, Manager) yang punya izin ganti mode & multi-cabang
-  const isExecutive = ['Administrator', 'Direktur Utama', 'Manager', 'Manager Umum', 'Finance & Accounting'].includes(userRole as any);
+  const isExecutive = roleUtamaDi(user, ['Administrator', 'Direktur Utama', 'Manager', 'Manager Umum', 'Finance & Accounting']);
   const canSwitchDivision = isExecutive || divisiAssigned === 'ALL';
   const isBawahan = !canSwitchDivision;
 
