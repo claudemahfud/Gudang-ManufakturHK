@@ -295,7 +295,7 @@ export const MENU_HIERARCHY: ParentMenuItem[] = [
         label: 'Pengaturan Perusahaan',
         icon: ShieldAlert,
         href: ROUTES.PENGATURAN_PERUSAHAAN,
-        roles: ['Direktur Utama'],
+        roles: ['Direktur Utama', 'Administrator'],
       },
       {
         label: 'Manajemen Cabang',

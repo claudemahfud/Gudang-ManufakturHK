@@ -10,7 +10,7 @@
 import { useEffect, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { ShieldAlert, CheckCircle2, AlertCircle, Lock } from 'lucide-react';
-import { punyaRole } from '@/shared/lib/auth/roles';
+import { punyaRole, roleUtamaDi } from '@/shared/lib/auth/roles';
 
 interface PengaturanPin {
   wajibPin: boolean;
@@ -25,6 +25,7 @@ interface PengaturanPin {
 export default function PengaturanPerusahaanView() {
   const { data: session } = useSession();
   const bolehUbah = punyaRole(session?.user as { role?: string; roles?: string[] } | undefined, ['Direktur Utama']);
+  const superuser = roleUtamaDi(session?.user as { role?: string } | undefined, ['Administrator']);
 
   const [data, setData] = useState<PengaturanPin | null>(null);
   const [pinBaru, setPinBaru] = useState('');
@@ -180,6 +181,115 @@ export default function PengaturanPerusahaanView() {
           </div>
         </form>
       )}
+      {superuser && <ZonaBahaya />}
     </div>
+  );
+}
+
+/** Reset Total: khusus Superuser, dikunci PIN Reset Total + ketik konfirmasi. */
+function ZonaBahaya() {
+  const [buka, setBuka] = useState(false);
+  const [pin, setPin] = useState('');
+  const [konfirmasi, setKonfirmasi] = useState('');
+  const [proses, setProses] = useState(false);
+  const [pesan, setPesan] = useState<{ ok: boolean; teks: string } | null>(null);
+  const siap = /^\d{6}$/.test(pin) && konfirmasi === 'RESET TOTAL' && !proses;
+
+  const jalankan = async () => {
+    setProses(true);
+    setPesan(null);
+    try {
+      const res = await fetch('/api/admin/reset-total', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pin, konfirmasi }),
+      });
+      const json = await res.json().catch(() => ({}));
+      setPesan({ ok: Boolean(json.success), teks: json.message || 'Gagal menjalankan Reset Total' });
+      if (json.success) {
+        setPin('');
+        setKonfirmasi('');
+        setTimeout(() => window.location.assign('/dashboard'), 2500);
+      }
+    } catch {
+      setPesan({ ok: false, teks: 'Gangguan jaringan' });
+    } finally {
+      setProses(false);
+    }
+  };
+
+  return (
+    <section aria-label="Zona Bahaya" className="mt-6 rounded-2xl border-2 border-red-300 bg-red-50/60 p-5 space-y-3">
+      <div>
+        <h2 className="text-sm font-extrabold text-red-800 uppercase tracking-wider">Zona Bahaya: Reset Total</h2>
+        <p className="mt-1 text-xs text-red-900/80 leading-relaxed">
+          Menghapus <strong>seluruh data aplikasi tanpa terkecuali</strong>: barang, stok, suplier, pelanggan, semua transaksi,
+          keuangan, jurnal, laporan, pengaturan, log, dan <strong>semua akun lain</strong>. Yang tersisa hanya akun Superuser
+          Anda, bagan akun, dan cabang Pusat. Tidak bisa dibatalkan.
+        </p>
+      </div>
+      {!buka ? (
+        <button
+          type="button"
+          onClick={() => setBuka(true)}
+          className="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-bold"
+        >
+          Reset Total...
+        </button>
+      ) : (
+        <div className="space-y-3 rounded-xl bg-white border border-red-200 p-4">
+          <label className="block text-xs font-semibold text-gray-700">
+            PIN Reset Total (6 angka, diatur di Setting Akun & Profil)
+            <input
+              type="password"
+              inputMode="numeric"
+              autoComplete="off"
+              maxLength={6}
+              value={pin}
+              onChange={(e) => setPin(e.target.value.replace(/\D/g, ''))}
+              className="mt-1 w-40 px-3 py-2 rounded-lg border border-gray-300 font-mono tracking-[0.4em] text-sm"
+            />
+          </label>
+          <label className="block text-xs font-semibold text-gray-700">
+            Ketik <span className="font-mono text-red-700">RESET TOTAL</span> untuk konfirmasi
+            <input
+              type="text"
+              autoComplete="off"
+              value={konfirmasi}
+              onChange={(e) => setKonfirmasi(e.target.value)}
+              className="mt-1 w-full max-w-xs px-3 py-2 rounded-lg border border-gray-300 text-sm"
+            />
+          </label>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={jalankan}
+              disabled={!siap}
+              className="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-bold disabled:bg-gray-300 disabled:text-gray-500"
+            >
+              {proses ? 'Menghapus semua data...' : 'Hapus Semua Data Sekarang'}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setBuka(false);
+                setPin('');
+                setKonfirmasi('');
+                setPesan(null);
+              }}
+              disabled={proses}
+              className="px-4 py-2 rounded-xl border border-gray-300 text-xs font-semibold text-gray-700"
+            >
+              Batal
+            </button>
+          </div>
+        </div>
+      )}
+      {pesan && (
+        <p role="alert" className={`text-xs font-semibold ${pesan.ok ? 'text-emerald-700' : 'text-red-700'}`}>
+          {pesan.teks}
+        </p>
+      )}
+    </section>
   );
 }
