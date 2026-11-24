@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import Link from 'next/link';
-import { Camera, Calendar, DollarSign, Building2, CreditCard, CheckCircle2, AlertCircle, Trash2, Sparkles, FileText, Download, Search, RefreshCw, Plus } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { Camera, Calendar, DollarSign, Building2, CreditCard, CheckCircle2, AlertCircle, Trash2, Sparkles, FileText, Download, Search, RefreshCw, Plus, ChevronDown, Truck, RotateCcw } from 'lucide-react';
 import { formatTanggal, formatTanggalWaktu, formatRupiah, bacaGramasi, formatBerat } from '@/shared/lib/utils';
 import { useBarcodeScanner } from '@/shared/hooks/useBarcodeScanner';
 import CameraBarcodeScanner from '@/shared/components/ui/CameraBarcodeScanner';
@@ -12,7 +13,7 @@ import { exportToCsv, exportRekapToPdfA4Landscape } from '@/shared/lib/exportDoc
 import DateTimeFilterBar from '@/shared/components/ui/DateTimeFilterBar';
 import PoDalamProses from './PoDalamProses';
 import FormReturPelanggan from './FormReturPelanggan';
-import { AksiHeader, GrupIkon, TombolIkon, TombolUtama } from '@/shared/components/ui/AksiHeader';
+import { AksiHeader, GrupIkon, TombolIkon } from '@/shared/components/ui/AksiHeader';
 import MemuatProgres from '@/shared/components/ui/MemuatProgres';
 
 // ============================================================
@@ -73,6 +74,25 @@ export default function BarangMasuk() {
 
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const router = useRouter();
+  // Dropdown tombol Catat Barang Masuk: PO Loading Baru / Retur Pelanggan
+  const [menuCatat, setMenuCatat] = useState(false);
+  const refMenuCatat = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!menuCatat) return;
+    const tutup = (e: MouseEvent | TouchEvent) => {
+      if (!refMenuCatat.current?.contains(e.target as Node)) setMenuCatat(false);
+    };
+    const esc = (e: KeyboardEvent) => e.key === 'Escape' && setMenuCatat(false);
+    document.addEventListener('mousedown', tutup);
+    document.addEventListener('touchstart', tutup);
+    document.addEventListener('keydown', esc);
+    return () => {
+      document.removeEventListener('mousedown', tutup);
+      document.removeEventListener('touchstart', tutup);
+      document.removeEventListener('keydown', esc);
+    };
+  }, [menuCatat]);
   const [jenisMasuk, setJenisMasuk] = useState<'PEMBELIAN' | 'RETUR'>('PEMBELIAN');
   const [isCameraOpen, setIsCameraOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -221,8 +241,8 @@ export default function BarangMasuk() {
     }));
   };
 
-  const openModal = () => {
-    if (suppliers.length === 0) {
+  const openModal = (jenis: 'PEMBELIAN' | 'RETUR' = 'PEMBELIAN') => {
+    if (jenis === 'PEMBELIAN' && suppliers.length === 0) {
       showToast(
         'warning',
         'Belum Ada Suplier Terdaftar!',
@@ -236,7 +256,7 @@ export default function BarangMasuk() {
       ...initialForm,
       supplier: suppliers[0]?.nama || '',
     });
-    setJenisMasuk('PEMBELIAN');
+    setJenisMasuk(jenis);
     setIsModalOpen(true);
   };
 
@@ -544,9 +564,53 @@ export default function BarangMasuk() {
             <TombolIkon ikon={FileText} label="Ekspor PDF (A4 Landscape)" onClick={handleExportPdfA4} warna="slate" />
             <TombolIkon ikon={Building2} label={`Data suplier (${suppliers.length})`} href="/suplier" />
           </GrupIkon>
-          <TombolUtama ikon={Plus} onClick={openModal}>
-            Catat Barang Masuk
-          </TombolUtama>
+          <div ref={refMenuCatat} className="relative">
+            <button
+              type="button"
+              onClick={() => setMenuCatat((v) => !v)}
+              aria-haspopup="menu"
+              aria-expanded={menuCatat}
+              className="inline-flex h-8 items-center gap-1.5 rounded-lg px-3 text-xs font-semibold text-white shadow-sm transition-colors bg-emerald-600 hover:bg-emerald-700 active:scale-[0.97] print:hidden"
+            >
+              <Plus className="h-3.5 w-3.5" aria-hidden="true" />
+              <span>Catat Barang Masuk</span>
+              <ChevronDown className={`h-3.5 w-3.5 transition-transform ${menuCatat ? 'rotate-180' : ''}`} aria-hidden="true" />
+            </button>
+            {menuCatat && (
+              <div role="menu" className="absolute right-0 top-full mt-2 w-64 rounded-2xl border border-gray-200 bg-white p-1.5 shadow-xl z-40 animate-in fade-in zoom-in-95 duration-150">
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={() => {
+                    setMenuCatat(false);
+                    router.push('/po-loading?baru=1');
+                  }}
+                  className="w-full flex items-start gap-3 rounded-xl px-3 py-2.5 text-left hover:bg-emerald-50"
+                >
+                  <Truck className="mt-0.5 h-4 w-4 text-emerald-600" aria-hidden="true" />
+                  <span>
+                    <span className="block text-xs font-bold text-gray-900">1. PO Loading Baru</span>
+                    <span className="block text-[11px] text-gray-500">Pesan barang ke suplier, terima saat datang</span>
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={() => {
+                    setMenuCatat(false);
+                    openModal('RETUR');
+                  }}
+                  className="w-full flex items-start gap-3 rounded-xl px-3 py-2.5 text-left hover:bg-amber-50"
+                >
+                  <RotateCcw className="mt-0.5 h-4 w-4 text-amber-600" aria-hidden="true" />
+                  <span>
+                    <span className="block text-xs font-bold text-gray-900">2. Retur Pelanggan</span>
+                    <span className="block text-[11px] text-gray-500">Barang kembali dari pelanggan</span>
+                  </span>
+                </button>
+              </div>
+            )}
+          </div>
         </AksiHeader>
       </header>
 
@@ -747,25 +811,6 @@ export default function BarangMasuk() {
                     ? 'Barang dikembalikan pelanggan: stok, piutang, kas, dan menu Retur Barang diperbarui sekaligus.'
                     : 'Input muatan masuk dari Suplier, tentukan harga beli dan skema pembayaran (Kas / Hutang).'}
                 </p>
-                <div className="mt-3 inline-flex rounded-xl bg-gray-100 p-1" role="tablist" aria-label="Jenis barang masuk">
-                  {([
-                    ['PEMBELIAN', '1. Purchasing'],
-                    ['RETUR', '2. Retur dari Pelanggan'],
-                  ] as const).map(([v, t]) => (
-                    <button
-                      key={v}
-                      type="button"
-                      role="tab"
-                      aria-selected={jenisMasuk === v}
-                      onClick={() => setJenisMasuk(v)}
-                      className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition ${
-                        jenisMasuk === v ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-800'
-                      }`}
-                    >
-                      {t}
-                    </button>
-                  ))}
-                </div>
               </div>
               <button
                 type="button"

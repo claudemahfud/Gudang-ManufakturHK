@@ -52,6 +52,15 @@ export default function PoLoading() {
   const [inventoryList, setInventoryList] = useState<InventoryOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
+
+  // Dari dropdown Barang Masuk (/po-loading?baru=1): langsung buka form PO baru
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    if (url.searchParams.get('baru') !== '1') return;
+    url.searchParams.delete('baru');
+    window.history.replaceState(null, '', url.pathname + url.search);
+    requestAnimationFrame(() => setIsModalOpen(true));
+  }, []);
   const [submitting, setSubmitting] = useState(false);
   const [search, setSearch] = useState('');
   const [startDate, setStartDate] = useState('');
