@@ -111,7 +111,7 @@ export async function buatOrder(
   const [order] = await tx
     .insert(orderFranchise)
     .values({
-      noOrder: await nomorUrut(tx, 'OF'),
+      noOrder: await nomorUrut(tx, 'ORF'),
       tanggal: new Date(),
       franchise: o.franchise,
       status: 'diajukan',
@@ -162,7 +162,7 @@ export async function kirimOrder(tx: Tx, id: string, u: Pelaku, tempoHari = TEMP
 
   const tanggal = new Date();
   const hari = Number.isInteger(tempoHari) && tempoHari >= 0 && tempoHari <= 365 ? tempoHari : TEMPO_DEFAULT_HARI;
-  const noFaktur = await nomorUrut(tx, 'FJ');
+  const noFaktur = await nomorUrut(tx, 'FPJ');
   await buatFakturPenjualan(tx, {
     noFaktur,
     tanggal,
