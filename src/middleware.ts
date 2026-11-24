@@ -28,7 +28,8 @@ const ROUTE_ROLES: Record<string, string[]> = {
   [ROUTES.LAPORAN_PENJUALAN]: ['Administrator', 'Manager', 'Manager Umum', 'Direktur Utama', 'Kepala Gudang', 'Admin Salesman', 'Finance & Accounting'],
 
   // API endpoints RBAC
-  '/api/users': ['Administrator'],
+  // Direktur: GET daftar & PUT roles. Tiap handler menjaga role-nya sendiri (POST/PUT/DELETE/password = Administrator)
+  '/api/users': ['Administrator', 'Direktur Utama'],
   '/api/logs': ['Administrator', 'Manager', 'Manager Umum', 'Direktur Utama'],
   '/api/keuangan': ['Administrator', 'Manager', 'Manager Umum', 'Direktur Utama', 'Kepala Gudang', 'Finance & Accounting'],
   '/api/biaya-operasional': ['Administrator', 'Manager', 'Manager Umum', 'Direktur Utama', 'Finance & Accounting'],
