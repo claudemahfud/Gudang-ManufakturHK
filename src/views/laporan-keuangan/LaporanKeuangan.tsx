@@ -108,19 +108,24 @@ function SubJudul({ children }: { children: React.ReactNode }) {
 
 function Akun({ kode, nama, v }: { kode?: string; nama: string; v: number }) {
   return (
-    <div className="flex items-baseline gap-2 py-1 pl-6 text-sm text-gray-700 break-inside-avoid">
-      {kode ? <span className="w-14 shrink-0 font-mono text-[11px] text-gray-400">{kode}</span> : <span className="w-14 shrink-0" />}
-      <span className="min-w-0 flex-1">{nama}</span>
-      <Angka v={v} />
+    // HP: nominal turun ke bawah nama akun; layar lebar & cetak: sejajar di kanan
+    <div className="py-1 pl-6 text-sm text-gray-700 break-inside-avoid sm:flex sm:items-baseline sm:gap-2">
+      <div className="flex min-w-0 flex-1 items-baseline gap-2">
+        {kode ? <span className="w-14 shrink-0 font-mono text-[11px] text-gray-400">{kode}</span> : <span className="w-14 shrink-0" />}
+        <span className="min-w-0 flex-1">{nama}</span>
+      </div>
+      <div className="pl-16 font-semibold text-gray-900 sm:pl-0 sm:font-normal sm:text-gray-700">
+        <Angka v={v} />
+      </div>
     </div>
   );
 }
 
 function Subtotal({ label, v }: { label: string; v: number }) {
   return (
-    <div className="flex items-baseline gap-2 py-1.5 pl-3 text-sm font-semibold text-gray-900">
-      <span className="min-w-0 flex-1">{label}</span>
-      <span className="border-t border-gray-400 pt-1">
+    <div className="py-1.5 pl-3 text-sm font-semibold text-gray-900 sm:flex sm:items-baseline sm:gap-2">
+      <div className="min-w-0 flex-1">{label}</div>
+      <span className="mt-0.5 inline-block border-t border-gray-400 pt-1 sm:mt-0">
         <Angka v={v} />
       </span>
     </div>
@@ -129,9 +134,9 @@ function Subtotal({ label, v }: { label: string; v: number }) {
 
 function Total({ label, v, ganda }: { label: string; v: number; ganda?: boolean }) {
   return (
-    <div className="flex items-baseline gap-2 py-2 text-sm font-extrabold text-gray-900">
-      <span className="min-w-0 flex-1 uppercase">{label}</span>
-      <span className={`border-t border-gray-900 pt-1 ${ganda ? 'border-b-4 border-double pb-0.5' : ''}`}>
+    <div className="py-2 text-sm font-extrabold text-gray-900 sm:flex sm:items-baseline sm:gap-2">
+      <div className="min-w-0 flex-1 uppercase">{label}</div>
+      <span className={`mt-0.5 inline-block border-t border-gray-900 pt-1 sm:mt-0 ${ganda ? 'border-b-4 border-double pb-0.5' : ''}`}>
         <Angka v={v} tebal />
       </span>
     </div>
@@ -349,8 +354,8 @@ function TabArusKas({ entitas, dari, sampai, versi }: { entitas: string; dari: s
         </Lencana>
       </div>
       <Kertas judul="Laporan Arus Kas (Metode Langsung)" entitas={entitas} periode={`Periode ${formatTanggal(d.dari)} s.d. ${formatTanggal(d.sampai)}`}>
-        <div className="flex items-baseline gap-2 pt-4 text-sm font-bold text-gray-900">
-          <span className="min-w-0 flex-1">Saldo Kas & Setara Kas Awal Periode</span>
+        <div className="pt-4 text-sm font-bold text-gray-900 sm:flex sm:items-baseline sm:gap-2">
+          <div className="min-w-0 flex-1">Saldo Kas & Setara Kas Awal Periode</div>
           <Angka v={d.saldoAwal} tebal />
         </div>
         <SeksiKas judul="Arus Kas dari Aktivitas Operasi" b={d.operasi} labelTotal="Kas Bersih dari Aktivitas Operasi" />
