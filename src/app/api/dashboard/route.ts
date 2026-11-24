@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/shared/lib/db';
 import { inventory, barangMasuk, barangKeluar } from '@/shared/lib/db/schema';
 import { sql, and, gte, lte, asc, desc, eq } from 'drizzle-orm';
-import { auth } from '@/shared/lib/auth/config';
+import { requireAuthRole } from '@/shared/lib/auth/rbac';
 
 // ============================================================
 // API ROUTE: Dashboard Stats & Summary (Multi-Domain Filtered)
@@ -12,13 +12,9 @@ import { auth } from '@/shared/lib/auth/config';
 export async function GET(req: NextRequest) {
   try {
     // 1. Cek Autentikasi
-    const session = await auth();
-    if (!session) {
-      return NextResponse.json(
-        { success: false, error: 'Unauthorized: Harap login terlebih dahulu' },
-        { status: 401 }
-      );
-    }
+    // Dibaca segar dari DB: akun nonaktif/dihapus langsung ditolak walau token masih berlaku
+    const authResult = await requireAuthRole();
+    if (!authResult.authorized) return authResult.response;
 
     const { searchParams } = new URL(req.url);
     const divisiParam = searchParams.get('divisi') || req.cookies.get('app_active_division')?.value || 'MANUFAKTUR';

@@ -1,8 +1,7 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/shared/lib/db';
 import { returBarang, inventory, logs } from '@/shared/lib/db/schema';
-import { auth } from '@/shared/lib/auth/config';
-import { ROLES_WAREHOUSE } from '@/shared/lib/auth/rbac';
+import { ROLES_WAREHOUSE, requireAuthRole } from '@/shared/lib/auth/rbac';
 import type { UserRole } from '@/shared/types';
 import { desc, eq } from 'drizzle-orm';
 import { BusinessError, errorResponse, incrementStock, normalizeSku, parsePositiveInt, resolveRequestCabang } from '@/shared/lib/stock';
@@ -15,10 +14,9 @@ import { punyaRole } from '@/shared/lib/auth/roles';
 
 export async function GET() {
   try {
-    const session = await auth();
-    if (!session) {
-      return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
-    }
+    // Dibaca segar dari DB: akun nonaktif/dihapus langsung ditolak walau token masih berlaku
+    const authResult = await requireAuthRole();
+    if (!authResult.authorized) return authResult.response;
 
     const items = await db
       .select()
@@ -34,10 +32,10 @@ export async function GET() {
 
 export async function POST(req: Request) {
   try {
-    const session = await auth();
-    if (!session) {
-      return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
-    }
+    // Dibaca segar dari DB: akun nonaktif/dihapus langsung ditolak walau token masih berlaku
+    const authResult = await requireAuthRole();
+    if (!authResult.authorized) return authResult.response;
+    const session = { user: authResult.user };
 
     const body = await req.json();
     const { tanggal, sku, namaBarang, qty, alasan, pelanggan, kembaliKeStok } = body;

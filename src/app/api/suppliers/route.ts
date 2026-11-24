@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/shared/lib/db';
 import { kontak, logs, hutangSupplier, inventory } from '@/shared/lib/db/schema';
-import { auth } from '@/shared/lib/auth/config';
 import { requireAuthRole, ROLES_EXECUTIVE } from '@/shared/lib/auth/rbac';
 import { desc, or, eq, sql } from 'drizzle-orm';
 
@@ -13,10 +12,9 @@ import { desc, or, eq, sql } from 'drizzle-orm';
 
 export async function GET(req: NextRequest) {
   try {
-    const session = await auth();
-    if (!session) {
-      return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
-    }
+    // Dibaca segar dari DB: akun nonaktif/dihapus langsung ditolak walau token masih berlaku
+    const authResult = await requireAuthRole();
+    if (!authResult.authorized) return authResult.response;
 
     // Ambil data supplier dari tabel kontak
     const suppliers = await db
