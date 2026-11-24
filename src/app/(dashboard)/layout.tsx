@@ -10,6 +10,7 @@ import AssistivePosButton from '@/shared/components/pos/AssistivePosButton';
 import { ShieldCheck, HeartPulse } from 'lucide-react';
 import { rolesOf } from '@/shared/lib/auth/roles';
 import { usePintasanSinkron } from '@/shared/lib/pintasan-sinkron';
+import { useLabelTabelHp } from '@/shared/lib/label-tabel';
 
 // ============================================================
 // LAYOUT: Dashboard (semua halaman authenticated)
@@ -52,6 +53,8 @@ function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
   const sudahCekNama = useRef(false);
   // Alt+R: tombol sinkron halaman aktif
   usePintasanSinkron();
+  // HP: semua tabel tampil sebagai kartu berlabel (lihat globals.css .tabel-kartu)
+  useLabelTabelHp();
 
   // Nama di token bisa basi (diubah Administrator / dari perangkat lain): samakan dengan DB
   useEffect(() => {
