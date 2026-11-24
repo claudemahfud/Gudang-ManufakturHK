@@ -606,7 +606,7 @@ export default function BarangMasuk() {
             <thead className="bg-gray-50/75 border-b border-gray-100 text-xs font-semibold uppercase tracking-wider text-gray-500">
               <tr>
                 <th className="py-3.5 px-4">Tanggal &amp; Waktu</th>
-                <th className="py-3.5 px-4">SKU / Nama Barang</th>
+                <th className="py-3.5 px-4">Nama Barang</th>
                 <th className="py-3.5 px-4">Jumlah</th>
                 <th className="py-3.5 px-4">Harga Beli &amp; Total</th>
                 <th className="py-3.5 px-4">Suplier Pemasok</th>
@@ -645,7 +645,6 @@ export default function BarangMasuk() {
                         <div className="font-semibold text-gray-900 group-hover:text-emerald-700 transition-colors">
                           {row.namaBarang}
                         </div>
-                        <div className="text-xs font-mono text-emerald-700">{row.sku}</div>
                       </td>
                       <td className="py-3.5 px-4 font-bold text-emerald-700 whitespace-nowrap">
                         +{row.qty} {row.satuan}
