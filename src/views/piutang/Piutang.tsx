@@ -549,7 +549,7 @@ function ModalBayar({
   return (
     <Bingkai judul="Terima Pembayaran Piutang" sub={`${faktur.noFaktur} · ${faktur.pelanggan}`} onClose={onClose}>
       <form onSubmit={simpan} className="flex-1 flex flex-col min-h-0">
-        <div className="flex-1 overflow-y-auto p-5 space-y-4">
+        <div className="flex-1 overflow-y-auto p-5 sm:px-8 space-y-4">
           <RingkasFaktur f={faktur} />
 
           <fieldset>
@@ -675,7 +675,7 @@ function ModalBayar({
           )}
         </div>
 
-        <div className="px-5 py-4 border-t border-gray-100 flex items-center justify-between gap-3 bg-gray-50/60">
+        <div className="px-5 sm:px-8 py-4 border-t border-gray-100 flex items-center justify-between gap-3 bg-gray-50/60">
           <div className="text-xs text-gray-500">
             Kas masuk <span className="font-bold text-gray-900 tabular-nums">{formatRupiah(jumlah)}</span>
             <span className="block">
@@ -737,7 +737,7 @@ function ModalTempo({
   return (
     <Bingkai judul="Mundurkan Jatuh Tempo" sub={`${faktur.noFaktur} · ${faktur.pelanggan}`} onClose={onClose}>
       <form onSubmit={simpan} className="flex-1 flex flex-col min-h-0">
-        <div className="flex-1 overflow-y-auto p-5 space-y-4">
+        <div className="flex-1 overflow-y-auto p-5 sm:px-8 space-y-4">
           <RingkasFaktur f={faktur} />
           <div className="grid grid-cols-2 gap-3">
             <div>
@@ -778,7 +778,7 @@ function ModalTempo({
           <p className="text-[11px] text-gray-500">Tidak ada uang yang dicatat. Perubahan tempo tersimpan di riwayat faktur.</p>
           {salah && <p className="text-xs text-red-600">{salah}</p>}
         </div>
-        <div className="px-5 py-4 border-t border-gray-100 flex justify-end gap-2 bg-gray-50/60">
+        <div className="px-5 sm:px-8 py-4 border-t border-gray-100 flex justify-end gap-2 bg-gray-50/60">
           <button type="button" onClick={onClose} className="h-10 px-4 rounded-xl border border-gray-200 text-sm font-semibold text-gray-600 hover:bg-white">
             Batal
           </button>
@@ -829,8 +829,8 @@ function ModalRiwayat({ faktur, onClose, notify }: { faktur: Faktur; onClose: ()
   );
 
   return (
-    <Bingkai judul="Riwayat Piutang" sub={`${faktur.noFaktur} · ${faktur.pelanggan}`} onClose={onClose} lebar="max-w-xl">
-      <div className="flex-1 overflow-y-auto p-5 space-y-4">
+    <Bingkai judul="Riwayat Piutang" sub={`${faktur.noFaktur} · ${faktur.pelanggan}`} onClose={onClose} lebar="max-w-2xl">
+      <div className="flex-1 overflow-y-auto p-5 sm:px-8 space-y-4">
         <RingkasFaktur f={faktur} />
         {!mutasi ? (
           <p className="text-sm text-gray-400 text-center py-6">Memuat riwayat…</p>

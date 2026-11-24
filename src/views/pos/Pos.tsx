@@ -1047,8 +1047,8 @@ export default function PosView() {
       {/* ============================================================ */}
       {isCheckoutModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-5 animate-in fade-in duration-200">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl lg:rounded-3xl w-full max-w-md lg:max-w-4xl max-h-[92vh] overflow-hidden shadow-2xl flex flex-col animate-in zoom-in-95 duration-150">
-            <div className="p-5 border-b border-slate-800 flex items-center justify-between shrink-0 bg-slate-900">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl lg:rounded-3xl w-full max-w-lg lg:max-w-5xl max-h-[92vh] overflow-hidden shadow-2xl flex flex-col animate-in zoom-in-95 duration-150">
+            <div className="p-5 sm:px-8 border-b border-slate-800 flex items-center justify-between shrink-0 bg-slate-900">
               <div>
                 <h3 className="font-bold text-base lg:text-lg text-white">Pembayaran Kasir POS</h3>
                 <p className="text-xs text-slate-400">Pilih metode bayar dan konfirmasi transaksi</p>
@@ -1063,7 +1063,7 @@ export default function PosView() {
               </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-5 sm:p-6">
+            <div className="flex-1 overflow-y-auto p-5 sm:px-8 sm:p-6">
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 lg:gap-6">
                 {/* Kolom Kiri: Tagihan & Metode */}
                 <div className="space-y-4">
@@ -1234,7 +1234,7 @@ export default function PosView() {
       {/* ============================================================ */}
       {isReceiptModalOpen && lastReceipt && (
         <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto animate-in fade-in duration-200">
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-md overflow-hidden shadow-2xl flex flex-col my-auto animate-in fade-in zoom-in-95 duration-200">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl flex flex-col my-auto animate-in fade-in zoom-in-95 duration-200">
             <div className="p-4 border-b border-slate-800 flex items-center justify-between">
               <div className="flex items-center gap-2 text-emerald-400 font-bold text-sm">
                 <CheckCircle2 className="w-5 h-5" />
@@ -1249,7 +1249,7 @@ export default function PosView() {
             </div>
 
             {/* Thermal Receipt Container (Styled strictly for 58mm printer) */}
-            <div className="p-4 sm:p-6 bg-slate-950/60 overflow-y-auto max-h-[65vh]">
+            <div className="p-4 sm:p-6 sm:px-8 bg-slate-950/60 overflow-y-auto max-h-[65vh]">
               <div
                 id="thermal-receipt-58mm"
                 className="bg-white text-black p-4 rounded-xl shadow-lg font-mono text-[11px] leading-tight max-w-[280px] sm:max-w-[300px] mx-auto border border-gray-200"
@@ -1392,8 +1392,8 @@ export default function PosView() {
       {/* ============================================================ */}
       {isSettingsModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl flex flex-col animate-in fade-in zoom-in-95 duration-200">
-            <div className="p-5 border-b border-slate-800 flex items-center justify-between">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-xl overflow-hidden shadow-2xl flex flex-col animate-in fade-in zoom-in-95 duration-200">
+            <div className="p-5 sm:px-8 border-b border-slate-800 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Sliders className="w-5 h-5 text-emerald-400" />
                 <div>
@@ -1432,7 +1432,7 @@ export default function PosView() {
                   requirePinVoidCart: posSettings.requirePinVoidCart,
                 });
               }}
-              className="p-5 space-y-4 overflow-y-auto max-h-[70vh]"
+              className="p-5 sm:px-8 space-y-4 overflow-y-auto max-h-[70vh]"
             >
               <div className="space-y-3">
                 <h4 className="text-xs font-bold text-emerald-400 uppercase tracking-wider">
@@ -1610,10 +1610,10 @@ export default function PosView() {
             role="dialog"
             aria-modal="true"
             aria-labelledby="pos-supervisor-title"
-            className="bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden animate-in zoom-in-95 duration-150 text-white"
+            className="bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-150 text-white"
           >
             {/* Header Dialog */}
-            <header className="p-5 border-b border-slate-800 flex items-start justify-between bg-gradient-to-r from-amber-950/40 via-slate-900 to-slate-900">
+            <header className="p-5 sm:px-8 border-b border-slate-800 flex items-start justify-between bg-gradient-to-r from-amber-950/40 via-slate-900 to-slate-900">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-2xl bg-amber-500/20 text-amber-400 border border-amber-500/30 flex items-center justify-center shadow-xs">
                   <ShieldAlert className="w-5 h-5" />

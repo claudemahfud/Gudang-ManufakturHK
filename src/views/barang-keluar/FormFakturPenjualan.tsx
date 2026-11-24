@@ -175,10 +175,10 @@ export default function FormFakturPenjualan({
         role="dialog"
         aria-modal="true"
         aria-labelledby="faktur-jual-title"
-        className="bg-white rounded-2xl shadow-2xl w-full max-w-6xl max-h-[94vh] flex flex-col overflow-hidden border border-gray-100 animate-in fade-in zoom-in-95 duration-200"
+        className="bg-white rounded-2xl shadow-2xl w-full max-w-7xl max-h-[94vh] flex flex-col overflow-hidden border border-gray-100 animate-in fade-in zoom-in-95 duration-200"
       >
         {/* Header */}
-        <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between shrink-0">
+        <div className="px-6 sm:px-8 py-4 border-b border-gray-100 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-800 flex items-center justify-center">
               <Receipt className="w-5 h-5" />
@@ -203,7 +203,7 @@ export default function FormFakturPenjualan({
         </div>
 
         <form onSubmit={simpan} className="flex-1 flex flex-col min-h-0">
-          <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-5">
+          <div className="flex-1 overflow-y-auto p-5 sm:px-8 sm:p-6 space-y-5">
             {/* 1. Pelanggan & faktur */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
               <fieldset className="lg:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-3 p-4 rounded-xl border border-gray-200 bg-gray-50/60">
@@ -557,7 +557,7 @@ export default function FormFakturPenjualan({
           </div>
 
           {/* Footer */}
-          <div className="px-6 py-4 border-t border-gray-100 flex flex-wrap items-center justify-between gap-3 shrink-0 bg-white">
+          <div className="px-6 sm:px-8 py-4 border-t border-gray-100 flex flex-wrap items-center justify-between gap-3 shrink-0 bg-white">
             <span className="text-xs text-gray-500">
               {baris.length} barang · {baris.reduce((s, b) => s + (b.qty || 0), 0)} pcs
             </span>

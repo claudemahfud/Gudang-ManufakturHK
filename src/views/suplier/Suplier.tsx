@@ -488,9 +488,9 @@ export default function SuplierView() {
       {/* ============================================================ */}
       {modalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/50 backdrop-blur-sm animate-in fade-in duration-150">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg lg:max-w-4xl max-h-[92vh] flex flex-col overflow-hidden border border-gray-100 animate-in zoom-in-95 duration-150">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-xl lg:max-w-5xl max-h-[92vh] flex flex-col overflow-hidden border border-gray-100 animate-in zoom-in-95 duration-150">
             {/* Fixed Header */}
-            <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between shrink-0 bg-white">
+            <div className="px-6 sm:px-8 py-4 border-b border-gray-100 flex items-center justify-between shrink-0 bg-white">
               <div className="flex items-center gap-2">
                 <Factory className="w-5 h-5 text-emerald-600" />
                 <h2 className="font-bold text-gray-900 text-base sm:text-lg">
@@ -509,7 +509,7 @@ export default function SuplierView() {
 
             {/* Landscape 2-Column Form Body */}
             <form onSubmit={handleFormSubmit} className="flex-1 flex flex-col overflow-hidden">
-              <div className="flex-1 overflow-y-auto p-6">
+              <div className="flex-1 overflow-y-auto p-6 sm:px-8">
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 lg:gap-6">
                   {/* Kolom Kiri: Identitas & Kontak */}
                   <div className="space-y-4">
@@ -598,7 +598,7 @@ export default function SuplierView() {
               </div>
 
               {/* Fixed Footer */}
-              <div className="px-6 py-3.5 border-t border-gray-100 bg-gray-50/80 flex items-center justify-end gap-3 shrink-0">
+              <div className="px-6 sm:px-8 py-3.5 border-t border-gray-100 bg-gray-50/80 flex items-center justify-end gap-3 shrink-0">
                 <button
                   type="button"
                   onClick={() => setModalOpen(false)}
@@ -628,7 +628,7 @@ export default function SuplierView() {
       {/* ============================================================ */}
       {deleteTarget && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-150">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 text-center space-y-4 border border-gray-100 animate-in zoom-in-95 duration-150">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6 text-center space-y-4 border border-gray-100 animate-in zoom-in-95 duration-150">
             <div className="w-14 h-14 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto">
               <Trash2 className="w-7 h-7" />
             </div>
