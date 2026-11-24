@@ -442,30 +442,12 @@ export default function Inventory() {
   // SECTION: Helper Badge Status Stok
   // ============================================================
 
-  const renderStockBadge = (stok: number, stokMinimum: number | null | undefined) => {
+  // Status stok ditandai lewat warna latar baris: merah = habis, kuning = kritis, putih = aman
+  const kelasBarisStok = (stok: number, stokMinimum: number | null | undefined) => {
     const min = stokMinimum ?? 10;
-    if (stok <= 0) {
-      return (
-        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-700 border border-red-200">
-          <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
-          Habis
-        </span>
-      );
-    }
-    if (stok <= min) {
-      return (
-        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 border border-amber-200">
-          <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
-          Kritis
-        </span>
-      );
-    }
-    return (
-      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 border border-emerald-200">
-        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-        Aman
-      </span>
-    );
+    if (stok <= 0) return { kelas: 'bg-red-50 hover:bg-red-100/70', status: 'Stok habis' };
+    if (stok <= min) return { kelas: 'bg-amber-50 hover:bg-amber-100/70', status: 'Stok kritis' };
+    return { kelas: 'hover:bg-emerald-50/30', status: 'Stok aman' };
   };
 
   // ============================================================
@@ -637,25 +619,29 @@ export default function Inventory() {
       {/* 3. SECTION: Tabel Inventory (F-Pattern Reading Grid) */}
       {/* ============================================================ */}
       <section aria-label="Tabel Master Barang" className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 px-4 py-2 border-b border-gray-100 text-[11px] text-gray-500">
+          <span className="font-semibold text-gray-600">Warna baris:</span>
+          <span className="inline-flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-red-100 border border-red-200" />Stok habis</span>
+          <span className="inline-flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-amber-100 border border-amber-200" />Stok kritis (&le; stok minimum)</span>
+          <span className="inline-flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-white border border-gray-200" />Aman</span>
+        </div>
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse text-sm">
             <thead>
               <tr className="bg-gray-50/80 border-b border-gray-100 text-xs font-semibold text-gray-500 uppercase tracking-wider">
                 <th className="py-3.5 px-4">SKU</th>
                 <th className="py-3.5 px-4">Nama Barang</th>
-                <th className="py-3.5 px-4">Suplier Asal</th>
-                <th className="py-3.5 px-4">Brand</th>
+                <th className="py-3.5 px-4">Suplier / Brand</th>
                 <th className="py-3.5 px-4">Gramasi / Varian</th>
                 <th className="py-3.5 px-4">Stok Fisik</th>
                 <th className="py-3.5 px-4">Harga Jual</th>
-                <th className="py-3.5 px-4">Status</th>
                 <th className="py-3.5 px-4 text-center">Aksi</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 text-gray-700">
               {loading ? (
                 <tr>
-                  <td colSpan={9} className="py-16 text-center">
+                  <td colSpan={7} className="py-16 text-center">
                     <div className="flex flex-col items-center justify-center gap-2">
                       <div className="w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin" />
                       <span className="text-xs font-medium text-gray-500">
@@ -666,7 +652,7 @@ export default function Inventory() {
                 </tr>
               ) : items.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="py-16 text-center text-gray-400">
+                  <td colSpan={7} className="py-16 text-center text-gray-400">
                     <div className="flex flex-col items-center justify-center gap-2">
                       <span className="text-3xl"></span>
                       <p className="font-semibold text-gray-600 text-base">Tidak ada data barang</p>
@@ -679,10 +665,13 @@ export default function Inventory() {
                   </td>
                 </tr>
               ) : (
-                items.map((item) => (
+                items.map((item) => {
+                  const baris = kelasBarisStok(item.stok, item.stokMinimum);
+                  return (
                   <tr
                     key={item.id}
-                    className="hover:bg-emerald-50/30 transition-colors group"
+                    title={baris.status}
+                    className={`${baris.kelas} transition-colors group`}
                   >
                     {/* SKU */}
                     <td className="py-3 px-4 font-mono font-bold text-xs text-emerald-700 whitespace-nowrap">
@@ -701,39 +690,18 @@ export default function Inventory() {
                       )}
                     </td>
 
-                    {/* Suplier Asal */}
-                    <td className="py-3 px-4 whitespace-nowrap text-xs text-gray-700">
-                      {item.supplier ? (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-50 text-blue-800 font-semibold text-xs border border-blue-200">
-                          🏢 {item.supplier}
-                        </span>
-                      ) : (
-                        <span className="text-gray-400 italic text-[11px]">Belum diatur</span>
-                      )}
+                    {/* Suplier / Brand (2 baris) */}
+                    <td className="py-3 px-4 text-xs">
+                      <div className={item.supplier ? 'font-semibold text-blue-800' : 'italic text-gray-400'}>
+                        {item.supplier || 'Suplier belum diatur'}
+                      </div>
+                      <div className="text-[11px] text-gray-500 mt-0.5">{item.brand || '-'}</div>
                     </td>
 
-                    {/* Brand */}
-                    <td className="py-3 px-4 whitespace-nowrap text-xs text-gray-600">
-                      {item.brand ? (
-                        <span className="px-2 py-0.5 bg-gray-100 rounded-md font-medium text-gray-700">
-                          {item.brand}
-                        </span>
-                      ) : (
-                        <span className="text-gray-400 italic">-</span>
-                      )}
-                    </td>
-
-                    {/* Gramasi / Varian */}
-                    <td className="py-3 px-4 whitespace-nowrap text-xs text-gray-600">
-                      {item.gramasi || item.varian ? (
-                        <span>
-                          {item.gramasi}
-                          {item.gramasi && item.varian ? ' • ' : ''}
-                          {item.varian}
-                        </span>
-                      ) : (
-                        <span className="text-gray-400 italic">-</span>
-                      )}
+                    {/* Gramasi / Varian (2 baris) */}
+                    <td className="py-3 px-4 whitespace-nowrap text-xs">
+                      <div className="font-medium text-gray-800">{item.gramasi || '-'}</div>
+                      <div className="text-[11px] text-gray-500 mt-0.5">{item.varian || '-'}</div>
                     </td>
 
                     {/* Stok (karton/pcs) */}
@@ -752,11 +720,6 @@ export default function Inventory() {
                     {/* Harga Jual */}
                     <td className="py-3 px-4 whitespace-nowrap font-semibold text-gray-800">
                       {formatRupiah(item.hargaJual)}
-                    </td>
-
-                    {/* Status Badge */}
-                    <td className="py-3 px-4 whitespace-nowrap">
-                      {renderStockBadge(item.stok, item.stokMinimum)}
                     </td>
 
                     {/* Aksi */}
@@ -782,7 +745,8 @@ export default function Inventory() {
                       </div>
                     </td>
                   </tr>
-                ))
+                  );
+                })
               )}
             </tbody>
           </table>
