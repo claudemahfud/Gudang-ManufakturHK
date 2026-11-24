@@ -28,6 +28,7 @@ import { exportToCsv } from '@/shared/lib/export';
 import DocumentModalViewer, { DocumentData } from '@/shared/components/documents/DocumentModalViewer';
 import { exportRekapToPdfA4Landscape } from '@/shared/lib/exportDoc';
 import DateTimeFilterBar from '@/shared/components/ui/DateTimeFilterBar';
+import { AksiHeader, GrupIkon, TombolIkon, TombolUtama } from '@/shared/components/ui/AksiHeader';
 
 export default function LaporanRusakReturView() {
   const { division, isManufaktur, isFnb } = useDivision();
@@ -434,46 +435,17 @@ export default function LaporanRusakReturView() {
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
-          <button
-            onClick={handleOpenInputModal}
-            className="inline-flex items-center gap-2 px-3.5 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-semibold transition shadow-sm"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            <span>Catat Barang Rusak</span>
-          </button>
-          <button
-            onClick={handleExportExcel}
-            className="inline-flex items-center gap-2 px-3.5 py-2 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-xs font-semibold transition shadow-sm"
-            title="Ekspor laporan aktif ke file Excel"
-          >
-            <Download className="w-3.5 h-3.5" />
-            <span>Ekspor Excel</span>
-          </button>
-          <button
-            type="button"
-            onClick={handleExportPdfA4}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-semibold transition shadow-sm"
-            title="Ekspor Rekap Laporan PDF Kertas A4 Landscape"
-          >
-            <FileText className="w-3.5 h-3.5 text-slate-300" />
-            <span>PDF (A4 Landscape)</span>
-          </button>
-          <button
-            onClick={fetchData}
-            className="inline-flex items-center gap-2 px-3.5 py-2 bg-white hover:bg-gray-50 border border-gray-200 text-gray-700 rounded-xl text-xs font-semibold transition shadow-sm"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-            <span>Segarkan</span>
-          </button>
-          <button
-            onClick={() => window.print()}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-gray-900 hover:bg-gray-800 text-white rounded-xl text-xs font-semibold transition shadow-sm"
-          >
-            <Printer className="w-3.5 h-3.5" />
-            <span>Cetak Laporan</span>
-          </button>
-        </div>
+        <AksiHeader>
+          <GrupIkon>
+            <TombolIkon ikon={RefreshCw} label="Segarkan data" onClick={fetchData} putar={loading} />
+            <TombolIkon ikon={Download} label="Ekspor Excel" onClick={handleExportExcel} warna="hijau" />
+            <TombolIkon ikon={FileText} label="Ekspor PDF (A4 Landscape)" onClick={handleExportPdfA4} warna="slate" />
+            <TombolIkon ikon={Printer} label="Cetak laporan" onClick={() => window.print()} />
+          </GrupIkon>
+          <TombolUtama ikon={Plus} onClick={handleOpenInputModal} warna="merah">
+            Catat Barang Rusak
+          </TombolUtama>
+        </AksiHeader>
       </div>
 
       {/* 4 Summary Stat Cards */}

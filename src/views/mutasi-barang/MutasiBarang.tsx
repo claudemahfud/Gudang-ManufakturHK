@@ -2,11 +2,12 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { formatTanggal, formatTanggalWaktu } from '@/shared/lib/utils';
-import { FileText, Download, ArrowLeftRight, Search, RefreshCw } from 'lucide-react';
+import { FileText, Download, ArrowLeftRight, Search, RefreshCw, Plus } from 'lucide-react';
 import DocumentModalViewer, { DocumentData } from '@/shared/components/documents/DocumentModalViewer';
 import { exportToCsv, exportRekapToPdfA4Landscape } from '@/shared/lib/exportDoc';
 import DateTimeFilterBar from '@/shared/components/ui/DateTimeFilterBar';
 import { useDivision } from '@/shared/context/DivisionContext';
+import { AksiHeader, GrupIkon, TombolIkon, TombolUtama } from '@/shared/components/ui/AksiHeader';
 
 // ============================================================
 // PAGE: Mutasi Barang
@@ -295,36 +296,23 @@ export default function MutasiBarang() {
             Pencatatan perpindahan stok antar gudang, rak simpan, atau cabang
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <button
-            type="button"
-            onClick={handleExportExcel}
-            className="inline-flex items-center gap-1.5 px-3 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 rounded-xl text-xs font-semibold border border-emerald-200 transition"
-            title="Export Rekapitulasi Data Mutasi ke Excel CSV"
-          >
-            <Download className="w-3.5 h-3.5 text-emerald-600" />
-            <span>Rekap Excel</span>
-          </button>
-          <button
-            type="button"
-            onClick={handleExportPdfA4}
-            className="inline-flex items-center gap-1.5 px-3 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-semibold transition"
-            title="Export Rekapitulasi Laporan PDF Kertas A4 Landscape"
-          >
-            <FileText className="w-3.5 h-3.5 text-slate-300" />
-            <span>PDF (A4 Landscape)</span>
-          </button>
-          <button
+        <AksiHeader>
+          <GrupIkon>
+            <TombolIkon ikon={Download} label="Rekap Excel" onClick={handleExportExcel} warna="hijau" />
+            <TombolIkon ikon={FileText} label="Ekspor PDF (A4 Landscape)" onClick={handleExportPdfA4} warna="slate" />
+          </GrupIkon>
+          <TombolUtama
+            ikon={Plus}
+            warna="biru"
             onClick={() => {
               // Default asal = cabang aktif di header
               setForm((p) => ({ ...p, dari: p.dari || (cabangAktif !== 'SEMUA' ? cabangAktif : '') }));
               setIsModalOpen(true);
             }}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs sm:text-sm font-semibold shadow-sm transition"
           >
-            <span>＋</span> Catat Mutasi
-          </button>
-        </div>
+            Catat Mutasi
+          </TombolUtama>
+        </AksiHeader>
       </div>
 
       <DateTimeFilterBar
