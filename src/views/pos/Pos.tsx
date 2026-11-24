@@ -1240,7 +1240,9 @@ export default function PosView() {
                     void handleProcessCheckout();
                     return;
                   }
-                  setGeserBayar(true);
+                  // Geser-untuk-bayar hanya di layar sentuh (HP/tablet); desktop langsung proses
+                  if (window.matchMedia('(pointer: coarse)').matches) setGeserBayar(true);
+                  else void handleProcessCheckout();
                 }}
                 disabled={isSubmitting}
                 className="px-6 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs transition shadow-lg shadow-emerald-500/20 disabled:opacity-50 flex items-center gap-2"
