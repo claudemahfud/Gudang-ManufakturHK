@@ -25,6 +25,7 @@ import { exportToCsv, exportRekapToPdfA4Landscape } from '@/shared/lib/exportDoc
 import DateTimeFilterBar from '@/shared/components/ui/DateTimeFilterBar';
 import FormFakturPenjualan, { isiKarton, type InventoryOption } from './FormFakturPenjualan';
 import { LABEL_METODE, LABEL_STATUS, type MetodeBayar, type StatusFaktur } from '@/shared/lib/faktur-hitung';
+import { AksiHeader, GrupIkon, TombolIkon, TombolUtama } from '@/shared/components/ui/AksiHeader';
 
 // ============================================================
 // PAGE: Barang Keluar & Faktur Penjualan
@@ -383,39 +384,15 @@ export default function BarangKeluar() {
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2.5">
-          {/* Tombol Ekspor Berpasangan (Toolbar Pill) */}
-          <div className="inline-flex items-center rounded-xl border border-gray-200 bg-gray-50/80 p-1 shadow-xs">
-            <button
-              type="button"
-              onClick={handleExportExcel}
-              className="inline-flex items-center gap-1.5 px-3 py-2 bg-white hover:bg-emerald-50 text-emerald-800 hover:text-emerald-900 rounded-lg text-xs font-bold border border-gray-100 transition shadow-xs"
-              title="Ekspor Rekapitulasi Data Barang Keluar ke Excel CSV"
-            >
-              <Download className="w-3.5 h-3.5 text-emerald-600" />
-              <span>Rekap Excel</span>
-            </button>
-            <button
-              type="button"
-              onClick={handleExportPdfA4}
-              className="inline-flex items-center gap-1.5 px-3 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs font-bold transition shadow-xs ml-1"
-              title="Ekspor Rekapitulasi Laporan PDF Kertas A4 Landscape dengan KOP Surat Resmi"
-            >
-              <FileText className="w-3.5 h-3.5 text-slate-300" />
-              <span>PDF (A4 Landscape)</span>
-            </button>
-          </div>
-
-          {/* Tombol Aksi Utama */}
-          <button
-            type="button"
-            onClick={() => setIsModalOpen(true)}
-            className="inline-flex items-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white rounded-xl text-xs sm:text-sm font-bold shadow-md shadow-emerald-600/20 transition"
-          >
-            <span className="text-base leading-none">＋</span>
-            <span>Buat Faktur Penjualan</span>
-          </button>
-        </div>
+        <AksiHeader>
+          <GrupIkon>
+            <TombolIkon ikon={Download} label="Rekap Excel" onClick={handleExportExcel} warna="hijau" />
+            <TombolIkon ikon={FileText} label="Ekspor PDF (A4 Landscape)" onClick={handleExportPdfA4} warna="slate" />
+          </GrupIkon>
+          <TombolUtama ikon={Plus} onClick={() => setIsModalOpen(true)}>
+            Buat Faktur Penjualan
+          </TombolUtama>
+        </AksiHeader>
       </header>
 
       {/* 2. Channel Switcher Tabs (Semantic <nav>) */}
