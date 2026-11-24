@@ -204,6 +204,74 @@ body:has(:is(.fixed.inset-0, [role="dialog"], [aria-modal="true"])) .assistive-p
   pointer-events: none;
 }
 
+/* ============================================================
+   HP (< 768px): baris tabel menjadi kartu agar semua data terbaca tanpa geser ke samping.
+   Label tiap sel = judul kolomnya (data-label, diisi src/shared/lib/label-tabel.ts).
+   Susunan: sel pertama selebar kartu, sisanya 2 kolom (label kecil di atas nilai),
+   kolom Aksi di bawah rata kanan; antarkartu dipisah garis tipis.
+   ============================================================ */
+@media (max-width: 767px) {
+  table.tabel-kartu,
+  table.tabel-kartu > tbody,
+  table.tabel-kartu > tfoot {
+    display: block;
+    width: 100%;
+    min-width: 0 !important;
+  }
+  table.tabel-kartu > thead {
+    display: none;
+  }
+  table.tabel-kartu > tbody > tr,
+  table.tabel-kartu > tfoot > tr {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.85rem 1rem;
+    padding: 1rem;
+    border-bottom: 1px solid rgb(241 245 249);
+  }
+  table.tabel-kartu > tbody > tr > td,
+  table.tabel-kartu > tfoot > tr > td {
+    display: block;
+    min-width: 0;
+    padding: 0 !important;
+    white-space: normal !important;
+    text-align: left !important;
+    overflow-wrap: anywhere;
+    line-height: 1.45;
+  }
+  table.tabel-kartu td::before {
+    content: attr(data-label);
+    display: block;
+    margin-bottom: 0.2rem;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: rgb(148 163 184);
+  }
+  table.tabel-kartu td:first-child,
+  table.tabel-kartu td[colspan] {
+    grid-column: 1 / -1;
+  }
+  table.tabel-kartu td:first-child {
+    font-size: 0.95rem;
+  }
+  table.tabel-kartu td[data-label='']::before,
+  table.tabel-kartu td:not([data-label])::before,
+  table.tabel-kartu td[data-aksi]::before {
+    display: none;
+  }
+  table.tabel-kartu td[colspan] {
+    text-align: center !important;
+  }
+  table.tabel-kartu td[data-aksi] {
+    grid-column: 1 / -1;
+    padding-top: 0.75rem !important;
+    border-top: 1px dashed rgb(226 232 240);
+    text-align: right !important;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   /* Tetap fade (membantu pemahaman), tanpa perpindahan posisi / skala */
   .animate-in {
