@@ -9,7 +9,7 @@ export default function Bingkai({
   sub,
   onClose,
   children,
-  lebar = 'max-w-lg',
+  lebar = 'max-w-xl',
 }: {
   judul: string;
   sub: string;
@@ -31,7 +31,7 @@ export default function Bingkai({
         aria-label={judul}
         className={`bg-white rounded-2xl shadow-2xl w-full ${lebar} max-h-[94vh] flex flex-col overflow-hidden border border-gray-100 animate-in fade-in zoom-in-95 duration-200`}
       >
-        <div className="px-5 py-4 border-b border-gray-100 flex items-start justify-between gap-3">
+        <div className="px-5 sm:px-8 py-4 border-b border-gray-100 flex items-start justify-between gap-3">
           <div>
             <h2 className="text-base font-bold text-gray-900">{judul}</h2>
             <p className="text-xs text-gray-500">{sub}</p>

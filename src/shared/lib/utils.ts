@@ -73,6 +73,30 @@ export function formatStok(stok: number, pakaiKarton: boolean, settingPcs: numbe
 }
 
 /**
+ * Baca gramasi master ("500g", "1 kg", "1000ml", "1,5 L") menjadi gram atau ml per pcs.
+ * Satuan lain ("16oz", "1pcs") dikembalikan null: tidak dihitung beratnya.
+ */
+export function bacaGramasi(gramasi?: string | null): { nilai: number; jenis: 'berat' | 'volume' } | null {
+  const m = String(gramasi ?? '').trim().toLowerCase().replace(',', '.').match(/^([\d.]+)\s*(g|gr|gram|kg|ml|l|lt|liter)$/);
+  if (!m) return null;
+  const n = parseFloat(m[1]);
+  if (!Number.isFinite(n) || n <= 0) return null;
+  const u = m[2];
+  if (u === 'kg') return { nilai: n * 1000, jenis: 'berat' };
+  if (u === 'l' || u === 'lt' || u === 'liter') return { nilai: n * 1000, jenis: 'volume' };
+  return { nilai: n, jenis: u === 'ml' ? 'volume' : 'berat' };
+}
+
+/** Tampilkan berat/volume: "500 g", "10 kg (10.000 g)", "1,5 liter (1.500 ml)". */
+export function formatBerat(nilai: number, jenis: 'berat' | 'volume'): string {
+  const kecil = jenis === 'berat' ? 'g' : 'ml';
+  const besar = jenis === 'berat' ? 'kg' : 'liter';
+  const fmt = (x: number) => x.toLocaleString('id-ID', { maximumFractionDigits: 2 });
+  if (nilai < 1000) return `${fmt(nilai)} ${kecil}`;
+  return `${fmt(nilai / 1000)} ${besar} (${fmt(nilai)} ${kecil})`;
+}
+
+/**
  * Generate nomor transaksi unik
  */
 export function generateTrxId(prefix: string = 'TRX'): string {

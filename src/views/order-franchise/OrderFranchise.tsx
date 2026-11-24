@@ -405,8 +405,8 @@ function ModalBuat({
   };
 
   return (
-    <Bingkai judul="Buat Order ke Dapur Pusat" sub="Harga sesuai harga franchise di Master Resep" onClose={onClose} lebar="max-w-2xl">
-      <div className="flex-1 overflow-y-auto p-5 space-y-4">
+    <Bingkai judul="Buat Order ke Dapur Pusat" sub="Harga sesuai harga franchise di Master Resep" onClose={onClose} lebar="max-w-3xl">
+      <div className="flex-1 overflow-y-auto p-5 sm:px-8 space-y-4">
         {lingkup === null && (
           <label className="text-xs font-semibold text-gray-700 space-y-1 block">
             <span>Outlet franchise pemesan</span>
@@ -450,7 +450,7 @@ function ModalBuat({
           <input value={catatan} onChange={(e) => setCatatan(e.target.value)} className={inputCls} placeholder="Opsional, mis. kirim pagi" />
         </label>
       </div>
-      <div className="px-5 py-4 border-t border-gray-100 flex items-center justify-between gap-3">
+      <div className="px-5 sm:px-8 py-4 border-t border-gray-100 flex items-center justify-between gap-3">
         <div className="text-sm">
           Total <strong className="tabular-nums">{formatRupiah(total)}</strong>
           <span className="text-gray-500"> · {items.length} produk</span>
@@ -536,7 +536,7 @@ function ModalAksi({
           </label>
         )}
       </div>
-      <div className="px-5 py-4 border-t border-gray-100 flex justify-end gap-2">
+      <div className="px-5 sm:px-8 py-4 border-t border-gray-100 flex justify-end gap-2">
         <button type="button" onClick={onClose} className="h-10 px-4 rounded-xl border border-gray-200 text-sm font-semibold text-gray-700 hover:bg-gray-50">
           Kembali
         </button>

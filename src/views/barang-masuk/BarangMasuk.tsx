@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { Camera, Calendar, DollarSign, Building2, CreditCard, CheckCircle2, AlertCircle, Trash2, Sparkles, FileText, Download, Search, RefreshCw, Plus } from 'lucide-react';
-import { formatTanggal, formatTanggalWaktu, formatRupiah } from '@/shared/lib/utils';
+import { formatTanggal, formatTanggalWaktu, formatRupiah, bacaGramasi, formatBerat } from '@/shared/lib/utils';
 import { useBarcodeScanner } from '@/shared/hooks/useBarcodeScanner';
 import CameraBarcodeScanner from '@/shared/components/ui/CameraBarcodeScanner';
 import { ToastFloater, ToastData } from '@/shared/components/ui/ToastFloater';
@@ -44,6 +44,9 @@ interface InventoryOption {
   hargaJual?: string | number | null;
   stok?: string | number | null;
   supplier?: string | null;
+  pakaiKarton?: boolean | null;
+  settingPcs?: number | null;
+  gramasi?: string | null;
 }
 
 interface SupplierOption {
@@ -195,9 +198,23 @@ export default function BarangMasuk() {
       ...prev,
       sku,
       namaBarang: selected ? selected.namaBarang : '',
+      // Satuan kembali ke pcs: harga master (HPP) selalu per pcs
+      satuan: 'pcs',
       hargaBeli: selected?.hargaBeli ? String(selected.hargaBeli) : prev.hargaBeli,
       supplier: selected?.supplier || prev.supplier || (suppliers[0]?.nama || ''),
     }));
+  };
+
+  // Ganti satuan pcs <-> karton: harga ikut dikali / dibagi isi karton
+  const handleSatuanChange = (satuan: string) => {
+    setForm((prev) => {
+      const h = Number(prev.hargaBeli);
+      let hargaBeli = prev.hargaBeli;
+      if (isiKarton > 1 && Number.isFinite(h) && h > 0 && satuan !== prev.satuan) {
+        hargaBeli = String(Math.round((satuan === 'karton' ? h * isiKarton : h / isiKarton) * 100) / 100);
+      }
+      return { ...prev, satuan, hargaBeli };
+    });
   };
 
   const openModal = () => {
@@ -223,10 +240,16 @@ export default function BarangMasuk() {
 
   // Perhitungan Moving Average HPP Real-time
   const selectedInv = inventoryList.find((i) => i.sku === form.sku);
+  // Isi per karton dari master Inventory; 0 = barang tidak dijual per karton
+  const isiKarton =
+    selectedInv?.pakaiKarton && Number(selectedInv.settingPcs) > 1 ? Number(selectedInv.settingPcs) : 0;
+  const pengali = form.satuan === 'karton' && isiKarton ? isiKarton : 1;
+  const berat = bacaGramasi(selectedInv?.gramasi);
   const curStock = Number(selectedInv?.stok) || 0;
   const curPrice = Number(selectedInv?.hargaBeli) || 0;
-  const qtyIn = Number(form.qty) || 0;
-  const priceIn = Number(form.hargaBeli) || 0;
+  // Stok & HPP dihitung per pcs (server mengonversi dengan cara yang sama)
+  const qtyIn = (Number(form.qty) || 0) * pengali;
+  const priceIn = (Number(form.hargaBeli) || 0) / pengali;
   const newStock = curStock + qtyIn;
   const isPriceDifferent = Boolean(
     selectedInv &&
@@ -236,7 +259,7 @@ export default function BarangMasuk() {
   );
   const estimatedAvg =
     newStock > 0 && curStock > 0
-      ? Math.round((curStock * curPrice + qtyIn * priceIn) / newStock)
+      ? Math.round(((curStock * curPrice + qtyIn * priceIn) / newStock) * 100) / 100
       : priceIn;
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -701,9 +724,9 @@ export default function BarangMasuk() {
       {/* ============================================================ */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/50 backdrop-blur-sm animate-in fade-in duration-150">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg lg:max-w-4xl max-h-[92vh] flex flex-col overflow-hidden border border-gray-100 animate-in zoom-in-95 duration-150">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-xl lg:max-w-5xl max-h-[92vh] flex flex-col overflow-hidden border border-gray-100 animate-in zoom-in-95 duration-150">
             {/* Modal Header (Fixed Top) */}
-            <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between shrink-0 bg-white">
+            <div className="px-6 sm:px-8 py-4 border-b border-gray-100 flex items-center justify-between shrink-0 bg-white">
               <div>
                 <h2 className="font-bold text-gray-900 text-base lg:text-lg">
                   Catat Barang Masuk ({jenisMasuk === 'RETUR' ? 'Retur Pelanggan' : 'Purchasing'})
@@ -757,7 +780,7 @@ export default function BarangMasuk() {
               />
             ) : (
             <form onSubmit={handleSubmit} className="flex-1 flex flex-col overflow-hidden">
-              <div className="flex-1 overflow-y-auto p-6">
+              <div className="flex-1 overflow-y-auto p-6 sm:px-8">
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 lg:gap-6">
                   {/* Kolom Kiri: Produk, Tanggal & Jumlah */}
                   <div className="space-y-4">
@@ -832,16 +855,37 @@ export default function BarangMasuk() {
                           />
                           <select
                             value={form.satuan}
-                            onChange={(e) => setForm({ ...form, satuan: e.target.value })}
+                            onChange={(e) => handleSatuanChange(e.target.value)}
+                            aria-label="Satuan"
                             className="w-24 px-2 py-2 rounded-xl border border-gray-200 text-sm focus:border-emerald-500 outline-none bg-white font-medium"
                           >
                             <option value="pcs">pcs</option>
-                            <option value="karton">karton</option>
-                            <option value="pack">pack</option>
-                            <option value="kg">kg</option>
-                            <option value="liter">liter</option>
+                            {isiKarton > 0 && <option value="karton">karton</option>}
                           </select>
                         </div>
+                        {selectedInv && (
+                          <div className="mt-1.5 space-y-0.5 text-[11px] text-gray-600">
+                            <p>
+                              1 pcs
+                              {berat
+                                ? ` = ${formatBerat(berat.nilai, berat.jenis)}`
+                                : selectedInv.gramasi
+                                  ? ` = ${selectedInv.gramasi}`
+                                  : ''}
+                              {isiKarton > 0 &&
+                                ` · 1 karton = ${isiKarton} pcs${berat ? ` = ${formatBerat(berat.nilai * isiKarton, berat.jenis)}` : ''}`}
+                            </p>
+                            {qtyIn > 0 && (pengali > 1 || berat) && (
+                              <p className="font-semibold text-emerald-700">
+                                Stok masuk: {qtyIn.toLocaleString('id-ID')} pcs
+                                {berat ? ` = ${formatBerat(berat.nilai * qtyIn, berat.jenis)}` : ''}
+                              </p>
+                            )}
+                            {isiKarton === 0 && (
+                              <p className="text-gray-400">Tidak dijual per karton. Atur isi karton di master Inventory bila perlu.</p>
+                            )}
+                          </div>
+                        )}
                       </div>
                     </div>
 
@@ -878,7 +922,7 @@ export default function BarangMasuk() {
                           <div className="pt-1.5 border-t border-blue-200/80 flex items-center justify-between text-[11px]">
                             <span className="text-blue-700">Estimasi HPP Rata-Rata Baru:</span>
                             <span className="font-bold text-blue-950 text-xs">
-                              {formatRupiah(estimatedAvg)} / {form.satuan}
+                              {formatRupiah(estimatedAvg)} / pcs
                             </span>
                           </div>
                         )}
@@ -1040,7 +1084,7 @@ export default function BarangMasuk() {
               </div>
 
               {/* Action Buttons (Fixed Footer) */}
-              <div className="px-6 py-3.5 border-t border-gray-100 bg-gray-50/80 flex justify-end gap-3 shrink-0">
+              <div className="px-6 sm:px-8 py-3.5 border-t border-gray-100 bg-gray-50/80 flex justify-end gap-3 shrink-0">
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
