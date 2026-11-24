@@ -25,7 +25,7 @@ export default function AssistivePosButton() {
 
   return (
     <div
-      className="assistive-pos fixed bottom-[calc(env(safe-area-inset-bottom)+6.5rem)] right-4 md:bottom-8 md:right-8 z-50 flex items-center gap-3 select-none"
+      className="assistive-pos fixed bottom-[4.75rem] right-3 md:bottom-8 md:right-8 z-50 flex items-center gap-3 select-none"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
@@ -47,7 +47,7 @@ export default function AssistivePosButton() {
         target="_blank"
         rel="noopener noreferrer"
         aria-label="Point of Sales Kasir Mobile"
-        className={`relative group flex items-center justify-center w-14 h-14 md:w-16 md:h-16 rounded-full transition-all duration-300 ease-out focus:outline-none focus:ring-4 focus:ring-emerald-500/30 ${
+        className={`relative group flex items-center justify-center w-11 h-11 md:w-16 md:h-16 rounded-full transition-all duration-300 ease-out focus:outline-none focus:ring-4 focus:ring-emerald-500/30 ${
           isHovered
             ? 'opacity-100 scale-110 shadow-2xl shadow-emerald-500/25 bg-slate-900 border-2 border-emerald-400/80 text-white'
             : 'opacity-40 scale-95 shadow-lg bg-slate-900/70 backdrop-blur-md border border-white/20 text-slate-200'
@@ -62,16 +62,16 @@ export default function AssistivePosButton() {
 
         {/* Center POS Icon */}
         <div className="relative z-10 flex flex-col items-center justify-center">
-          <ShoppingBag className="w-6 h-6 md:w-7 md:h-7 transition-transform group-hover:scale-110" />
-          <span className="text-[9px] font-bold tracking-tighter uppercase mt-0.5 opacity-90">
+          <ShoppingBag className="w-5 h-5 md:w-7 md:h-7 transition-transform group-hover:scale-110" />
+          <span className="hidden md:block text-[9px] font-bold tracking-tighter uppercase mt-0.5 opacity-90">
             POS
           </span>
         </div>
 
         {/* Pulse Beacon Indicator */}
-        <span className="absolute -top-1 -right-1 flex h-3.5 w-3.5">
+        <span className="absolute -top-0.5 -right-0.5 md:-top-1 md:-right-1 flex h-2.5 w-2.5 md:h-3.5 md:w-3.5">
           <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-          <span className="relative inline-flex rounded-full h-3.5 w-3.5 bg-emerald-500 border-2 border-white" />
+          <span className="relative inline-flex rounded-full h-2.5 w-2.5 md:h-3.5 md:w-3.5 bg-emerald-500 border-2 border-white" />
         </span>
       </Link>
     </div>
