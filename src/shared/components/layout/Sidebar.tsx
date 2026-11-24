@@ -582,7 +582,7 @@ export default function Sidebar({ userRoles = [], onClose }: SidebarProps) {
 
       {/* Footer Info */}
       <div className="p-3 border-t border-gray-100 bg-gray-50/50 text-[10px] text-gray-400 text-center">
-        <span>Gudang Manufaktur & F&B Hub &bull; v2.2</span>
+        <span>©Hikimori 2026</span>
       </div>
     </aside>
   );
