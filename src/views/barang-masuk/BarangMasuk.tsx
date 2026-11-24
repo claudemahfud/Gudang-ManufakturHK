@@ -47,6 +47,7 @@ interface InventoryOption {
   pakaiKarton?: boolean | null;
   settingPcs?: number | null;
   gramasi?: string | null;
+  hargaBeliKarton?: string | number | null;
 }
 
 interface SupplierOption {
@@ -207,14 +208,15 @@ export default function BarangMasuk() {
     }));
   };
 
-  // Centang karton: harga karton dari suplier berbeda dengan harga pcs, jadi tidak dikali otomatis.
-  // Karton -> kosongkan harga (diketik per karton); pcs -> kembali ke HPP master per pcs.
+  // Centang karton: harga diambil dari Master Barang (harga per karton / per pcs), tidak dikali otomatis.
+  // Tetap bisa diubah bila faktur suplier berbeda.
   const handleKartonToggle = (pakai: boolean) => {
     const sel = inventoryList.find((i) => i.sku === form.sku);
+    const hargaMaster = pakai ? Number(sel?.hargaBeliKarton) || 0 : Number(sel?.hargaBeli) || 0;
     setForm((prev) => ({
       ...prev,
       satuan: pakai ? 'karton' : 'pcs',
-      hargaBeli: pakai ? '' : sel?.hargaBeli ? String(sel.hargaBeli) : '',
+      hargaBeli: hargaMaster > 0 ? String(hargaMaster) : '',
     }));
   };
 
@@ -241,7 +243,7 @@ export default function BarangMasuk() {
 
   // Perhitungan Moving Average HPP Real-time
   const selectedInv = inventoryList.find((i) => i.sku === form.sku);
-  // Isi per karton dari master Inventory; 0 = barang tidak dijual per karton
+  // Isi per karton dari Master Barang; 0 = barang tidak dijual per karton
   const isiMaster =
     selectedInv?.pakaiKarton && Number(selectedInv.settingPcs) > 1 ? Number(selectedInv.settingPcs) : 0;
   const pakaiKarton = form.satuan === 'karton';
@@ -821,7 +823,7 @@ export default function BarangMasuk() {
                         onChange={(e) => handleSkuChange(e.target.value)}
                         className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 text-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 outline-none transition bg-white font-medium text-gray-800"
                       >
-                        <option value="">-- Pilih Barang dari Master Inventory --</option>
+                        <option value="">-- Pilih dari Master Barang --</option>
                         {inventoryList.map((item) => (
                           <option key={item.sku} value={item.sku}>
                             {item.sku} - {item.namaBarang}
@@ -884,7 +886,7 @@ export default function BarangMasuk() {
                       {pakaiKarton && (
                         isiMaster > 0 ? (
                           <p className="text-[11px] text-gray-600">
-                            Isi per karton: <strong>{isiMaster} pcs</strong> (dari master Inventory)
+                            Isi per karton: <strong>{isiMaster} pcs</strong> (dari Master Barang)
                           </p>
                         ) : (
                           <div className="flex items-center gap-2">
@@ -897,7 +899,7 @@ export default function BarangMasuk() {
                               onChange={(e) => setForm({ ...form, isiKarton: e.target.value })}
                               className="w-24 px-3 py-1.5 bg-white border border-gray-300 rounded-lg text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500"
                             />
-                            <span className="text-[11px] text-gray-600">pcs per 1 karton (disimpan ke master Inventory)</span>
+                            <span className="text-[11px] text-gray-600">pcs per 1 karton (disimpan ke Master Barang)</span>
                           </div>
                         )
                       )}
@@ -937,7 +939,12 @@ export default function BarangMasuk() {
                         className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 text-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 outline-none transition font-semibold"
                       />
                       <p className="text-[10px] text-gray-500 mt-1">
-                        Harga yang <strong>dibayar kepada Suplier</strong> untuk 1 {pakaiKarton ? 'karton' : 'pcs'}.
+                        Harga yang <strong>dibayar kepada Suplier</strong> untuk 1 {pakaiKarton ? 'karton' : 'pcs'}
+                        {selectedInv && Number(pakaiKarton ? selectedInv.hargaBeliKarton : selectedInv.hargaBeli) > 0
+                          ? ' (dari Master Barang, bisa diubah bila faktur berbeda).'
+                          : pakaiKarton && selectedInv
+                            ? '. Harga karton belum diatur di Master Barang.'
+                            : '.'}
                         {pakaiKarton && isiKarton > 1 && Number(form.hargaBeli) > 0 && (
                           <> Setara <strong>{formatRupiah(Number(form.hargaBeli) / isiKarton)}</strong> per pcs (HPP stok).</>
                         )}

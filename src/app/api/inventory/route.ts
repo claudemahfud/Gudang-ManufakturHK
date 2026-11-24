@@ -6,7 +6,7 @@ import { canViewCostPrice, requireAuthRole, ROLES_WAREHOUSE } from '@/shared/lib
 import { roleUtamaDi } from '@/shared/lib/auth/roles';
 
 // ============================================================
-// API ROUTE: Master Inventory List & Create
+// API ROUTE: Master Barang (tabel inventory) List & Create
 // Endpoint:
 // - GET /api/inventory (list with pagination + search + filter divisi)
 // - POST /api/inventory (create item dengan tagging divisi)
@@ -100,6 +100,7 @@ export async function GET(req: NextRequest) {
         return {
           ...item,
           hargaBeli: '0',
+          hargaBeliKarton: '0',
         };
       }
       return item;
@@ -141,6 +142,7 @@ export async function POST(req: NextRequest) {
       gramasi,
       varian,
       hargaBeli,
+      hargaBeliKarton,
       hargaJual,
       supplier,
       settingPcs,
@@ -244,6 +246,7 @@ export async function POST(req: NextRequest) {
         varian: varian?.trim() || null,
         stok: 0,
         hargaBeli: hargaBeli !== undefined && hargaBeli !== '' ? String(hargaBeli) : '0',
+        hargaBeliKarton: Number(hargaBeliKarton) > 0 ? String(Number(hargaBeliKarton)) : '0',
         hargaJual: hargaJual !== undefined && hargaJual !== '' ? String(hargaJual) : '0',
         supplier: supplier?.trim() || null,
         settingPcs: Number(settingPcs) > 0 ? Number(settingPcs) : 1,

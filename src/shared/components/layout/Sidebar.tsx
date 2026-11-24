@@ -119,7 +119,7 @@ export const MENU_HIERARCHY: ParentMenuItem[] = [
     icon: Package,
     items: [
       {
-        label: 'Master Inventory',
+        label: 'Master Barang',
         icon: Package,
         href: ROUTES.INVENTORY,
       },

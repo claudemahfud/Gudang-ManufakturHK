@@ -34,7 +34,7 @@ const ALIAS_KARTON = ['karton', 'ctn', 'dus', 'dos'];
 
 /**
  * Ubah qty & harga dari satuan input ke satuan dasar stok (pcs).
- * Karton memakai isi per karton dari master Inventory (setting_pcs); satuan lain belum punya konversi.
+ * Karton memakai isi per karton dari Master Barang (setting_pcs); satuan lain belum punya konversi.
  */
 export function konversiKePcs(
   satuan: string | null | undefined,

@@ -82,7 +82,7 @@ export default function CreativeMegaMenu({ userRoles = [], isOpen, onClose }: Me
   // Modul Categories
   const categoryGudang = [
     {
-      title: 'Master Inventory',
+      title: 'Master Barang',
       desc: 'Katalog SKU, stok fisik & HPP',
       href: ROUTES.INVENTORY,
       icon: Package,
