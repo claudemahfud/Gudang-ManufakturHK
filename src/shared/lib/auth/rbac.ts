@@ -1,6 +1,10 @@
 import type { UserRole } from '@/shared/types';
 import { auth } from './config';
 import { NextResponse } from 'next/server';
+import { eq } from 'drizzle-orm';
+import { db } from '@/shared/lib/db';
+import { users } from '@/shared/lib/db/schema';
+import { punyaRole, rolesOf } from './roles';
 
 // ============================================================
 // RBAC: Role-Based Access Control Definitions & Privacy Bounds
@@ -131,9 +135,9 @@ export const ROLES_COMPANY_SETTINGS: UserRole[] = ['Direktur Utama'];
 /**
  * Cek apakah sebuah role berhak melihat Harga Beli / HPP Modal rahasia perusahaan
  */
-export function canViewCostPrice(role?: UserRole | string | null): boolean {
-  if (!role) return false;
-  return ROLES_PROFIT_MARGIN.includes(role as UserRole);
+export function canViewCostPrice(u?: { role?: string | null; roles?: readonly string[] | null } | string | null): boolean {
+  if (!u) return false;
+  return punyaRole(typeof u === 'string' ? { role: u } : u, ROLES_PROFIT_MARGIN);
 }
 
 /**
@@ -156,10 +160,31 @@ export async function requireAuthRole(allowedRoles?: UserRole[]) {
   }
 
   const user = session.user as any;
+  // Role dibaca ulang dari DB: role yang dicabut / akun yang dinonaktifkan langsung berlaku di API
+  if (user.username) {
+    const [segar] = await db
+      .select({ role: users.role, rolesTambahan: users.rolesTambahan, aktif: users.aktif })
+      .from(users)
+      .where(eq(users.username, user.username))
+      .limit(1);
+    if (!segar || !segar.aktif) {
+      return {
+        authorized: false as const,
+        user: null,
+        userRole: null,
+        response: NextResponse.json(
+          { success: false, message: 'Akun tidak aktif atau tidak ditemukan. Silakan login kembali.' },
+          { status: 401 }
+        ),
+      };
+    }
+    user.role = segar.role;
+    user.roles = rolesOf({ role: segar.role, roles: segar.rolesTambahan });
+  }
   const userRole = user.role as UserRole;
 
   if (allowedRoles && allowedRoles.length > 0) {
-    if (!allowedRoles.includes(userRole)) {
+    if (!punyaRole(user, allowedRoles)) {
       return {
         authorized: false as const,
         user,
@@ -167,7 +192,7 @@ export async function requireAuthRole(allowedRoles?: UserRole[]) {
         response: NextResponse.json(
           {
             success: false,
-            message: `Akses ditolak. Role '${userRole}' tidak memiliki izin untuk melihat informasi ini (Privasi Dibatasi).`,
+            message: `Akses ditolak. Role '${rolesOf(user).join(', ')}' tidak memiliki izin untuk melihat informasi ini (Privasi Dibatasi).`,
           },
           { status: 403 }
         ),

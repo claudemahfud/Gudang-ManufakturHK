@@ -14,6 +14,7 @@ import { BusinessError, incrementStock, normalizeSku, parsePositiveInt } from '@
 import { batalkanFakturPenjualan, buatFakturPenjualan } from '@/shared/lib/faktur-penjualan';
 import { DAPUR_PUSAT } from '@/shared/lib/dapur-pusat';
 import { generateTrxId } from '@/shared/lib/utils';
+import { roleUtamaDi } from '@/shared/lib/auth/roles';
 
 // ============================================================
 // Order Franchise -> Dapur Pusat.
@@ -30,6 +31,7 @@ export const TEMPO_DEFAULT_HARI = 14;
 export interface Pelaku {
   username: string;
   role?: string;
+  roles?: string[];
   cabang?: string;
 }
 
@@ -37,7 +39,7 @@ const PIMPINAN = ['Administrator', 'Direktur Utama', 'Manager', 'Manager Umum'];
 
 /** Tim Dapur Pusat: pimpinan, atau pengguna yang ditempatkan di Pusat / ALL. */
 export function isTimPusat(u: Pelaku) {
-  return PIMPINAN.includes(u.role ?? '') || !u.cabang || u.cabang === 'Pusat' || u.cabang === 'ALL';
+  return roleUtamaDi(u, PIMPINAN) || !u.cabang || u.cabang === 'Pusat' || u.cabang === 'ALL';
 }
 
 /** Franchise yang boleh dilihat pengguna: null = semua (tim pusat), selain itu hanya cabangnya. */

@@ -6,9 +6,9 @@ import { SessionProvider } from 'next-auth/react';
 import Sidebar from '@/shared/components/layout/Sidebar';
 import Header from '@/shared/components/layout/Header';
 import { useSession } from 'next-auth/react';
-import type { UserRole } from '@/shared/types';
 import AssistivePosButton from '@/shared/components/pos/AssistivePosButton';
 import { ShieldCheck, HeartPulse } from 'lucide-react';
+import { rolesOf } from '@/shared/lib/auth/roles';
 
 // ============================================================
 // LAYOUT: Dashboard (semua halaman authenticated)
@@ -50,7 +50,7 @@ function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   // Sidebar desktop bisa disembunyikan; pilihan diingat per perangkat
   const desktopSidebarOpen = useSyncExternalStore(subscribeSidebarPref, readSidebarPref, () => true);
-  const userRole = (session?.user as any)?.role as UserRole | undefined;
+  const userRoles = rolesOf(session?.user as { role?: string; roles?: string[] } | undefined);
 
   const toggleSidebar = () => {
     if (window.matchMedia('(min-width: 1024px)').matches) {
@@ -65,7 +65,7 @@ function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
       {/* 1. Holy Grail Layout: Left Semantic <aside> for Navigation */}
       {desktopSidebarOpen && (
         <aside aria-label="Sidebar Navigasi Desktop" className="hidden lg:flex flex-shrink-0">
-          <Sidebar userRole={userRole} />
+          <Sidebar userRoles={userRoles} />
         </aside>
       )}
 
@@ -80,7 +80,7 @@ function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
             aria-label="Sidebar Navigasi Mobile"
             className="fixed inset-y-0 left-0 z-50 lg:hidden animate-in slide-in-from-left duration-300 [animation-timing-function:var(--ease-drawer)]"
           >
-            <Sidebar userRole={userRole} onClose={() => setSidebarOpen(false)} />
+            <Sidebar userRoles={userRoles} onClose={() => setSidebarOpen(false)} />
           </aside>
         </>
       )}

@@ -3,6 +3,7 @@ import { db } from '@/shared/lib/db';
 import { targetKomisi, logs } from '@/shared/lib/db/schema';
 import { requireAuthRole, ROLES_SALES_OPS } from '@/shared/lib/auth/rbac';
 import { desc, eq } from 'drizzle-orm';
+import { roleUtamaDi } from '@/shared/lib/auth/roles';
 
 // ============================================================
 // API: /api/target-komisi
@@ -14,12 +15,13 @@ export async function GET() {
     const authResult = await requireAuthRole(ROLES_SALES_OPS);
     if (!authResult.authorized) return authResult.response;
 
-    const { user, userRole } = authResult;
+    const { user } = authResult;
 
     // Jika sales biasa, hanya boleh melihat target & komisi miliknya sendiri
     let query = db.select().from(targetKomisi);
     let items;
-    if (userRole === 'Salesman' || userRole === 'Sales Canvas' || userRole === 'Sales Motoris' || userRole === 'Agen' || userRole === 'Sales Agent') {
+    // Batas data sendiri mengikuti role utama (role tambahan tidak memperluas lingkup data)
+    if (roleUtamaDi(user, ['Salesman', 'Sales Canvas', 'Sales Motoris', 'Agen', 'Sales Agent'])) {
       items = await db
         .select()
         .from(targetKomisi)

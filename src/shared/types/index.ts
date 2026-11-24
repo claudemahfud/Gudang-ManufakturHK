@@ -30,6 +30,8 @@ export interface SessionUser {
   email: string;
   username: string;
   role: UserRole;
+  /** Role utama + role tambahan. */
+  roles?: UserRole[];
 }
 
 // Inventory

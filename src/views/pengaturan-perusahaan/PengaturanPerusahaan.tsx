@@ -10,6 +10,7 @@
 import { useEffect, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { ShieldAlert, CheckCircle2, AlertCircle, Lock } from 'lucide-react';
+import { punyaRole } from '@/shared/lib/auth/roles';
 
 interface PengaturanPin {
   wajibPin: boolean;
@@ -23,8 +24,7 @@ interface PengaturanPin {
 
 export default function PengaturanPerusahaanView() {
   const { data: session } = useSession();
-  const role = (session?.user as { role?: string } | undefined)?.role;
-  const bolehUbah = role === 'Direktur Utama';
+  const bolehUbah = punyaRole(session?.user as { role?: string; roles?: string[] } | undefined, ['Direktur Utama']);
 
   const [data, setData] = useState<PengaturanPin | null>(null);
   const [pinBaru, setPinBaru] = useState('');

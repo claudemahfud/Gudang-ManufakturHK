@@ -11,6 +11,7 @@
 // ============================================================
 
 import { useState, useEffect } from 'react';
+import { useSession } from 'next-auth/react';
 import { formatTanggal } from '@/shared/lib/utils';
 import type { UserRole } from '@/shared/types';
 import {
@@ -30,12 +31,16 @@ import {
   Maximize2,
   Minimize2,
 } from 'lucide-react';
+import { PENENTU_MULTI_ROLE, punyaRole } from '@/shared/lib/auth/roles';
+import AturRoleModal from './AturRoleModal';
+import { roleUtamaDi } from '@/shared/lib/auth/roles';
 
 interface UserItem {
   id: string;
   username: string;
   namaLengkap: string;
   role: UserRole;
+  rolesTambahan?: UserRole[];
   email: string | null;
   aktif: boolean;
   divisiAssigned?: 'ALL' | 'MANUFAKTUR' | 'FNB';
@@ -72,6 +77,12 @@ const ROLES: UserRole[] = [
 ];
 
 export default function Users() {
+  const { data: session } = useSession();
+  const sesi = session?.user as { role?: string; roles?: string[] } | undefined;
+  // Administrator kelola akun; Direktur Utama tetapkan role tambahan (multi-role)
+  const bolehKelolaAkun = punyaRole(sesi, ['Administrator']);
+  const bolehAturRole = punyaRole(sesi, [PENENTU_MULTI_ROLE]);
+  const [aturRole, setAturRole] = useState<UserItem | null>(null);
   const [data, setData] = useState<UserItem[]>([]);
   const [branches, setBranches] = useState<CabangOption[]>([]);
   const [loading, setLoading] = useState(true);
@@ -226,6 +237,7 @@ export default function Users() {
           </div>
         </div>
 
+        {bolehKelolaAkun && (
         <button
           onClick={() => setIsModalOpen(true)}
           className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-gray-900 hover:bg-gray-800 text-white rounded-xl text-xs sm:text-sm font-semibold shadow-sm transition"
@@ -233,6 +245,7 @@ export default function Users() {
           <Plus className="w-4 h-4" />
           <span>Tambah Pengguna Baru</span>
         </button>
+        )}
       </header>
 
       {/* 2. Info Card Isolasi Penempatan */}
@@ -355,7 +368,7 @@ export default function Users() {
                 </tr>
               ) : (
                 data.map((row) => {
-                  const isExec = ['Administrator', 'Direktur Utama', 'Manager', 'Manager Umum', 'Finance & Accounting'].includes(row.role);
+                  const isExec = roleUtamaDi(row, ['Administrator', 'Direktur Utama', 'Manager', 'Manager Umum', 'Finance & Accounting']);
                   const isLocked = !isExec && row.cabang && row.cabang !== 'Pusat' && row.cabang !== 'ALL';
 
                   return (
@@ -366,6 +379,15 @@ export default function Users() {
                         <span className="px-2.5 py-1 rounded-md text-[11px] font-semibold bg-gray-100 text-gray-800 border border-gray-200">
                           {row.role}
                         </span>
+                        {(row.rolesTambahan ?? []).length > 0 && (
+                          <div className="flex flex-wrap gap-1 mt-1 max-w-[220px] whitespace-normal">
+                            {(row.rolesTambahan ?? []).map((r) => (
+                              <span key={r} className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-indigo-50 text-indigo-800 border border-indigo-200">
+                                + {r}
+                              </span>
+                            ))}
+                          </div>
+                        )}
                       </td>
                       <td className="py-3.5 px-4">
                         <span
@@ -398,13 +420,23 @@ export default function Users() {
                       <td className="py-3.5 px-4 text-[11px] text-gray-500 whitespace-nowrap">
                         {formatTanggal(row.createdAt)}
                       </td>
-                      <td className="py-3.5 px-4 text-center">
-                        <button
-                          onClick={() => handleDelete(row.username)}
-                          className="text-red-500 hover:text-red-700 text-xs font-semibold px-2 py-1 rounded hover:bg-red-50 transition"
-                        >
-                          Hapus
-                        </button>
+                      <td className="py-3.5 px-4 text-center whitespace-nowrap">
+                        {bolehAturRole && (
+                          <button
+                            onClick={() => setAturRole(row)}
+                            className="text-indigo-700 hover:text-indigo-900 text-xs font-semibold px-2 py-1 rounded hover:bg-indigo-50 transition"
+                          >
+                            Atur Role
+                          </button>
+                        )}
+                        {bolehKelolaAkun && (
+                          <button
+                            onClick={() => handleDelete(row.username)}
+                            className="text-red-500 hover:text-red-700 text-xs font-semibold px-2 py-1 rounded hover:bg-red-50 transition"
+                          >
+                            Hapus
+                          </button>
+                        )}
                       </td>
                     </tr>
                   );
@@ -431,6 +463,21 @@ export default function Users() {
       </section>
 
       {/* Modal Tambah Pengguna Baru — Desktop Landscape */}
+      {aturRole && (
+        <AturRoleModal
+          pengguna={aturRole}
+          onClose={() => setAturRole(null)}
+          onTersimpan={(pesan, ok) => {
+            setToast({ message: pesan, type: ok ? 'success' : 'error' });
+            setTimeout(() => setToast(null), 5000);
+            if (ok) {
+              setAturRole(null);
+              fetchData();
+            }
+          }}
+        />
+      )}
+
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-gray-900/40 backdrop-blur-xs animate-in fade-in duration-150">
           <div className="bg-white rounded-2xl lg:rounded-3xl shadow-2xl border border-gray-200 w-full max-w-lg lg:max-w-4xl max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-150">
