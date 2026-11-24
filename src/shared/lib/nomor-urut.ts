@@ -14,11 +14,18 @@ function tanggalWib(waktu: Date) {
 }
 
 /**
- * Nomor dokumen berurutan: PREFIX-BBTT-NNN (mis. POS-1124-001).
+ * Kode awalan per jenis dokumen; tiap kode punya seri sendiri.
+ * POS = penjualan kasir, FPJ = faktur penjualan, SJ = surat jalan, PO = purchase order,
+ * PRD = produksi dapur, ORF = order franchise, MTS = mutasi barang, RTRN = retur.
+ */
+export type SeriNomor = 'POS' | 'FPJ' | 'SJ' | 'PO' | 'PRD' | 'ORF' | 'MTS' | 'RTRN';
+
+/**
+ * Nomor dokumen berurutan KODE + BBTTNNN (bulan, tanggal, seri 3 digit), mis. POS1124001.
  * Seri kembali ke 001 setiap hari (WIB). Atomik lewat upsert, aman untuk kasir bersamaan.
  * Panggil di dalam transaksi bila memungkinkan agar nomor tidak terpakai saat transaksi gagal.
  */
-export async function nomorUrut(ex: Executor, prefix: string, waktu = new Date()): Promise<string> {
+export async function nomorUrut(ex: Executor, prefix: SeriNomor, waktu = new Date()): Promise<string> {
   const { iso, bb, tt } = tanggalWib(waktu);
   const rows = await ex.execute(sql`
     INSERT INTO nomor_urut (prefix, tanggal, terakhir)
@@ -28,5 +35,5 @@ export async function nomorUrut(ex: Executor, prefix: string, waktu = new Date()
   `);
   const n = Number((rows as unknown as { terakhir: number }[])[0]?.terakhir);
   if (!Number.isFinite(n) || n < 1) throw new Error('Gagal mengambil nomor urut');
-  return `${prefix}-${bb}${tt}-${String(n).padStart(3, '0')}`;
+  return `${prefix}${bb}${tt}${String(n).padStart(3, '0')}`;
 }

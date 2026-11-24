@@ -11,6 +11,7 @@ import {
   parsePositiveInt,
   resolveCabang,
 } from '@/shared/lib/stock';
+import { nomorUrut } from '@/shared/lib/nomor-urut';
 
 // ============================================================
 // API: /api/mutasi-barang
@@ -96,6 +97,7 @@ export async function POST(req: Request) {
       const [inserted] = await tx
         .insert(mutasiBarang)
         .values({
+          noMutasi: await nomorUrut(tx, 'MTS'),
           tanggal: tanggal ? new Date(tanggal) : new Date(),
           sku,
           namaBarang: inv.namaBarang,
