@@ -12,6 +12,7 @@ import { useSession } from 'next-auth/react';
 import { useDivision, DivisionMode } from '@/shared/context/DivisionContext';
 import { formatTanggal } from '@/shared/lib/utils';
 import { siapkanFoto, umumkanFotoBerubah, useFotoProfil } from '@/shared/lib/foto-profil';
+import { roleUtamaDi } from '@/shared/lib/auth/roles';
 import {
   User,
   Shield,
@@ -197,6 +198,10 @@ export default function Profile() {
           </div>
         </div>
       </header>
+
+      {roleUtamaDi(session?.user as { role?: string } | undefined, ['Administrator']) && (
+        <PinResetTotal onPesan={showToast} />
+      )}
 
       {/* ============================================================ */}
       {/* 2. SECTION: GANTI MODE OPERASIONAL (Permintaan Khusus User) */}
@@ -522,5 +527,79 @@ function FotoProfil({ inisial, onPesan }: { inisial: string; onPesan: (pesan: st
         </button>
       )}
     </div>
+  );
+}
+
+/** PIN Reset Total Superuser: wajib password akun untuk mengatur / mengganti. */
+function PinResetTotal({ onPesan }: { onPesan: (pesan: string, jenis: 'success' | 'error') => void }) {
+  const [adaPin, setAdaPin] = useState<boolean | null>(null);
+  const [password, setPassword] = useState('');
+  const [pin, setPin] = useState('');
+  const [pin2, setPin2] = useState('');
+  const [proses, setProses] = useState(false);
+
+  useEffect(() => {
+    fetch('/api/profile/pin-reset')
+      .then((r) => r.json())
+      .then((j) => j.success && setAdaPin(Boolean(j.adaPin)))
+      .catch(() => {});
+  }, []);
+
+  const simpan = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!/^\d{6}$/.test(pin)) return onPesan('PIN harus tepat 6 angka', 'error');
+    if (pin !== pin2) return onPesan('Ulangi PIN tidak sama', 'error');
+    setProses(true);
+    try {
+      const res = await fetch('/api/profile/pin-reset', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password, pin }),
+      });
+      const json = await res.json().catch(() => ({}));
+      onPesan(json.message || (json.success ? 'PIN disimpan' : 'Gagal menyimpan PIN'), json.success ? 'success' : 'error');
+      if (json.success) {
+        setAdaPin(true);
+        setPassword('');
+        setPin('');
+        setPin2('');
+      }
+    } catch {
+      onPesan('Gangguan jaringan', 'error');
+    } finally {
+      setProses(false);
+    }
+  };
+
+  const kelas = 'w-full px-3 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-red-200';
+  return (
+    <section aria-label="PIN Reset Total" className="bg-white rounded-3xl p-6 border-2 border-red-200 shadow-xs space-y-3">
+      <div>
+        <h2 className="text-sm font-extrabold text-red-800 uppercase tracking-wider">PIN Reset Total (Superuser)</h2>
+        <p className="text-xs text-slate-600 mt-1">
+          PIN 6 angka untuk tombol Reset Total di Pengaturan Perusahaan. Disimpan terenkripsi (hash), tidak bisa dilihat siapa
+          pun. Status: <strong>{adaPin === null ? '...' : adaPin ? 'sudah diatur' : 'belum diatur'}</strong>
+        </p>
+      </div>
+      <form onSubmit={simpan} className="grid grid-cols-1 sm:grid-cols-3 gap-3" autoComplete="off">
+        <label className="text-xs font-semibold text-slate-700">
+          Password akun
+          <input type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} className={`${kelas} mt-1`} />
+        </label>
+        <label className="text-xs font-semibold text-slate-700">
+          PIN baru (6 angka)
+          <input type="password" inputMode="numeric" maxLength={6} autoComplete="new-password" value={pin} onChange={(e) => setPin(e.target.value.replace(/\D/g, ''))} className={`${kelas} mt-1 font-mono tracking-[0.3em]`} />
+        </label>
+        <label className="text-xs font-semibold text-slate-700">
+          Ulangi PIN
+          <input type="password" inputMode="numeric" maxLength={6} autoComplete="new-password" value={pin2} onChange={(e) => setPin2(e.target.value.replace(/\D/g, ''))} className={`${kelas} mt-1 font-mono tracking-[0.3em]`} />
+        </label>
+        <div className="sm:col-span-3">
+          <button type="submit" disabled={proses || !password || pin.length !== 6 || pin2.length !== 6} className="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-bold disabled:bg-gray-300 disabled:text-gray-500">
+            {proses ? 'Menyimpan...' : adaPin ? 'Ganti PIN' : 'Simpan PIN'}
+          </button>
+        </div>
+      </form>
+    </section>
   );
 }

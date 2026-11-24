@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
-import { BarChart3, CreditCard, Package, Route, UserRound, Users } from 'lucide-react';
+import { BarChart3, CreditCard, Package, UserRound, Users } from 'lucide-react';
 import { formatRupiah } from '@/shared/lib/utils';
 import { useDivision } from '@/shared/context/DivisionContext';
 import MemuatProgres from '@/shared/components/ui/MemuatProgres';
@@ -108,10 +108,9 @@ function TabelIsi({ baris, kolomNama }: { baris: BarisRekap[]; kolomNama: string
   );
 }
 
-type KunciTab = 'tren' | 'jalur' | 'metode' | 'sales' | 'produk' | 'pelanggan';
+type KunciTab = 'tren' | 'metode' | 'sales' | 'produk' | 'pelanggan';
 const TAB: { kunci: KunciTab; label: string; ikon: typeof Package; kolom: string }[] = [
   { kunci: 'tren', label: 'Tren Harian', ikon: BarChart3, kolom: 'Tanggal' },
-  { kunci: 'jalur', label: 'Jalur', ikon: Route, kolom: 'Jalur' },
   { kunci: 'metode', label: 'Metode Bayar', ikon: CreditCard, kolom: 'Metode' },
   { kunci: 'sales', label: 'Salesman / Kasir', ikon: UserRound, kolom: 'Salesman / Kasir' },
   { kunci: 'produk', label: 'Produk Top 10', ikon: Package, kolom: 'Produk' },
@@ -125,9 +124,7 @@ function GrafikAnalitik({ data }: { data: DataRekap }) {
   const baris =
     tab === 'tren'
       ? data.perHari.map((h) => ({ ...h, label: labelTgl(h.kunci) }))
-      : tab === 'jalur'
-        ? data.perJalur
-        : tab === 'metode'
+      : tab === 'metode'
           ? data.perMetode
           : tab === 'sales'
             ? data.perSales
