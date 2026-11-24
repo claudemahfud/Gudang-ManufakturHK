@@ -5,7 +5,6 @@ import { useState } from 'react';
 import Link from 'next/link';
 import {
   Menu,
-  Bell,
   ChevronDown,
   LogOut,
   Factory,
@@ -22,6 +21,7 @@ import {
 import { useDivision } from '@/shared/context/DivisionContext';
 import { ROUTES } from '@/router/routes';
 import CreativeMegaMenu from './CreativeMegaMenu';
+import LoncengNotifikasi from './LoncengNotifikasi';
 import { labelRole, rolesOf } from '@/shared/lib/auth/roles';
 import { useFotoProfil } from '@/shared/lib/foto-profil';
 
@@ -173,10 +173,7 @@ export default function Header({ onMenuClick, title }: HeaderProps) {
       <div className="flex-1" />
 
       {/* Notifications */}
-      <button className="relative p-2 rounded-xl hover:bg-gray-100 text-gray-600 transition">
-        <Bell className="w-4 h-4" />
-        <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-emerald-500 rounded-full" />
-      </button>
+      <LoncengNotifikasi />
 
       {/* User avatar + dropdown */}
       <div className="relative shrink-0">
