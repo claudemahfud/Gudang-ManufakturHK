@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { db } from '@/shared/lib/db';
 import { inventory, stokCabang } from '@/shared/lib/db/schema';
+import { roleUtamaDi } from '@/shared/lib/auth/roles';
 
 // ============================================================
 // STOCK HELPERS — mutasi stok atomik (server only)
@@ -94,8 +95,8 @@ export async function incrementStock(tx: Executor, sku: string, qty: number, cab
  * pimpinan / pengguna Pusat boleh memilih cabang (aturan yang sama dengan
  * isolasi cabang di route lain).
  */
-export function resolveCabang(user: { role?: string; cabang?: string } | null | undefined, requested?: unknown) {
-  const isExecutive = ['Administrator', 'Direktur Utama', 'Manager', 'Manager Umum'].includes(user?.role ?? '');
+export function resolveCabang(user: { role?: string; roles?: string[]; cabang?: string } | null | undefined, requested?: unknown) {
+  const isExecutive = roleUtamaDi(user, ['Administrator', 'Direktur Utama', 'Manager', 'Manager Umum']);
   const userCabang = user?.cabang || 'Pusat';
   if (!isExecutive && userCabang !== 'ALL' && userCabang !== 'Pusat') return userCabang;
   return typeof requested === 'string' && requested.trim() && requested !== 'SEMUA' ? requested.trim() : 'Pusat';

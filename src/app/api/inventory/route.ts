@@ -4,6 +4,7 @@ import { inventory, kontak, stokCabang } from '@/shared/lib/db/schema';
 import { sql, or, and, ilike, desc, eq, getTableColumns } from 'drizzle-orm';
 import { auth } from '@/shared/lib/auth/config';
 import { canViewCostPrice, requireAuthRole, ROLES_WAREHOUSE } from '@/shared/lib/auth/rbac';
+import { roleUtamaDi } from '@/shared/lib/auth/roles';
 
 // ============================================================
 // API ROUTE: Master Inventory List & Create
@@ -29,9 +30,8 @@ export async function GET(req: NextRequest) {
     const divisiParam = searchParams.get('divisi') || req.cookies.get('app_active_division')?.value || 'MANUFAKTUR';
 
     const user = session?.user as any;
-    const userRole = user?.role;
     const userCabang = user?.cabang || 'Pusat';
-    const isExecutive = ['Administrator', 'Direktur Utama', 'Manager', 'Manager Umum'].includes(userRole);
+    const isExecutive = roleUtamaDi(user, ['Administrator', 'Direktur Utama', 'Manager', 'Manager Umum']);
 
     const offset = (page - 1) * limit;
 
@@ -97,7 +97,7 @@ export async function GET(req: NextRequest) {
     const items = rows.map(({ stokCabang: sc, ...item }) => (sc === null ? item : { ...item, stok: sc }));
 
     // Sanitasi data: Akun bawahan (Petugas Gudang, Kasir, Salesman) tidak boleh melihat Harga Beli / HPP
-    const allowHpp = canViewCostPrice(userRole);
+    const allowHpp = canViewCostPrice(user);
 
     const sanitizedItems = items.map((item) => {
       if (!allowHpp) {
@@ -134,9 +134,8 @@ export async function POST(req: NextRequest) {
     const session = { user: authResult.user };
 
     const user = session?.user as any;
-    const userRole = user?.role;
     const userCabang = user?.cabang || 'Pusat';
-    const isExecutive = ['Administrator', 'Direktur Utama', 'Manager', 'Manager Umum'].includes(userRole);
+    const isExecutive = roleUtamaDi(user, ['Administrator', 'Direktur Utama', 'Manager', 'Manager Umum']);
 
     const body = await req.json();
     const {

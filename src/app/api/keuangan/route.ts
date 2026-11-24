@@ -3,6 +3,7 @@ import { db } from '@/shared/lib/db';
 import { keuangan, logs } from '@/shared/lib/db/schema';
 import { requireAuthRole, ROLES_FINANCE } from '@/shared/lib/auth/rbac';
 import { desc } from 'drizzle-orm';
+import { roleUtamaDi } from '@/shared/lib/auth/roles';
 
 // ============================================================
 // API: /api/keuangan
@@ -29,7 +30,7 @@ export async function GET(req: Request) {
 
     // Isolasi Cabang
     const userCabang = (authResult.user as any)?.cabang || 'Pusat';
-    const isExecutive = ['Administrator', 'Direktur Utama', 'Manager', 'Manager Umum', 'Finance & Accounting'].includes(authResult.userRole);
+    const isExecutive = roleUtamaDi(authResult.user, ['Administrator', 'Direktur Utama', 'Manager', 'Manager Umum', 'Finance & Accounting']);
     let effectiveCabang: string | null = null;
     if (!isExecutive && userCabang !== 'ALL' && userCabang !== 'Pusat') {
       effectiveCabang = userCabang;

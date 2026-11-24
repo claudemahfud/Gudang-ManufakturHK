@@ -6,6 +6,7 @@ import { ROLES_WAREHOUSE } from '@/shared/lib/auth/rbac';
 import type { UserRole } from '@/shared/types';
 import { desc, eq } from 'drizzle-orm';
 import { BusinessError, errorResponse, incrementStock, normalizeSku, parsePositiveInt, resolveRequestCabang } from '@/shared/lib/stock';
+import { punyaRole } from '@/shared/lib/auth/roles';
 
 // ============================================================
 // API: /api/retur-barang
@@ -57,12 +58,12 @@ export async function POST(req: Request) {
       );
     }
 
-    const sessionUser = session.user as { name?: string; username?: string; role?: UserRole; cabang?: string };
+    const sessionUser = session.user as { name?: string; username?: string; role?: UserRole; roles?: string[]; cabang?: string };
     const user = sessionUser?.name || sessionUser?.username || 'System';
     const cabang = await resolveRequestCabang(sessionUser, body.cabang);
 
     // Langsung masuk stok = persetujuan retur, hanya untuk tim gudang
-    if (kembaliKeStok && !ROLES_WAREHOUSE.includes(sessionUser?.role as UserRole)) {
+    if (kembaliKeStok && !punyaRole(sessionUser, ROLES_WAREHOUSE)) {
       return NextResponse.json(
         { success: false, message: 'Hanya tim gudang yang boleh langsung mengembalikan retur ke stok.' },
         { status: 403 }

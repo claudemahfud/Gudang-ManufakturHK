@@ -28,12 +28,13 @@ import {
   Search,
   Lock,
 } from 'lucide-react';
+import { roleUtamaDi } from '@/shared/lib/auth/roles';
 
 export default function CabangView() {
   const { data: session } = useSession();
   const { refetchCabang, cabang: activeCabang, setCabang } = useDivision();
   const user = session?.user as any;
-  const isExecutive = ['Administrator', 'Direktur Utama', 'Manager', 'Manager Umum'].includes(user?.role);
+  const isExecutive = roleUtamaDi(user, ['Administrator', 'Direktur Utama', 'Manager', 'Manager Umum']);
 
   const [branches, setBranches] = useState<CabangItem[]>([]);
   const [loading, setLoading] = useState(true);

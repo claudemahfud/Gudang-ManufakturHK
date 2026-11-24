@@ -5,6 +5,7 @@ import { db } from '@/shared/lib/db';
 import { users, logs } from '@/shared/lib/db/schema';
 import { and, count, eq, gt } from 'drizzle-orm';
 import { hashPassword, verifyPassword } from './password';
+import { rolesOf } from './roles';
 
 // ============================================================
 // FULL NEXTAUTH CONFIG (Node.js runtime only)
@@ -77,6 +78,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           email: user.email ?? '',
           username: user.username,
           role: user.role,
+          roles: rolesOf({ role: user.role, roles: user.rolesTambahan }),
           divisiAssigned: user.divisiAssigned || 'ALL',
           cabang: user.cabang || 'Pusat',
         };

@@ -289,7 +289,7 @@ export const MENU_HIERARCHY: ParentMenuItem[] = [
         label: 'Manajemen Pengguna',
         icon: Users,
         href: ROUTES.USERS,
-        roles: ['Administrator'],
+        roles: ['Administrator', 'Direktur Utama'],
       },
       {
         label: 'Pengaturan Perusahaan',
@@ -314,11 +314,13 @@ export const MENU_HIERARCHY: ParentMenuItem[] = [
 ];
 
 interface SidebarProps {
-  userRole?: UserRole;
+  /** Semua role pengguna (utama + tambahan); kosong = belum dimuat. */
+  userRoles?: string[];
   onClose?: () => void;
 }
 
-export default function Sidebar({ userRole, onClose }: SidebarProps) {
+export default function Sidebar({ userRoles = [], onClose }: SidebarProps) {
+  const bolehLihat = (roles?: string[]) => !roles || userRoles.length === 0 || roles.some((r) => userRoles.includes(r));
   const pathname = usePathname();
   const router = useRouter();
   const {
@@ -444,7 +446,7 @@ export default function Sidebar({ userRole, onClose }: SidebarProps) {
       <nav className="flex-1 overflow-y-auto px-3 py-3 space-y-1">
         {MENU_HIERARCHY.map((parent) => {
           // Otorisasi role parent
-          if (parent.roles && userRole && !parent.roles.includes(userRole)) {
+          if (!bolehLihat(parent.roles)) {
             return null;
           }
 
@@ -480,7 +482,7 @@ export default function Sidebar({ userRole, onClose }: SidebarProps) {
 
           // Filter sub-items berdasarkan role & divisi
           const visibleSubItems = parent.items.filter((sub) => {
-            if (sub.roles && userRole && !sub.roles.includes(userRole)) return false;
+            if (!bolehLihat(sub.roles)) return false;
             if (sub.division && sub.division !== division) return false;
             return true;
           });

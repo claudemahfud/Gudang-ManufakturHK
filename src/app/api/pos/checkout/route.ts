@@ -6,6 +6,7 @@ import { eq } from 'drizzle-orm';
 import { decrementStock, errorResponse, normalizeSku, parsePositiveInt } from '@/shared/lib/stock';
 import { generateTrxId } from '@/shared/lib/utils';
 import { assertSupervisorPin, getPengaturan } from '@/shared/lib/pengaturan';
+import { roleUtamaDi } from '@/shared/lib/auth/roles';
 
 // ============================================================
 // API: /api/pos/checkout
@@ -52,7 +53,7 @@ export async function POST(req: Request) {
     };
 
     // Isolasi Cabang: Karyawan cabang otomatis dikunci ke cabang penempatannya
-    const isExecutive = ['Administrator', 'Direktur Utama', 'Manager', 'Manager Umum'].includes(userRole as any);
+    const isExecutive = roleUtamaDi(user, ['Administrator', 'Direktur Utama', 'Manager', 'Manager Umum']);
     const userCabang = (user as any)?.cabang;
     const finalCabang = (!isExecutive && userCabang && userCabang !== 'ALL' && userCabang !== 'Pusat')
       ? userCabang
