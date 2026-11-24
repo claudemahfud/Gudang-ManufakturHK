@@ -126,7 +126,7 @@ export async function POST(req: Request) {
       );
     }
 
-    // 3. Nomor transaksi POS-BBTT-NNN (urut harian, diambil di dalam transaksi)
+    // 3. Nomor transaksi POSBBTTNNN (urut harian, diambil di dalam transaksi)
     let trxId = '';
     const tanggalTrx = new Date();
     const cashierName = user.name || user.username || 'Kasir';

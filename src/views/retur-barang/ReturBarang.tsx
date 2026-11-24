@@ -11,6 +11,7 @@ import MemuatProgres from '@/shared/components/ui/MemuatProgres';
 
 interface ItemRetur {
   id: string;
+  noRetur?: string | null;
   tanggal: string;
   sku: string;
   namaBarang: string;
@@ -234,6 +235,7 @@ export default function ReturBarang() {
                   <tr key={row.id} className="hover:bg-gray-50/50 transition">
                     <td className="py-3.5 px-4 text-xs font-medium text-gray-700 whitespace-nowrap">
                       {formatTanggal(row.tanggal)}
+                      {row.noRetur && <div className="text-[10px] font-mono font-semibold text-gray-400 mt-0.5">{row.noRetur}</div>}
                     </td>
                     <td className="py-3.5 px-4">
                       <div className="font-semibold text-gray-800">{row.pelanggan || '-'}</div>

@@ -13,6 +13,7 @@ import {
   returBarang,
 } from '@/shared/lib/db/schema';
 import { BusinessError, decrementStock, incrementStock } from '@/shared/lib/stock';
+import { nomorUrut } from '@/shared/lib/nomor-urut';
 
 // ============================================================
 // Retur dari pelanggan (dicatat lewat Barang Masuk, jenis RETUR_PELANGGAN).
@@ -249,6 +250,7 @@ export async function catatReturPelanggan(tx: Tx, p: ReturInput, user: string) {
   const [retur] = await tx
     .insert(returBarang)
     .values({
+      noRetur: await nomorUrut(tx, 'RTRN'),
       tanggal: p.tanggal, sku: p.sku, namaBarang: inv.namaBarang, qty: p.qty, alasan: p.alasan, pelanggan,
       divisi, status: 'disetujui', cabang, createdBy: user, noFaktur: p.noFaktur, kondisi: p.kondisi,
       nilai: String(nilai), potongPiutang: String(potong), refund: String(refund),
