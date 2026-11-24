@@ -1,9 +1,10 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/shared/lib/db';
-import { barangMasuk, logs } from '@/shared/lib/db/schema';
+import { barangMasuk, logs, returBarang } from '@/shared/lib/db/schema';
 import { requireAuthRole, ROLES_WAREHOUSE } from '@/shared/lib/auth/rbac';
 import { eq } from 'drizzle-orm';
 import { BusinessError, decrementStock, errorResponse } from '@/shared/lib/stock';
+import { batalkanReturPelanggan } from '@/shared/lib/retur-pelanggan';
 
 // ============================================================
 // API: /api/barang-masuk/[id]
@@ -23,6 +24,12 @@ export async function DELETE(
     const user = authResult.user?.name || authResult.user?.username || 'System';
 
     await db.transaction(async (tx) => {
+      // Retur pelanggan: batalkan returnya utuh (stok, piutang, refund, catatan retur)
+      const [retur] = await tx.select({ id: returBarang.id }).from(returBarang).where(eq(returBarang.barangMasukId, id)).limit(1);
+      if (retur) {
+        await batalkanReturPelanggan(tx, retur.id, user);
+        return;
+      }
       // Hapus & ambil barisnya dalam satu langkah (aman dari klik ganda)
       const [item] = await tx.delete(barangMasuk).where(eq(barangMasuk.id, id)).returning();
       if (!item) throw new BusinessError('Data barang masuk tidak ditemukan', 404);

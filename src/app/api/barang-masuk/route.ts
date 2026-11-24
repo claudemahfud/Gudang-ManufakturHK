@@ -5,6 +5,8 @@ import { auth } from '@/shared/lib/auth/config';
 import { requireAuthRole, ROLES_WAREHOUSE } from '@/shared/lib/auth/rbac';
 import { eq, desc, and, gte, lte, or } from 'drizzle-orm';
 import { catatBarangMasuk, catatPembayaranPembelian, resolveJatuhTempo } from '@/shared/lib/barang-masuk';
+import { catatReturPelanggan } from '@/shared/lib/retur-pelanggan';
+import { errorResponse, normalizeSku, parsePositiveInt, resolveRequestCabang } from '@/shared/lib/stock';
 
 // ============================================================
 // API: /api/barang-masuk
@@ -93,6 +95,12 @@ export async function POST(req: Request) {
     const session = { user: authResult.user };
 
     const body = await req.json();
+
+    // Jenis Retur Pelanggan: stok/rusak, piutang, refund & retur tercatat dalam satu transaksi
+    if (body?.jenis === 'RETUR_PELANGGAN') {
+      return await postReturPelanggan(body, authResult.user);
+    }
+
     const {
       tanggal,
       sku,
@@ -209,5 +217,45 @@ export async function POST(req: Request) {
       },
       { status: 500 }
     );
+  }
+}
+
+type SesiUser = { name?: string | null; username?: string; role?: string; cabang?: string } | undefined;
+
+async function postReturPelanggan(body: Record<string, unknown>, sessionUser: SesiUser) {
+  try {
+    const sku = normalizeSku(body.sku);
+    const qty = parsePositiveInt(body.qty);
+    if (!sku || !qty) {
+      return NextResponse.json(
+        { success: false, message: 'SKU dan Qty retur wajib diisi', penyebab: 'Qty harus bilangan bulat lebih dari 0.' },
+        { status: 400 }
+      );
+    }
+    const user = sessionUser?.name || sessionUser?.username || 'System';
+    const noFaktur = typeof body.noFaktur === 'string' && body.noFaktur.trim() ? body.noFaktur.trim() : null;
+    const cabang = await resolveRequestCabang(sessionUser, body.cabang);
+    const result = await db.transaction((tx) =>
+      catatReturPelanggan(
+        tx,
+        {
+          tanggal: typeof body.tanggal === 'string' && body.tanggal ? new Date(body.tanggal) : new Date(),
+          sku,
+          qty,
+          kondisi: body.kondisi === 'rusak' ? 'rusak' : 'layak',
+          alasan: typeof body.alasan === 'string' && body.alasan.trim() ? body.alasan.trim() : null,
+          noFaktur,
+          pelanggan: typeof body.pelanggan === 'string' ? body.pelanggan : null,
+          nilaiRefund: noFaktur ? 0 : Number(body.nilaiRefund) || 0,
+          metodeRefund: body.metodeRefund === 'transfer' ? 'transfer' : 'tunai',
+          cabang,
+          divisi: typeof body.divisi === 'string' && body.divisi ? body.divisi : '',
+        },
+        user
+      )
+    );
+    return NextResponse.json({ success: true, data: result }, { status: 201 });
+  } catch (err) {
+    return errorResponse(err, 'RETUR_PELANGGAN_POST');
   }
 }

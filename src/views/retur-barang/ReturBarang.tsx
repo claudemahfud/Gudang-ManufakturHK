@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { formatTanggal } from '@/shared/lib/utils';
+import { formatRupiah, formatTanggal } from '@/shared/lib/utils';
 
 // ============================================================
 // PAGE: Retur Barang
@@ -18,7 +18,17 @@ interface ItemRetur {
   pelanggan: string | null;
   status: string;
   createdBy: string | null;
+  noFaktur?: string | null;
+  kondisi?: 'layak' | 'rusak';
+  nilai?: string | null;
+  potongPiutang?: string | null;
+  refund?: string | null;
+  barangMasukId?: string | null;
+  barangRusakId?: string | null;
 }
+
+/** Retur yang dicatat lewat Barang Masuk: final, hapus = batalkan stok/piutang/refund. */
+const dariBarangMasuk = (r: ItemRetur) => Boolean(r.barangMasukId || r.barangRusakId);
 
 interface InventoryOption {
   sku: string;
@@ -142,13 +152,20 @@ export default function ReturBarang() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Hapus data retur ini?')) return;
+    const row = data.find((d) => d.id === id);
+    const pesan =
+      row && dariBarangMasuk(row)
+        ? 'Batalkan retur pelanggan ini? Stok/catatan rusak, potongan piutang, dan refund ikut dibalik.'
+        : 'Hapus data retur ini?';
+    if (!confirm(pesan)) return;
     try {
       const res = await fetch(`/api/retur-barang/${id}`, { method: 'DELETE' });
       const json = await res.json();
       if (json.success) {
         showToast('Data retur dihapus', 'success');
         fetchData();
+      } else {
+        showToast(json.message || 'Gagal menghapus', 'error');
       }
     } catch {
       showToast('Gagal menghapus', 'error');
@@ -217,13 +234,22 @@ export default function ReturBarang() {
                     <td className="py-3.5 px-4 text-xs font-medium text-gray-700 whitespace-nowrap">
                       {formatTanggal(row.tanggal)}
                     </td>
-                    <td className="py-3.5 px-4 font-semibold text-gray-800">{row.pelanggan || '-'}</td>
+                    <td className="py-3.5 px-4">
+                      <div className="font-semibold text-gray-800">{row.pelanggan || '-'}</div>
+                      {row.noFaktur && <div className="text-[11px] font-mono text-gray-400">{row.noFaktur}</div>}
+                    </td>
                     <td className="py-3.5 px-4">
                       <div className="font-semibold text-gray-800">{row.namaBarang}</div>
                       <div className="text-xs font-mono text-gray-400">{row.sku}</div>
                     </td>
-                    <td className="py-3.5 px-4 font-bold text-amber-700 whitespace-nowrap">
-                      {row.qty} pcs
+                    <td className="py-3.5 px-4 whitespace-nowrap">
+                      <div className="font-bold text-amber-700">{row.qty} pcs</div>
+                      {dariBarangMasuk(row) && (
+                        <div className="text-[11px] text-gray-500">
+                          {row.kondisi === 'rusak' ? 'Rusak, tidak masuk stok' : 'Layak, masuk stok'}
+                          {Number(row.nilai) > 0 ? ` · ${formatRupiah(row.nilai)}` : ''}
+                        </div>
+                      )}
                     </td>
                     <td className="py-3.5 px-4 text-gray-700">{row.alasan || '-'}</td>
                     <td className="py-3.5 px-4 whitespace-nowrap">
@@ -236,9 +262,16 @@ export default function ReturBarang() {
                       >
                         {row.status.toUpperCase()}
                       </span>
+                      {dariBarangMasuk(row) && (
+                        <div className="text-[10px] text-gray-400 mt-1">
+                          via Barang Masuk
+                          {Number(row.potongPiutang) > 0 ? ` · piutang −${formatRupiah(row.potongPiutang)}` : ''}
+                          {Number(row.refund) > 0 ? ` · refund ${formatRupiah(row.refund)}` : ''}
+                        </div>
+                      )}
                     </td>
                     <td className="py-3.5 px-4 text-center whitespace-nowrap">
-                      {row.status !== 'disetujui' && (
+                      {row.status !== 'disetujui' && !dariBarangMasuk(row) && (
                         <button
                           onClick={() => handleApprove(row.id)}
                           className="text-emerald-600 hover:text-emerald-800 text-xs font-semibold px-2 py-1 rounded hover:bg-emerald-50 transition mr-1"

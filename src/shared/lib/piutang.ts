@@ -162,28 +162,33 @@ export interface TemuanAudit {
 
 /**
  * Audit arus kas piutang. Untuk setiap faktur:
- * 1. grand total = dibayar + sisa piutang
+ * 1. grand total = dibayar + sisa piutang + nilai retur (potong piutang & refund)
  * 2. status sesuai sisa (lunas / sebagian / belum lunas)
  * 3. dibayar = kas bersih yang tercatat dengan referensi faktur ini
- * 4. jumlah cicilan di riwayat <= dibayar (selisihnya = uang muka saat faktur dibuat)
+ * 4. jumlah cicilan − refund retur <= dibayar (selisihnya = uang muka saat faktur dibuat)
  * Ditambah kas berreferensi faktur yang fakturnya sudah tidak ada tetapi belum nol.
  */
 export async function auditPiutang(ex: Executor = db) {
   const rows = (await ex.execute(sql`
     SELECT f.no_faktur, f.pelanggan, f.grand_total::float8 AS grand, f.dibayar::float8 AS dibayar,
            f.sisa_piutang::float8 AS sisa, f.status,
-           COALESCE(k.net, 0)::float8 AS kas_net, COALESCE(m.cicilan, 0)::float8 AS cicilan
+           COALESCE(k.net, 0)::float8 AS kas_net, COALESCE(m.cicilan, 0)::float8 AS cicilan,
+           COALESCE(m.retur, 0)::float8 AS retur, COALESCE(m.refund, 0)::float8 AS refund
     FROM faktur_penjualan f
     LEFT JOIN (
       SELECT referensi, SUM(CASE WHEN jenis = 'masuk' THEN jumlah ELSE -jumlah END) AS net
       FROM keuangan WHERE referensi IS NOT NULL GROUP BY referensi
     ) k ON k.referensi = f.no_faktur
     LEFT JOIN (
-      SELECT no_faktur, SUM(jumlah) AS cicilan FROM piutang_mutasi WHERE jenis = 'bayar' GROUP BY no_faktur
+      SELECT no_faktur,
+             SUM(CASE WHEN jenis = 'bayar' THEN jumlah ELSE 0 END) AS cicilan,
+             SUM(CASE jenis WHEN 'retur' THEN jumlah WHEN 'batal_retur' THEN -jumlah ELSE 0 END) AS retur,
+             SUM(CASE jenis WHEN 'refund' THEN jumlah WHEN 'batal_refund' THEN -jumlah ELSE 0 END) AS refund
+      FROM piutang_mutasi WHERE jenis <> 'ubah_tempo' GROUP BY no_faktur
     ) m ON m.no_faktur = f.no_faktur
   `)) as unknown as {
     no_faktur: string; pelanggan: string; grand: number; dibayar: number; sisa: number;
-    status: string; kas_net: number; cicilan: number;
+    status: string; kas_net: number; cicilan: number; retur: number; refund: number;
   }[];
 
   const yatim = (await ex.execute(sql`
@@ -205,11 +210,15 @@ export async function auditPiutang(ex: Executor = db) {
     totalPiutang += r.sisa;
     totalKasFaktur += r.kas_net;
     const t = (masalah: string) => temuan.push({ noFaktur: r.no_faktur, pelanggan: r.pelanggan, masalah });
-    if (beda(r.grand, r.dibayar + r.sisa)) t(`Grand total ${f(r.grand)} ≠ dibayar ${f(r.dibayar)} + sisa ${f(r.sisa)}`);
+    // Retur pelanggan memotong sisa (retur) atau mengembalikan uang yang sudah dibayar (refund)
+    const diretur = r.retur + r.refund;
+    if (beda(r.grand, r.dibayar + r.sisa + diretur)) {
+      t(`Grand total ${f(r.grand)} ≠ dibayar ${f(r.dibayar)} + sisa ${f(r.sisa)}${diretur ? ` + retur ${f(diretur)}` : ''}`);
+    }
     const statusSeharusnya = r.sisa <= 0.009 ? 'lunas' : r.dibayar > 0.009 ? 'sebagian' : 'belum_lunas';
     if (r.status !== statusSeharusnya) t(`Status "${r.status}" seharusnya "${statusSeharusnya}"`);
     if (beda(r.dibayar, r.kas_net)) t(`Dibayar ${f(r.dibayar)} ≠ kas tercatat ${f(r.kas_net)}`);
-    if (r.cicilan - r.dibayar > 0.009) t(`Total cicilan ${f(r.cicilan)} melebihi dibayar ${f(r.dibayar)}`);
+    if (r.cicilan - r.refund - r.dibayar > 0.009) t(`Total cicilan ${f(r.cicilan)} melebihi dibayar ${f(r.dibayar)}`);
   }
   for (const y of yatim) {
     temuan.push({ noFaktur: y.referensi, pelanggan: null, masalah: `Faktur tidak ada, tetapi kas bersihnya ${f(y.net)} (seharusnya 0)` });
