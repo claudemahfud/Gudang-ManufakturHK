@@ -6,6 +6,7 @@ import type { UserRole } from '@/shared/types';
 import { desc, eq } from 'drizzle-orm';
 import { BusinessError, errorResponse, incrementStock, normalizeSku, parsePositiveInt, resolveRequestCabang } from '@/shared/lib/stock';
 import { punyaRole } from '@/shared/lib/auth/roles';
+import { nomorUrut } from '@/shared/lib/nomor-urut';
 
 // ============================================================
 // API: /api/retur-barang
@@ -79,6 +80,7 @@ export async function POST(req: Request) {
       const [inserted] = await tx
         .insert(returBarang)
         .values({
+          noRetur: await nomorUrut(tx, 'RTRN'),
           tanggal: tanggal ? new Date(tanggal) : new Date(),
           sku: normalizedSku,
           namaBarang: inv.namaBarang || namaBarang,

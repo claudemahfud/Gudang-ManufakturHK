@@ -201,6 +201,7 @@ export const poLoadingItems = pgTable('po_loading_items', {
 // ============================================================
 export const returBarang = pgTable('retur_barang', {
   id: uuid('id').primaryKey().defaultRandom(),
+  noRetur: varchar('no_retur', { length: 30 }), // RTRNBBTTNNN (migrasi 011)
   tanggal: timestamp('tanggal').notNull(),
   sku: varchar('sku', { length: 50 }).notNull(),
   namaBarang: varchar('nama_barang', { length: 150 }).notNull(),
@@ -244,6 +245,7 @@ export const barangRusak = pgTable('barang_rusak', {
 // ============================================================
 export const mutasiBarang = pgTable('mutasi_barang', {
   id: uuid('id').primaryKey().defaultRandom(),
+  noMutasi: varchar('no_mutasi', { length: 30 }), // MTSBBTTNNN (migrasi 011)
   tanggal: timestamp('tanggal').notNull(),
   sku: varchar('sku', { length: 50 }).notNull(),
   namaBarang: varchar('nama_barang', { length: 150 }).notNull(),
