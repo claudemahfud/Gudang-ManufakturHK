@@ -7,6 +7,7 @@
 // ============================================================
 
 import { exportToCsv, ExportColumn } from './export';
+import { canvasToBlob, saveFile } from './simpan-berkas';
 
 export { exportToCsv, type ExportColumn };
 
@@ -351,7 +352,7 @@ export async function exportRekapToPdfA4Landscape(options: RekapPdfOptions) {
         : `${options.filename}.pdf`
       : `Laporan_${options.title.replace(/[^a-zA-Z0-9]/g, '_')}_A4_Landscape.pdf`;
 
-    doc.save(outputFilename);
+    saveFile(doc.output('blob'), outputFilename);
     return true;
   } catch (err) {
     console.error('Gagal mengekspor PDF A4 Landscape:', err);
@@ -427,7 +428,7 @@ export async function exportReportToPdfA4Landscape(
     }
 
     const cleanFilename = filename.endsWith('.pdf') ? filename : `${filename}.pdf`;
-    pdf.save(cleanFilename);
+    saveFile(pdf.output('blob'), cleanFilename);
   } catch (err) {
     console.error('Gagal mengekspor PDF A4 Landscape:', err);
     alert('Terjadi kesalahan saat memproses ekspor PDF A4 Landscape.');
@@ -490,7 +491,7 @@ export async function exportToPdfA5(elementOrId: HTMLElement | string, filename:
     pdf.addImage(imgData, 'JPEG', posX, posY, renderWidth, renderHeight);
 
     const cleanFilename = filename.endsWith('.pdf') ? filename : `${filename}.pdf`;
-    pdf.save(cleanFilename);
+    saveFile(pdf.output('blob'), cleanFilename);
   } catch (err) {
     console.error('Gagal mengekspor PDF A5:', err);
     alert('Terjadi kesalahan saat memproses ekspor PDF A5.');
@@ -518,14 +519,8 @@ export async function exportToPngA5(elementOrId: HTMLElement | string, filename:
       backgroundColor: '#ffffff',
     });
 
-    const dataUrl = canvas.toDataURL('image/png');
-    const link = document.createElement('a');
     const cleanFilename = filename.endsWith('.png') ? filename : `${filename}.png`;
-    link.download = cleanFilename;
-    link.href = dataUrl;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    saveFile(await canvasToBlob(canvas), cleanFilename);
   } catch (err) {
     console.error('Gagal mengekspor PNG A5:', err);
     alert('Terjadi kesalahan saat memproses ekspor gambar PNG.');
