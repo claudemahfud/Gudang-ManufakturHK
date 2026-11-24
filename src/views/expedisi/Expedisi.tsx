@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import MemuatProgres from '@/shared/components/ui/MemuatProgres';
 
 // ============================================================
 // PAGE: Manajemen Expedisi & Armada
@@ -166,7 +167,7 @@ export default function Expedisi() {
               {loading ? (
                 <tr>
                   <td colSpan={6} className="py-12 text-center text-gray-400">
-                    Memuat armada...
+                    <MemuatProgres teks="Memuat armada..." />
                   </td>
                 </tr>
               ) : data.length === 0 ? (

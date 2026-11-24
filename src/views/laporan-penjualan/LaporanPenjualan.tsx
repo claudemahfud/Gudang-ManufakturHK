@@ -28,6 +28,7 @@ import { exportToCsv } from '@/shared/lib/export';
 import { exportRekapToPdfA4Landscape } from '@/shared/lib/exportDoc';
 import DateTimeFilterBar from '@/shared/components/ui/DateTimeFilterBar';
 import { AksiHeader, GrupIkon, TombolIkon } from '@/shared/components/ui/AksiHeader';
+import MemuatProgres from '@/shared/components/ui/MemuatProgres';
 
 interface PenjualanRow {
   id: string;
@@ -391,7 +392,7 @@ export default function LaporanPenjualanView() {
               {loading ? (
                 <tr>
                   <td colSpan={10} className="py-12 text-center text-gray-400">
-                    Memuat data laporan penjualan...
+                    <MemuatProgres teks="Memuat data laporan penjualan..." />
                   </td>
                 </tr>
               ) : filteredData.length === 0 ? (

@@ -5,6 +5,7 @@ import { Plus } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { formatTanggal } from '@/shared/lib/utils';
 import { AksiHeader, TombolUtama } from '@/shared/components/ui/AksiHeader';
+import MemuatProgres from '@/shared/components/ui/MemuatProgres';
 
 // ============================================================
 // PAGE: Surat Jalan
@@ -253,7 +254,7 @@ export default function SuratJalan() {
               {loading ? (
                 <tr>
                   <td colSpan={6} className="py-12 text-center text-gray-400">
-                    Memuat data surat jalan...
+                    <MemuatProgres teks="Memuat data surat jalan..." />
                   </td>
                 </tr>
               ) : data.length === 0 ? (

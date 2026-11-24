@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { formatRupiah, formatTanggal } from '@/shared/lib/utils';
 import Bingkai from '@/shared/components/ui/Bingkai';
+import MemuatProgres from '@/shared/components/ui/MemuatProgres';
 
 // ============================================================
 // Piutang Pelanggan: tagihan dari Faktur Penjualan yang belum lunas.
@@ -350,7 +351,7 @@ export default function Piutang() {
               {loading && data.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="p-10 text-center text-gray-400">
-                    Memuat piutang…
+                    <MemuatProgres teks="Memuat piutang…" />
                   </td>
                 </tr>
               ) : data.length === 0 ? (
@@ -833,7 +834,7 @@ function ModalRiwayat({ faktur, onClose, notify }: { faktur: Faktur; onClose: ()
       <div className="flex-1 overflow-y-auto p-5 sm:px-8 space-y-4">
         <RingkasFaktur f={faktur} />
         {!mutasi ? (
-          <p className="text-sm text-gray-400 text-center py-6">Memuat riwayat…</p>
+          <p className="text-sm text-gray-400 text-center py-6"><MemuatProgres teks="Memuat riwayat…" /></p>
         ) : (
           <ol className="relative border-l-2 border-gray-100 ml-2 space-y-4">
             <li className="pl-5 relative">
