@@ -178,7 +178,8 @@ Berdasarkan audit komprehensif sistem (20 November 2026), seluruh modul dan API 
      * Master Inventory, Barang Keluar: `ROLES_EXECUTIVE`.
      * Barang Masuk, Barang Rusak, Mutasi Barang, Retur, PO Loading: `ROLES_WAREHOUSE`.
      * Surat Jalan, Armada: `ROLES_EXPEDISI`.
-   * **Multi-role** (migrasi 008, `src/shared/lib/auth/roles.ts`): `users.role` = role utama (diatur Administrator), `users.roles_tambahan` = role tambahan yang hanya bisa ditetapkan **Direktur Utama** (`PUT /api/users/[username]/roles`, tombol "Atur Role" di `/users`). Sesi membawa `roles`.
+   * **Multi-role** (migrasi 008, `src/shared/lib/auth/roles.ts`): `users.role` = role utama (diatur Administrator), `users.roles_tambahan` = role tambahan yang hanya bisa ditetapkan **Direktur Utama** (`PUT /api/users/[username]/roles`, bagian "Role Tambahan" di modal Edit). Sesi membawa `roles`.
+   * **Edit Akun terpadu** (`src/views/users/EditAkunModal.tsx`, satu tombol "Edit" per baris `/users`): Administrator mengubah nama, username, email, role utama, divisi, cabang, aktif, password, dan menghapus akun; Direktur Utama mengatur role tambahan. Ganti username (`PUT /api/users/[username]` field `username`) memindahkan nilai username di kolom teks riwayat (`created_by`, `salesman`, dst., daftar `KOLOM_USERNAME`) dalam satu transaksi; `logs.user` tidak diubah. Username, role utama, dan status aktif akun sendiri dikunci.
      * Hak menu & fitur = gabungan semua role: cek dengan `punyaRole(user, DAFTAR)`, jangan `DAFTAR.includes(user.role)`. `requireAuthRole` membaca role terbaru dari DB (pencabutan & akun nonaktif langsung berlaku di API); menu/sidebar ikut setelah login ulang.
      * Ruang lingkup data (Mode Manufaktur/F&B, cabang, batas data sendiri sales) mengikuti **role utama** saja: `roleUtamaDi(user, DAFTAR)`. Role tambahan tidak membuka ganti Mode atau akses semua cabang.
 3. **Pencegahan Stok Negatif & Validasi Stok Kritis**:
