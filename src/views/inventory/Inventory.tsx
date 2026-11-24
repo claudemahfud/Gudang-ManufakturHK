@@ -27,6 +27,7 @@ interface FormState {
   varian: string;
   stok: number | string;
   hargaBeli: number | string;
+  hargaBeliKarton: number | string;
   hargaJual: number | string;
   settingPcs: number | string;
   pakaiKarton: boolean;
@@ -43,6 +44,7 @@ const initialForm: FormState = {
   varian: '',
   stok: 0,
   hargaBeli: 0,
+  hargaBeliKarton: 0,
   hargaJual: 0,
   settingPcs: 1,
   pakaiKarton: true,
@@ -221,6 +223,7 @@ export default function Inventory() {
       varian: item.varian || '',
       stok: item.stok,
       hargaBeli: item.hargaBeli || 0,
+      hargaBeliKarton: item.hargaBeliKarton || 0,
       hargaJual: item.hargaJual || 0,
       settingPcs: item.settingPcs || 1,
       pakaiKarton: item.pakaiKarton ?? true,
@@ -303,6 +306,7 @@ export default function Inventory() {
         varian: form.varian.trim() || null,
         // Stok tidak dikirim: hanya berubah lewat Barang Masuk / Barang Keluar
         hargaBeli: Number(form.hargaBeli) || 0,
+        hargaBeliKarton: form.pakaiKarton ? Number(form.hargaBeliKarton) || 0 : 0,
         hargaJual: Number(form.hargaJual) || 0,
         settingPcs: Math.max(1, Number(form.settingPcs) || 1),
         pakaiKarton: Boolean(form.pakaiKarton),
@@ -487,6 +491,7 @@ export default function Inventory() {
               : `${i.stok} pcs`,
         },
         { header: 'Harga Beli Modal (Rp)', accessor: (i) => Number(i.hargaBeli || 0) },
+        { header: 'Harga Beli / Karton (Rp)', accessor: (i) => Number(i.hargaBeliKarton || 0) },
         { header: 'Harga Jual (Rp)', accessor: (i) => Number(i.hargaJual || 0) },
         { header: 'Stok Minimum Alert', accessor: (i) => i.stokMinimum || 10 },
         { header: 'Tipe Item', accessor: (i) => i.tipeItem || 'barang_jadi' },
@@ -551,7 +556,7 @@ export default function Inventory() {
             <span className="text-gray-500">Warehouse Terisolasi</span>
           </div>
           <h1 className="text-2xl font-extrabold text-gray-900 tracking-tight">
-            {isManufaktur ? 'Katalog Inventory & Stok Pabrik' : 'Bahan Baku & Menu F&B'}
+            {isManufaktur ? 'Master Barang & Stok Pabrik' : 'Master Barang: Bahan Baku & Menu F&B'}
           </h1>
           <p className="text-xs sm:text-sm text-gray-500 mt-0.5">
             {isManufaktur
@@ -631,7 +636,7 @@ export default function Inventory() {
       {/* ============================================================ */}
       {/* 3. SECTION: Tabel Inventory (F-Pattern Reading Grid) */}
       {/* ============================================================ */}
-      <section aria-label="Tabel Master Inventory" className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+      <section aria-label="Tabel Master Barang" className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse text-sm">
             <thead>
@@ -1121,7 +1126,7 @@ export default function Inventory() {
                     <div className="grid grid-cols-2 gap-3.5">
                       <div>
                         <label className="block text-xs font-bold text-gray-700 mb-1 uppercase tracking-wider">
-                          Harga Beli (Rp)
+                          Harga Beli per Pcs (Rp)
                         </label>
                         <input
                           type="number"
@@ -1211,6 +1216,23 @@ export default function Inventory() {
                             />
                             <span className="text-xs text-gray-500">pcs per 1 karton</span>
                           </div>
+                          <label className="block text-[11px] font-medium text-gray-600 mt-2.5 mb-1">
+                            Harga Beli per Karton (Rp)
+                          </label>
+                          <input
+                            type="number"
+                            min={0}
+                            disabled={submitting}
+                            value={form.hargaBeliKarton}
+                            onChange={(e) => setForm((p) => ({ ...p, hargaBeliKarton: e.target.value }))}
+                            className="w-full px-3 py-1.5 bg-white border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 font-semibold"
+                          />
+                          <p className="text-[10px] text-gray-500 mt-1">
+                            Harga 1 karton dari Suplier (bisa beda dari harga pcs × isi).
+                            {Number(form.hargaBeliKarton) > 0 && Number(form.settingPcs) > 1 && (
+                              <> Setara <strong>{formatRupiah(Number(form.hargaBeliKarton) / Number(form.settingPcs))}</strong> per pcs.</>
+                            )}
+                          </p>
                         </div>
                       )}
                     </div>

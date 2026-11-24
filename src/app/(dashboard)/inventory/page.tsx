@@ -6,7 +6,7 @@ import Inventory from '@/views/inventory';
 // ============================================================
 
 export const metadata = {
-  title: 'Inventory | Gudang Manufaktur HK',
+  title: 'Master Barang | Gudang Manufaktur HK',
   description: 'Katalog stok barang dan manajemen master SKU inventaris',
 };
 

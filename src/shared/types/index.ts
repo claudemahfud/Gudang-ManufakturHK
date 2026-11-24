@@ -44,6 +44,7 @@ export interface InventoryItem {
   varian?: string | null;
   stok: number;
   hargaBeli?: string | null;
+  hargaBeliKarton?: string | null;
   hargaJual?: string | null;
   supplier?: string | null;
   settingPcs: number;
