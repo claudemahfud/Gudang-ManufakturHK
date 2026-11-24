@@ -8,6 +8,7 @@ import { exportToCsv, exportRekapToPdfA4Landscape } from '@/shared/lib/exportDoc
 import DateTimeFilterBar from '@/shared/components/ui/DateTimeFilterBar';
 import { isPoTerbuka, PO_STATUS, PO_STATUS_LABEL } from '@/shared/lib/po-status';
 import { AksiHeader, GrupIkon, TombolIkon, TombolUtama } from '@/shared/components/ui/AksiHeader';
+import MemuatProgres from '@/shared/components/ui/MemuatProgres';
 
 const statusBadge = (status: string) =>
   status === PO_STATUS.SELESAI
@@ -424,7 +425,7 @@ export default function PoLoading() {
               {loading ? (
                 <tr>
                   <td colSpan={6} className="py-12 text-center text-gray-400">
-                    Memuat daftar PO...
+                    <MemuatProgres teks="Memuat daftar PO..." />
                   </td>
                 </tr>
               ) : filteredData.length === 0 ? (

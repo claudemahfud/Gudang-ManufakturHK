@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import { formatRupiah } from '@/shared/lib/utils';
 import { ToastFloater, ToastData } from '@/shared/components/ui/ToastFloater';
+import MemuatProgres from '@/shared/components/ui/MemuatProgres';
 
 interface SupplierData {
   id: string;
@@ -342,8 +343,7 @@ export default function SuplierView() {
                 <tr>
                   <td colSpan={4} className="py-16 text-center">
                     <div className="flex flex-col items-center justify-center gap-2">
-                      <div className="w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin" />
-                      <span className="text-xs font-medium text-gray-500">Memuat data suplier...</span>
+                      <span className="text-xs font-medium text-gray-500"><MemuatProgres teks="Memuat data suplier..." /></span>
                     </div>
                   </td>
                 </tr>

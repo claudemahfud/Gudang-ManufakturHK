@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { formatRupiah, formatStok } from '@/shared/lib/utils';
 import { ROUTES } from '@/router/routes';
+import MemuatProgres from '@/shared/components/ui/MemuatProgres';
 
 // ============================================================
 // PAGE: Monitor Stok Kritis
@@ -136,7 +137,7 @@ export default function StokKritis() {
               {loading ? (
                 <tr>
                   <td colSpan={7} className="py-12 text-center text-gray-400">
-                    Memuat barang stok kritis...
+                    <MemuatProgres teks="Memuat barang stok kritis..." />
                   </td>
                 </tr>
               ) : items.length === 0 ? (

@@ -26,6 +26,7 @@ import DateTimeFilterBar from '@/shared/components/ui/DateTimeFilterBar';
 import FormFakturPenjualan, { isiKarton, type InventoryOption } from './FormFakturPenjualan';
 import { LABEL_METODE, LABEL_STATUS, type MetodeBayar, type StatusFaktur } from '@/shared/lib/faktur-hitung';
 import { AksiHeader, GrupIkon, TombolIkon, TombolUtama } from '@/shared/components/ui/AksiHeader';
+import MemuatProgres from '@/shared/components/ui/MemuatProgres';
 
 // ============================================================
 // PAGE: Barang Keluar & Faktur Penjualan
@@ -499,7 +500,7 @@ export default function BarangKeluar() {
               {loading ? (
                 <tr>
                   <td colSpan={8} className="py-12 text-center text-gray-400">
-                    Memuat data barang keluar...
+                    <MemuatProgres teks="Memuat data barang keluar..." />
                   </td>
                 </tr>
               ) : filteredData.length === 0 ? (

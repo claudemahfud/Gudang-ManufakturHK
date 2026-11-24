@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import MemuatProgres from '@/shared/components/ui/MemuatProgres';
 
 // ============================================================
 // PAGE: Manajemen Kontak Mitra & Pelanggan
@@ -192,7 +193,7 @@ export default function Kontak() {
               {loading ? (
                 <tr>
                   <td colSpan={6} className="py-12 text-center text-gray-400">
-                    Memuat kontak...
+                    <MemuatProgres teks="Memuat kontak..." />
                   </td>
                 </tr>
               ) : filteredData.length === 0 ? (

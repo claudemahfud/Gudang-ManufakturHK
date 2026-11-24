@@ -14,6 +14,7 @@ import { formatRupiah, formatTanggal } from '@/shared/lib/utils';
 import { useDivision } from '@/shared/context/DivisionContext';
 import { ROUTES } from '@/router/routes';
 import { PO_STATUS, PO_STATUS_LABEL } from '@/shared/lib/po-status';
+import MemuatProgres from '@/shared/components/ui/MemuatProgres';
 
 interface PoItem {
   id: string;
@@ -221,7 +222,7 @@ export default function PoDalamProses({ onReceived, notify }: { onReceived: () =
       </div>
 
       {loading && list.length === 0 ? (
-        <div className="p-6 text-center text-xs text-gray-400">Memuat PO...</div>
+        <div className="p-6 text-center text-xs text-gray-400"><MemuatProgres teks="Memuat PO..." /></div>
       ) : list.length === 0 ? (
         <div className="p-6 text-center text-xs text-gray-400">
           Tidak ada PO yang menunggu barang datang. Buat PO di menu PO Loading.

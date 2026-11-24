@@ -34,6 +34,7 @@ import {
 import { PENENTU_MULTI_ROLE, punyaRole } from '@/shared/lib/auth/roles';
 import EditAkunModal from './EditAkunModal';
 import { roleUtamaDi } from '@/shared/lib/auth/roles';
+import MemuatProgres from '@/shared/components/ui/MemuatProgres';
 
 interface UserItem {
   id: string;
@@ -339,7 +340,7 @@ export default function Users() {
               {loading ? (
                 <tr>
                   <td colSpan={7} className="py-12 text-center text-gray-400">
-                    Memuat daftar pengguna...
+                    <MemuatProgres teks="Memuat daftar pengguna..." />
                   </td>
                 </tr>
               ) : data.length === 0 ? (

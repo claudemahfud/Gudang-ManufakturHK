@@ -29,6 +29,7 @@ import {
   Lock,
 } from 'lucide-react';
 import { roleUtamaDi } from '@/shared/lib/auth/roles';
+import MemuatProgres from '@/shared/components/ui/MemuatProgres';
 
 export default function CabangView() {
   const { data: session } = useSession();
@@ -241,7 +242,7 @@ export default function CabangView() {
               {loading ? (
                 <tr>
                   <td colSpan={6} className="py-8 text-center text-gray-400">
-                    Memuat data cabang...
+                    <MemuatProgres teks="Memuat data cabang..." />
                   </td>
                 </tr>
               ) : filteredBranches.length === 0 ? (
