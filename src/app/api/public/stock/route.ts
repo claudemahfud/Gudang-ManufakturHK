@@ -2,14 +2,18 @@ import { NextResponse } from 'next/server';
 import { db } from '@/shared/lib/db';
 import { inventory } from '@/shared/lib/db/schema';
 import { asc } from 'drizzle-orm';
+import { requireAuthRole } from '@/shared/lib/auth/rbac';
 
 // ============================================================
 // API: /api/public/stock
-// Akses publik tanpa auth (untuk integrasi luar & cek stok live)
+// Dulu publik tanpa auth; kini wajib login (akun aktif) agar daftar stok & harga tidak terbuka
 // ============================================================
 
 export async function GET() {
   try {
+    const authResult = await requireAuthRole();
+    if (!authResult.authorized) return authResult.response;
+
     const list = await db
       .select({
         name: inventory.namaBarang,

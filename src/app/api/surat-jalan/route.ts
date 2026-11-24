@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/shared/lib/db';
 import { suratJalan, suratJalanItems, logs } from '@/shared/lib/db/schema';
-import { auth } from '@/shared/lib/auth/config';
+import { requireAuthRole, ROLES_EXPEDISI } from '@/shared/lib/auth/rbac';
 import { generateTrxId } from '@/shared/lib/utils';
 import { desc, eq } from 'drizzle-orm';
 
@@ -12,10 +12,9 @@ import { desc, eq } from 'drizzle-orm';
 
 export async function GET() {
   try {
-    const session = await auth();
-    if (!session) {
-      return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
-    }
+    // Dibaca segar dari DB: akun nonaktif/dihapus langsung ditolak walau token masih berlaku
+    const authResult = await requireAuthRole();
+    if (!authResult.authorized) return authResult.response;
 
     const list = await db
       .select()
@@ -31,10 +30,10 @@ export async function GET() {
 
 export async function POST(req: Request) {
   try {
-    const session = await auth();
-    if (!session) {
-      return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
-    }
+    // Dibaca segar dari DB: akun nonaktif/dihapus langsung ditolak walau token masih berlaku
+    const authResult = await requireAuthRole(ROLES_EXPEDISI);
+    if (!authResult.authorized) return authResult.response;
+    const session = { user: authResult.user };
 
     const body = await req.json();
     const { tanggal, pelanggan, alamat, ekspedisi, armada, catatan, items } = body;
