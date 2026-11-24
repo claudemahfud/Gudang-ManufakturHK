@@ -30,11 +30,11 @@ import {
   ChevronUp,
   Maximize2,
   Minimize2,
+  Pencil,
 } from 'lucide-react';
 import { PENENTU_MULTI_ROLE, punyaRole } from '@/shared/lib/auth/roles';
-import AturRoleModal from './AturRoleModal';
+import EditAkunModal from './EditAkunModal';
 import { roleUtamaDi } from '@/shared/lib/auth/roles';
-import ResetPasswordModal from './ResetPasswordModal';
 
 interface UserItem {
   id: string;
@@ -79,12 +79,11 @@ const ROLES: UserRole[] = [
 
 export default function Users() {
   const { data: session } = useSession();
-  const sesi = session?.user as { role?: string; roles?: string[] } | undefined;
+  const sesi = session?.user as { role?: string; roles?: string[]; username?: string } | undefined;
   // Administrator kelola akun; Direktur Utama tetapkan role tambahan (multi-role)
   const bolehKelolaAkun = punyaRole(sesi, ['Administrator']);
   const bolehAturRole = punyaRole(sesi, [PENENTU_MULTI_ROLE]);
-  const [aturRole, setAturRole] = useState<UserItem | null>(null);
-  const [resetPw, setResetPw] = useState<UserItem | null>(null);
+  const [edit, setEdit] = useState<UserItem | null>(null);
   const [data, setData] = useState<UserItem[]>([]);
   const [branches, setBranches] = useState<CabangOption[]>([]);
   const [loading, setLoading] = useState(true);
@@ -182,23 +181,6 @@ export default function Users() {
       showToast('Terjadi kesalahan koneksi', 'error');
     } finally {
       setSubmitting(false);
-    }
-  };
-
-  const handleDelete = async (username: string) => {
-    if (!confirm(`Yakin ingin menonaktifkan pengguna @${username}?`)) return;
-
-    try {
-      const res = await fetch(`/api/users/${username}`, { method: 'DELETE' });
-      const json = await res.json();
-      if (json.success) {
-        showToast('Pengguna berhasil dihapus', 'success');
-        fetchData();
-      } else {
-        showToast(json.message || 'Gagal menghapus', 'error');
-      }
-    } catch {
-      showToast('Gagal menghapus', 'error');
     }
   };
 
@@ -423,28 +405,14 @@ export default function Users() {
                         {formatTanggal(row.createdAt)}
                       </td>
                       <td className="py-3.5 px-4 text-center whitespace-nowrap">
-                        {bolehAturRole && (
+                        {(bolehKelolaAkun || bolehAturRole) && (
                           <button
-                            onClick={() => setAturRole(row)}
-                            className="text-indigo-700 hover:text-indigo-900 text-xs font-semibold px-2 py-1 rounded hover:bg-indigo-50 transition"
+                            onClick={() => setEdit(row)}
+                            className="inline-flex items-center gap-1 text-gray-800 hover:text-gray-950 text-xs font-semibold px-2.5 py-1 rounded-lg border border-gray-200 hover:bg-gray-100 transition"
+                            aria-label={`Edit akun @${row.username}`}
                           >
-                            Atur Role
-                          </button>
-                        )}
-                        {bolehKelolaAkun && (
-                          <button
-                            onClick={() => setResetPw(row)}
-                            className="text-slate-700 hover:text-slate-950 text-xs font-semibold px-2 py-1 rounded hover:bg-slate-100 transition"
-                          >
-                            Reset Password
-                          </button>
-                        )}
-                        {bolehKelolaAkun && (
-                          <button
-                            onClick={() => handleDelete(row.username)}
-                            className="text-red-500 hover:text-red-700 text-xs font-semibold px-2 py-1 rounded hover:bg-red-50 transition"
-                          >
-                            Hapus
+                            <Pencil className="w-3 h-3" aria-hidden="true" />
+                            Edit
                           </button>
                         )}
                       </td>
@@ -472,34 +440,25 @@ export default function Users() {
         )}
       </section>
 
+      {/* Modal Edit Akun (profil, akses, password, role tambahan, hapus) */}
+      {edit && (
+        <EditAkunModal
+          pengguna={edit}
+          cabangOpsi={branches}
+          bolehKelolaAkun={bolehKelolaAkun}
+          bolehAturRole={bolehAturRole}
+          usernameSaya={sesi?.username}
+          onClose={() => setEdit(null)}
+          onSelesai={(pesan, ok, muatUlang) => {
+            setToast({ message: pesan, type: ok ? 'success' : 'error' });
+            setTimeout(() => setToast(null), 5000);
+            if (ok) setEdit(null);
+            if (muatUlang) fetchData();
+          }}
+        />
+      )}
+
       {/* Modal Tambah Pengguna Baru — Desktop Landscape */}
-      {resetPw && (
-        <ResetPasswordModal
-          pengguna={resetPw}
-          onClose={() => setResetPw(null)}
-          onSelesai={(pesan, ok) => {
-            setToast({ message: pesan, type: ok ? 'success' : 'error' });
-            setTimeout(() => setToast(null), 5000);
-            if (ok) setResetPw(null);
-          }}
-        />
-      )}
-
-      {aturRole && (
-        <AturRoleModal
-          pengguna={aturRole}
-          onClose={() => setAturRole(null)}
-          onTersimpan={(pesan, ok) => {
-            setToast({ message: pesan, type: ok ? 'success' : 'error' });
-            setTimeout(() => setToast(null), 5000);
-            if (ok) {
-              setAturRole(null);
-              fetchData();
-            }
-          }}
-        />
-      )}
-
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-gray-900/40 backdrop-blur-xs animate-in fade-in duration-150">
           <div className="bg-white rounded-2xl lg:rounded-3xl shadow-2xl border border-gray-200 w-full max-w-lg lg:max-w-4xl max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-150">
