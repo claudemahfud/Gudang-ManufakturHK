@@ -3,6 +3,7 @@ import { db } from '@/shared/lib/db';
 import { barangKeluar, fakturPenjualan, inventory, keuangan, logs } from '@/shared/lib/db/schema';
 import { BusinessError, decrementStock, incrementStock } from '@/shared/lib/stock';
 import { hitungFaktur, LABEL_METODE, type MetodeBayar } from '@/shared/lib/faktur-hitung';
+import { fakturPunyaRetur } from '@/shared/lib/retur-pelanggan';
 
 // ============================================================
 // Faktur Penjualan (grosir). Wajib dipanggil di dalam db.transaction.
@@ -144,6 +145,10 @@ export async function buatFakturPenjualan(tx: Tx, f: FakturPenjualanInput) {
  * kas yang sudah diterima dibalik. Return null bila trxId bukan faktur penjualan.
  */
 export async function batalkanFakturPenjualan(tx: Tx, noFaktur: string, user: string, username: string | null) {
+  // Stok & uang yang sudah diretur akan terhitung dua kali bila faktur dibatalkan utuh
+  if (await fakturPunyaRetur(tx, noFaktur)) {
+    throw new BusinessError(`Faktur ${noFaktur} punya retur pelanggan. Batalkan returnya dulu di menu Retur Barang.`);
+  }
   // Hapus header dulu & ambil barisnya: dua pembatalan bersamaan, hanya satu yang jalan
   const [faktur] = await tx.delete(fakturPenjualan).where(eq(fakturPenjualan.noFaktur, noFaktur)).returning();
   if (!faktur) return null;
