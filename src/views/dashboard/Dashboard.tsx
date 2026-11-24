@@ -21,6 +21,7 @@ import { formatRupiah, formatStok, formatTanggal } from '@/shared/lib/utils';
 import { ROUTES } from '@/router/routes';
 import type { InventoryItem } from '@/shared/types';
 import { useDivision } from '@/shared/context/DivisionContext';
+import RekapGlobal from './RekapGlobal';
 import {
   ArrowDownToLine,
   Truck,
@@ -241,6 +242,9 @@ export default function Dashboard() {
           </div>
         </div>
       </header>
+
+      {/* Rekap penjualan global: tampilan utama (hanya role yang boleh melihat laba) */}
+      <RekapGlobal />
 
       {/* ============================================================ */}
       {/* 2. SECTION: Quick Action Hub (Grid Layout Archetype) */}
