@@ -4,7 +4,8 @@ import { returBarang, logs } from '@/shared/lib/db/schema';
 import { requireAuthRole, ROLES_WAREHOUSE } from '@/shared/lib/auth/rbac';
 import { and, eq, ne } from 'drizzle-orm';
 import { BusinessError, decrementStock, errorResponse, incrementStock } from '@/shared/lib/stock';
-import { batalkanReturPelanggan, returTerkelola } from '@/shared/lib/retur-pelanggan';
+import { batalkanReturPelanggan, jurnalReturMasukStok, returTerkelola } from '@/shared/lib/retur-pelanggan';
+import { balikJurnal } from '@/shared/lib/jurnal';
 
 // ============================================================
 // API: /api/retur-barang/[id]
@@ -60,6 +61,7 @@ export async function PUT(
 
       if (masukStok) {
         await incrementStock(tx, current.sku, current.qty, current.cabang);
+        await jurnalReturMasukStok(tx, current, user);
       }
 
       await tx.insert(logs).values({
@@ -100,6 +102,9 @@ export async function DELETE(
       // Retur yang sudah masuk stok: tarik kembali qty-nya
       if (item.status === 'disetujui') {
         await decrementStock(tx, item.sku, item.qty, item.cabang);
+        if (item.noRetur) {
+          await balikJurnal(tx, { referensi: item.noRetur, sumber: ['RETUR'], keterangan: `Hapus retur ${item.sku} x${item.qty}`, user });
+        }
       }
 
       await tx.insert(logs).values({

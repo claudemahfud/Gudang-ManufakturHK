@@ -4,6 +4,7 @@ import { cashOpname, logs } from '@/shared/lib/db/schema';
 import { requireAuthRole, ROLES_POS } from '@/shared/lib/auth/rbac';
 import { desc } from 'drizzle-orm';
 import { roleUtamaDi } from '@/shared/lib/auth/roles';
+import { AKUN, posting } from '@/shared/lib/jurnal';
 
 // ============================================================
 // API: /api/fnb/cash-opname
@@ -81,7 +82,12 @@ export async function POST(req: Request) {
 
     const user = authResult.user?.name || authResult.user?.username || 'Kasir';
 
-    const [row] = await db
+    const cabangKasir = (authResult.user as { cabang?: string })?.cabang;
+    const cabang = cabangKasir && cabangKasir !== 'ALL' ? cabangKasir : 'Pusat';
+    const selisihRp = Math.round(selisih * 100) / 100;
+
+    const row = await db.transaction(async (tx) => {
+    const [row] = await tx
       .insert(cashOpname)
       .values({
         tanggal: new Date(),
@@ -99,10 +105,27 @@ export async function POST(req: Request) {
       })
       .returning();
 
-    await db.insert(logs).values({
+    // Selisih laci (lebih/kurang) dibukukan ke Selisih Kas, agar Kas Tunai di buku = uang fisik
+    await posting(tx, {
+      tanggal: row.tanggal,
+      divisi: 'FNB',
+      cabang,
+      sumber: 'KAS_OPNAME',
+      referensi: row.id,
+      keterangan: `Selisih kas opname ${shift} (${kasir || user}): ${status}`,
+      user,
+      baris:
+        selisihRp > 0
+          ? [{ akun: AKUN.KAS_TUNAI, debit: selisihRp }, { akun: AKUN.SELISIH_KAS, kredit: selisihRp }]
+          : [{ akun: AKUN.SELISIH_KAS, debit: -selisihRp }, { akun: AKUN.KAS_TUNAI, kredit: -selisihRp }],
+    });
+
+    await tx.insert(logs).values({
       user,
       aksi: 'CASH_OPNAME',
       detail: `Cash Opname ${shift} oleh ${kasir || user}: Fisik Rp ${parsedKasFisik.toLocaleString('id-ID')} vs Sistem Rp ${kasSeharusnya.toLocaleString('id-ID')} (Selisih: Rp ${selisih.toLocaleString('id-ID')})`,
+    });
+    return row;
     });
 
     return NextResponse.json({ success: true, data: row });

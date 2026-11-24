@@ -38,6 +38,9 @@ export const ROUTES = {
   PIUTANG: '/piutang',
   BIAYA_OPERASIONAL: '/biaya-operasional',
   NERACA: '/neraca',
+  LAPORAN_KEUANGAN: '/laporan-keuangan',
+  JURNAL: '/jurnal',
+  HUTANG: '/hutang',
 
   // F&B & Resto (Harmonisasi Plafon Terpadu)
   KALKULATOR_HPP: '/kalkulator-hpp',

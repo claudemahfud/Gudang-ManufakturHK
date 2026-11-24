@@ -3,42 +3,55 @@
 import { useState, useEffect } from 'react';
 import { formatTanggal, formatRupiah } from '@/shared/lib/utils';
 import MemuatProgres from '@/shared/components/ui/MemuatProgres';
+import { useDivision } from '@/shared/context/DivisionContext';
+import { ambil, KotakTerlarang, type Akun } from '@/views/laporan-keuangan/util';
 
 // ============================================================
 // PAGE: Biaya Operasional
 // Route: /biaya-operasional
+// Tiap biaya dijurnal: Debit akun beban (6-xxxx), Kredit kas/bank sesuai metode.
 // ============================================================
 
 interface ItemOps {
   id: string;
   tanggal: string;
-  kategori: string;
+  kategori: string; // nama akun beban
+  akunKode: string | null;
+  divisi: string;
   jumlah: string;
   keterangan: string | null;
   createdBy: string | null;
 }
 
+const formAwal = () => ({
+  tanggal: new Date().toISOString().split('T')[0],
+  akunKode: '',
+  metode: 'tunai' as 'tunai' | 'transfer',
+  jumlah: '',
+  keterangan: '',
+});
+
 export default function BiayaOperasional() {
+  const { division, cabang } = useDivision();
+  const [akunBeban, setAkunBeban] = useState<Akun[]>([]);
+  const [terlarang, setTerlarang] = useState(false);
   const [data, setData] = useState<ItemOps[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
-  const [form, setForm] = useState({
-    tanggal: new Date().toISOString().split('T')[0],
-    kategori: 'BBM & Tol Ekspedisi',
-    jumlah: '',
-    keterangan: '',
-  });
+  const [form, setForm] = useState(formAwal);
 
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
   const fetchData = async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/biaya-operasional');
+      const res = await fetch(`/api/biaya-operasional?divisi=${division}`);
+      if (res.status === 401 || res.status === 403) return setTerlarang(true);
       const json = await res.json();
       if (json.success) setData(json.data);
+      else showToast(json.message || 'Gagal memuat data', 'error');
     } catch {
       showToast('Gagal memuat data', 'error');
     } finally {
@@ -48,6 +61,13 @@ export default function BiayaOperasional() {
 
   useEffect(() => {
     fetchData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [division]);
+
+  useEffect(() => {
+    ambil<Akun[]>('/api/akuntansi/akun').then((h) => {
+      if (h.ok) setAkunBeban(h.data.filter((a) => a.posting && a.tipe === 'BEBAN' && a.kode.startsWith('6-')));
+    });
   }, []);
 
   const showToast = (message: string, type: 'success' | 'error') => {
@@ -60,8 +80,8 @@ export default function BiayaOperasional() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (submitting) return;
-    if (!form.jumlah) {
-      showToast('Nominal biaya wajib diisi', 'error');
+    if (!form.jumlah || !form.akunKode) {
+      showToast('Akun biaya dan nominal wajib diisi', 'error');
       return;
     }
 
@@ -70,18 +90,13 @@ export default function BiayaOperasional() {
       const res = await fetch('/api/biaya-operasional', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
+        body: JSON.stringify({ ...form, jumlah: Number(form.jumlah), divisi: division, cabang }),
       });
       const json = await res.json();
       if (json.success) {
         showToast('Biaya operasional berhasil dicatat!', 'success');
         setIsModalOpen(false);
-        setForm({
-          tanggal: new Date().toISOString().split('T')[0],
-          kategori: 'BBM & Tol Ekspedisi',
-          jumlah: '',
-          keterangan: '',
-        });
+        setForm(formAwal());
         fetchData();
       } else {
         showToast(json.message || 'Gagal menyimpan', 'error');
@@ -101,11 +116,13 @@ export default function BiayaOperasional() {
       if (json.success) {
         showToast('Data dihapus', 'success');
         fetchData();
-      }
+      } else showToast(json.message || 'Gagal menghapus', 'error');
     } catch {
       showToast('Gagal menghapus', 'error');
     }
   };
+
+  if (terlarang) return <KotakTerlarang />;
 
   return (
     <div className="space-y-6">
@@ -154,7 +171,7 @@ export default function BiayaOperasional() {
             <thead className="bg-gray-50/75 border-b border-gray-100 text-xs font-semibold uppercase tracking-wider text-gray-500">
               <tr>
                 <th className="py-3.5 px-4">Tanggal</th>
-                <th className="py-3.5 px-4">Kategori Biaya</th>
+                <th className="py-3.5 px-4">Kategori (Akun)</th>
                 <th className="py-3.5 px-4">Jumlah (Rp)</th>
                 <th className="py-3.5 px-4">Keterangan</th>
                 <th className="py-3.5 px-4">Petugas</th>
@@ -180,7 +197,10 @@ export default function BiayaOperasional() {
                     <td className="py-3.5 px-4 text-xs font-medium text-gray-700 whitespace-nowrap">
                       {formatTanggal(row.tanggal)}
                     </td>
-                    <td className="py-3.5 px-4 font-semibold text-gray-800">{row.kategori}</td>
+                    <td className="py-3.5 px-4 font-semibold text-gray-800">
+                      {row.kategori}
+                      {row.akunKode && <span className="block font-mono text-[11px] font-normal text-gray-400">{row.akunKode}</span>}
+                    </td>
                     <td className="py-3.5 px-4 font-bold text-red-600 whitespace-nowrap">
                       {formatRupiah(row.jumlah)}
                     </td>
@@ -233,19 +253,39 @@ export default function BiayaOperasional() {
                     </div>
 
                     <div>
-                      <label className="block text-xs font-semibold text-gray-700 mb-1">Kategori Biaya *</label>
+                      <label className="block text-xs font-semibold text-gray-700 mb-1">Kategori Biaya (Akun) *</label>
                       <select
-                        value={form.kategori}
-                        onChange={(e) => setForm({ ...form, kategori: e.target.value })}
+                        required
+                        value={form.akunKode}
+                        onChange={(e) => setForm({ ...form, akunKode: e.target.value })}
                         className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm focus:border-red-500 outline-none"
                       >
-                        <option value="BBM & Tol Ekspedisi">BBM & Tol Ekspedisi</option>
-                        <option value="Servis Kendaraan">Servis / Perawatan Kendaraan</option>
-                        <option value="Listrik & Internet">Listrik, Air & Internet Gudang</option>
-                        <option value="Packing & Plastik">Perlengkapan Packing / Lakban / Plastik</option>
-                        <option value="Gaji & Uang Makan">Gaji, Lembur & Uang Makan Sopir</option>
-                        <option value="Lain-lain">Operasional Lainnya</option>
+                        <option value="">— Pilih akun beban —</option>
+                        {akunBeban.map((a) => (
+                          <option key={a.kode} value={a.kode}>
+                            {a.kode} · {a.nama}
+                          </option>
+                        ))}
                       </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-700 mb-1">Dibayar dengan *</label>
+                      <div className="grid grid-cols-2 gap-2">
+                        {(['tunai', 'transfer'] as const).map((m) => (
+                          <button
+                            key={m}
+                            type="button"
+                            aria-pressed={form.metode === m}
+                            onClick={() => setForm({ ...form, metode: m })}
+                            className={`h-9 rounded-xl border text-sm font-semibold transition ${
+                              form.metode === m ? 'border-red-500 bg-red-50 text-red-700' : 'border-gray-200 text-gray-600 hover:bg-gray-50'
+                            }`}
+                          >
+                            {m === 'tunai' ? 'Kas Tunai' : 'Transfer Bank'}
+                          </button>
+                        ))}
+                      </div>
                     </div>
                   </div>
 

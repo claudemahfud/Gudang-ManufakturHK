@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/shared/lib/db';
 import { inventory, logs } from '@/shared/lib/db/schema';
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
+import { AKUN, posting } from '@/shared/lib/jurnal';
 import { BusinessError } from '@/shared/lib/stock';
 import {
   canViewCostPrice,
@@ -39,6 +40,7 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
         sku: inventory.sku,
         hargaBeli: inventory.hargaBeli,
         hargaJual: inventory.hargaJual,
+        divisi: inventory.divisi,
       })
       .from(inventory)
       .where(eq(inventory.sku, decodedSku))
@@ -100,7 +102,11 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ success: false, error: 'Harga beli per karton tidak valid' }, { status: 400 });
     }
 
-    const [updated] = await db
+    const hppLama = Number(existing.hargaBeli ?? 0) || 0;
+    const hppBerubah = hargaBeliBaru !== undefined && Math.abs(hargaBeliBaru - hppLama) >= 0.005;
+
+    const updated = await db.transaction(async (tx) => {
+    const [updated] = await tx
       .update(inventory)
       .set({
         ...(namaBarang !== undefined && { namaBarang: namaBarang.trim() }),
@@ -119,6 +125,38 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
       })
       .where(eq(inventory.sku, decodedSku))
       .returning();
+
+    if (hppBerubah) {
+      // Revaluasi: stok milik perusahaan (bukan stok outlet franchise) x selisih HPP,
+      // lawannya Selisih Persediaan, agar nilai persediaan di neraca = stok x HPP baru.
+      const [st] = (await tx.execute(sql`
+        SELECT COALESCE(SUM(sc.stok), 0)::float8 AS stok
+        FROM stok_cabang sc LEFT JOIN master_cabang mc ON mc.nama_cabang = sc.cabang
+        WHERE sc.sku = ${decodedSku} AND COALESCE(mc.tipe, '') <> 'FRANCHISE'
+      `)) as unknown as { stok: number }[];
+      const stok = Math.max(0, Number(st?.stok) || 0);
+      const nilai = Math.round(stok * (hargaBeliBaru! - hppLama) * 100) / 100;
+      await posting(tx, {
+        tanggal: new Date(),
+        divisi: existing.divisi,
+        cabang: 'Pusat',
+        sumber: 'REVALUASI',
+        referensi: decodedSku,
+        keterangan: `Revaluasi HPP ${decodedSku}: Rp ${hppLama.toLocaleString('id-ID')} -> Rp ${hargaBeliBaru!.toLocaleString('id-ID')} x ${stok} pcs`,
+        user: actor,
+        baris:
+          nilai > 0
+            ? [{ akun: AKUN.PERSEDIAAN, debit: nilai }, { akun: AKUN.SELISIH_PERSEDIAAN, kredit: nilai }]
+            : [{ akun: AKUN.SELISIH_PERSEDIAAN, debit: -nilai }, { akun: AKUN.PERSEDIAAN, kredit: -nilai }],
+      });
+      await tx.insert(logs).values({
+        user: actor,
+        aksi: 'KOREKSI_HPP',
+        detail: `Edit master ${decodedSku}: HPP ${hppLama} -> ${hargaBeliBaru} (stok ${stok}, revaluasi Rp ${nilai.toLocaleString('id-ID')})`,
+      });
+    }
+    return updated;
+    });
 
     if (hargaJualBerubah) {
       await db.insert(logs).values({

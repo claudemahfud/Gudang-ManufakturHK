@@ -91,6 +91,7 @@ export const barangKeluar = pgTable('barang_keluar', {
   divisi: varchar('divisi', { length: 30 }).notNull().default('MANUFAKTUR'),
   cabang: varchar('cabang', { length: 50 }).notNull().default('Pusat'),
   channel: varchar('channel', { length: 30 }).notNull().default('GROSIR'), // GROSIR | POS | INTERNAL
+  hpp: decimal('hpp', { precision: 15, scale: 2 }).notNull().default('0'), // HPP aktual baris (migrasi 012)
   keterangan: text('keterangan'),
   createdBy: varchar('created_by', { length: 50 }),
   createdAt: timestamp('created_at').defaultNow(),
@@ -303,6 +304,7 @@ export const keuangan = pgTable('keuangan', {
   cabang: varchar('cabang', { length: 50 }).notNull().default('Pusat'),
   keterangan: text('keterangan'),
   referensi: varchar('referensi', { length: 100 }), // no faktur asal kas (audit)
+  akunKode: varchar('akun_kode', { length: 10 }), // akun lawan kas manual; null = dicatat otomatis (migrasi 012)
   createdBy: varchar('created_by', { length: 50 }),
   createdAt: timestamp('created_at').defaultNow(),
 });
@@ -318,6 +320,9 @@ export const biayaOperasional = pgTable('biaya_operasional', {
   divisi: varchar('divisi', { length: 30 }).notNull().default('MANUFAKTUR'), // MANUFAKTUR | FNB | HOLDING
   cabang: varchar('cabang', { length: 50 }).notNull().default('Pusat'),
   keterangan: text('keterangan'),
+  akunKode: varchar('akun_kode', { length: 10 }), // akun beban (migrasi 012)
+  metode: varchar('metode', { length: 20 }).notNull().default('tunai'), // tunai | transfer
+  keuanganId: uuid('keuangan_id'), // baris kas keluar terkait
   createdBy: varchar('created_by', { length: 50 }),
   createdAt: timestamp('created_at').defaultNow(),
 });
@@ -586,4 +591,56 @@ export const orderFranchiseItems = pgTable('order_franchise_items', {
   qty: integer('qty').notNull(),
   harga: decimal('harga', { precision: 15, scale: 2 }).notNull().default('0'),
   subtotal: decimal('subtotal', { precision: 15, scale: 2 }).notNull().default('0'),
+});
+
+// ============================================================
+// AKUNTANSI BERPASANGAN (migrasi 012). Entitas MANUFAKTUR & FNB terpisah.
+// Jurnal & barisnya tidak bisa diubah/dihapus (trigger DB); koreksi = jurnal pembalik.
+// ============================================================
+export const akun = pgTable('akun', {
+  kode: varchar('kode', { length: 10 }).primaryKey(),
+  nama: varchar('nama', { length: 120 }).notNull(),
+  tipe: varchar('tipe', { length: 12 }).notNull(), // ASET | KEWAJIBAN | EKUITAS | PENDAPATAN | BEBAN
+  saldoNormal: varchar('saldo_normal', { length: 1 }).notNull(), // D | K
+  induk: varchar('induk', { length: 10 }),
+  kelompok: varchar('kelompok', { length: 40 }).notNull(),
+  arusKas: varchar('arus_kas', { length: 10 }), // KAS | OPERASI | INVESTASI | PENDANAAN
+  posting: boolean('posting').notNull().default(true),
+  urutan: integer('urutan').notNull().default(0),
+  aktif: boolean('aktif').notNull().default(true),
+});
+
+export const jurnal = pgTable('jurnal', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  noJurnal: varchar('no_jurnal', { length: 30 }).notNull().unique(),
+  tanggal: timestamp('tanggal').notNull(),
+  entitas: varchar('entitas', { length: 20 }).notNull(), // MANUFAKTUR | FNB
+  cabang: varchar('cabang', { length: 50 }).notNull().default('Pusat'),
+  sumber: varchar('sumber', { length: 30 }).notNull(),
+  referensi: varchar('referensi', { length: 100 }),
+  keterangan: text('keterangan').notNull(),
+  pembalikDari: uuid('pembalik_dari'),
+  dibuatOleh: varchar('dibuat_oleh', { length: 100 }),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+});
+
+export const jurnalBaris = pgTable('jurnal_baris', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  jurnalId: uuid('jurnal_id').notNull().references(() => jurnal.id),
+  akunKode: varchar('akun_kode', { length: 10 }).notNull(),
+  debit: decimal('debit', { precision: 15, scale: 2 }).notNull().default('0'),
+  kredit: decimal('kredit', { precision: 15, scale: 2 }).notNull().default('0'),
+  keterangan: text('keterangan'),
+});
+
+// Pembayaran hutang suplier (cicilan / pelunasan)
+export const hutangBayar = pgTable('hutang_bayar', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  hutangId: uuid('hutang_id').notNull().references(() => hutangSupplier.id),
+  tanggal: timestamp('tanggal').notNull(),
+  jumlah: decimal('jumlah', { precision: 15, scale: 2 }).notNull(),
+  metode: varchar('metode', { length: 20 }).notNull().default('tunai'),
+  catatan: text('catatan'),
+  createdBy: varchar('created_by', { length: 50 }),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
 });
