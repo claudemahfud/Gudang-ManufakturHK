@@ -23,6 +23,7 @@ import { useDivision } from '@/shared/context/DivisionContext';
 import { ROUTES } from '@/router/routes';
 import CreativeMegaMenu from './CreativeMegaMenu';
 import { labelRole, rolesOf } from '@/shared/lib/auth/roles';
+import { useFotoProfil } from '@/shared/lib/foto-profil';
 
 // ============================================================
 // SHARED COMPONENT: Header
@@ -50,12 +51,13 @@ export default function Header({ onMenuClick, title }: HeaderProps) {
   } = useDivision();
 
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const foto = useFotoProfil();
   const [showCabangMenu, setShowCabangMenu] = useState(false);
   const [showMegaMenu, setShowMegaMenu] = useState(false);
   const user = session?.user as any;
 
   return (
-    <header className="h-16 bg-white border-b border-gray-200 flex items-center px-4 md:px-6 gap-3 sticky top-0 z-30 select-none">
+    <header className="h-16 bg-white border-b border-gray-200 flex items-center pl-3 pr-4 md:px-6 gap-2 sm:gap-3 sticky top-0 z-30 select-none">
       {/* Tombol garis 3: buka/tutup sidebar (desktop & mobile) */}
       <button
         type="button"
@@ -177,20 +179,26 @@ export default function Header({ onMenuClick, title }: HeaderProps) {
       </button>
 
       {/* User avatar + dropdown */}
-      <div className="relative">
+      <div className="relative shrink-0">
         <button
           onClick={() => setShowUserMenu((p) => !p)}
-          className="flex items-center gap-2.5 px-3 py-1.5 rounded-xl hover:bg-gray-100 transition"
+          aria-label="Menu akun"
+          className="flex items-center gap-2.5 p-1 sm:px-3 sm:py-1.5 rounded-xl hover:bg-gray-100 transition"
         >
-          <div className="w-8 h-8 bg-gray-900 text-white rounded-lg flex items-center justify-center font-bold text-xs tracking-wider">
-            {user?.name?.[0]?.toUpperCase() ?? 'U'}
-          </div>
+          {foto ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={foto} alt="" className="w-8 h-8 rounded-lg object-cover bg-gray-100" />
+          ) : (
+            <div className="w-8 h-8 bg-gray-900 text-white rounded-lg flex items-center justify-center font-bold text-xs tracking-wider">
+              {user?.name?.[0]?.toUpperCase() ?? 'U'}
+            </div>
+          )}
           <div className="hidden sm:block text-left">
             {/* Dual Line: Name & Role */}
             <div className="text-xs font-bold text-slate-900 leading-tight">{user?.name}</div>
             <div className="text-[11px] text-slate-600 font-medium leading-none mt-0.5">{labelRole(user)}</div>
           </div>
-          <ChevronDown className="w-3.5 h-3.5 text-slate-500" />
+          <ChevronDown className="hidden sm:block w-3.5 h-3.5 text-slate-500" />
         </button>
 
         {/* Dropdown User: Setting Akun & Ganti Mode (Permintaan Khusus User) */}
