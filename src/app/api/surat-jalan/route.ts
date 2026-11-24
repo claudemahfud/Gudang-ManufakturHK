@@ -2,8 +2,8 @@ import { NextResponse } from 'next/server';
 import { db } from '@/shared/lib/db';
 import { suratJalan, suratJalanItems, logs } from '@/shared/lib/db/schema';
 import { requireAuthRole, ROLES_EXPEDISI } from '@/shared/lib/auth/rbac';
-import { generateTrxId } from '@/shared/lib/utils';
 import { desc, eq } from 'drizzle-orm';
+import { nomorUrut } from '@/shared/lib/nomor-urut';
 
 // ============================================================
 // API: /api/surat-jalan
@@ -46,10 +46,11 @@ export async function POST(req: Request) {
     }
 
     const user = (session.user as any)?.name || (session.user as any)?.username || 'System';
-    const noSj = generateTrxId('SJ');
+    let noSj = '';
     let headerResult: any;
 
     await db.transaction(async (tx) => {
+      noSj = await nomorUrut(tx, 'SJ');
       const [header] = await tx
         .insert(suratJalan)
         .values({

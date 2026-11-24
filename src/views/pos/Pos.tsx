@@ -53,7 +53,7 @@ import {
 } from 'lucide-react';
 import { formatRupiah } from '@/shared/lib/utils';
 import GeserKonfirmasi from '@/shared/components/ui/GeserKonfirmasi';
-import { unduhElemenPng } from '@/shared/lib/unduh-png';
+import { gambarNotaPng, simpanPng } from '@/shared/lib/unduh-png';
 import { ROUTES } from '@/router/routes';
 import type { InventoryItem } from '@/shared/types';
 import { useDivision, DivisionMode } from '@/shared/context/DivisionContext';
@@ -1295,11 +1295,10 @@ export default function PosView() {
                   type="button"
                   disabled={mengunduhNota}
                   onClick={async () => {
-                    const el = document.getElementById('thermal-receipt-58mm');
-                    if (!el) return;
                     setMengunduhNota(true);
                     try {
-                      await unduhElemenPng(el, `nota-${lastReceipt.trxId}.png`);
+                      const png = await gambarNotaPng(lastReceipt, posSettings);
+                      await simpanPng(png, `nota-${lastReceipt.trxId}.png`);
                     } catch {
                       alert('Gagal membuat gambar nota. Coba lagi.');
                     } finally {

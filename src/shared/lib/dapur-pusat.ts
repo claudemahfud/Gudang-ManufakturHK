@@ -12,7 +12,7 @@ import {
 } from '@/shared/lib/db/schema';
 import { BusinessError, decrementStock, incrementStock, normalizeSku } from '@/shared/lib/stock';
 import { evaluasiHarga, hitungHpp, pemakaianBahan } from '@/shared/lib/resep-hitung';
-import { generateTrxId } from '@/shared/lib/utils';
+import { nomorUrut } from '@/shared/lib/nomor-urut';
 
 // ============================================================
 // Dapur Pusat: Master Resep (HPP per batch) & Produksi.
@@ -215,7 +215,7 @@ export async function buatProduksi(
   await incrementStock(tx, menuSku, hasilQty, DAPUR_PUSAT);
   await tx.update(inventory).set({ hargaBeli: String(hargaBaru), updatedAt: new Date() }).where(eq(inventory.sku, menuSku));
 
-  const noProduksi = generateTrxId('PRD');
+  const noProduksi = await nomorUrut(tx, 'PRD');
   const [row] = await tx
     .insert(produksi)
     .values({

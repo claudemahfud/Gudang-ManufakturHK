@@ -2,10 +2,10 @@ import { NextResponse } from 'next/server';
 import { db } from '@/shared/lib/db';
 import { poLoading, poLoadingItems, logs } from '@/shared/lib/db/schema';
 import { requireAuthRole, ROLES_WAREHOUSE } from '@/shared/lib/auth/rbac';
-import { generateTrxId } from '@/shared/lib/utils';
 import { resolveRequestCabang } from '@/shared/lib/stock';
 import { desc, inArray } from 'drizzle-orm';
 import { PO_STATUS } from '@/shared/lib/po-status';
+import { nomorUrut } from '@/shared/lib/nomor-urut';
 
 // ============================================================
 // API: /api/po-loading
@@ -65,11 +65,12 @@ export async function POST(req: Request) {
     }
 
     const user = (session.user as any)?.name || (session.user as any)?.username || 'System';
-    const noPo = generateTrxId('PO');
+    let noPo = '';
     const cabang = await resolveRequestCabang(session.user, body.cabang);
     let headerResult: any;
 
     await db.transaction(async (tx) => {
+      noPo = await nomorUrut(tx, 'PO');
       const [header] = await tx
         .insert(poLoading)
         .values({
