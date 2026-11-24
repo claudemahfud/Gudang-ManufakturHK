@@ -1,4 +1,5 @@
 'use client';
+import { saveFile } from '@/shared/lib/simpan-berkas';
 
 // Nota digambar langsung ke kanvas dari data transaksi (bukan tangkapan layar elemen):
 // html2canvas menggeser posisi teks sehingga baris nama barang terpotong dan "Subtotal" tercoret.
@@ -152,26 +153,9 @@ export async function gambarNotaPng(d: DataNota, t: TokoNota): Promise<Blob> {
 }
 
 /**
- * Simpan PNG. Di HP yang mendukung Web Share berkas, muncul lembar bagikan
- * (pilih "Simpan Gambar" untuk masuk Galeri); selain itu berkas diunduh ke folder Unduhan.
+ * Simpan PNG: unduh lewat blob URL; di HP yang mendukung Web Share berkas tampil dialog "File siap"
+ * (tombol Bagikan/Simpan dipicu klik langsung, karena Safari menolak share setelah await render).
  */
 export async function simpanPng(blob: Blob, namaFile: string) {
-  const berkas = new File([blob], namaFile, { type: 'image/png' });
-  const sentuh = matchMedia('(pointer: coarse)').matches;
-  if (sentuh && navigator.canShare?.({ files: [berkas] })) {
-    try {
-      await navigator.share({ files: [berkas], title: namaFile });
-      return;
-    } catch (e) {
-      if ((e as Error)?.name === 'AbortError') return;
-    }
-  }
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = namaFile;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 2000);
+  saveFile(blob, namaFile);
 }
