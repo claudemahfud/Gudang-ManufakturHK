@@ -19,6 +19,7 @@ import {
   TrendingUp,
 } from 'lucide-react';
 import { formatRupiah, formatTanggal } from '@/shared/lib/utils';
+import { AksiHeader, GrupIkon, TombolIkon, TombolUtama } from '@/shared/components/ui/AksiHeader';
 
 export default function CashOpnameView() {
   const [data, setData] = useState<any[]>([]);
@@ -118,22 +119,14 @@ export default function CashOpnameView() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setIsModalOpen(true)}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition shadow-sm"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Buka Form Cash Opname</span>
-          </button>
-          <button
-            onClick={fetchData}
-            className="inline-flex items-center gap-2 px-3.5 py-2 bg-white hover:bg-gray-50 border border-gray-200 text-gray-700 rounded-xl text-xs font-semibold transition shadow-sm"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-            <span>Segarkan</span>
-          </button>
-        </div>
+        <AksiHeader>
+          <GrupIkon>
+            <TombolIkon ikon={RefreshCw} label="Segarkan data" onClick={fetchData} putar={loading} />
+          </GrupIkon>
+          <TombolUtama ikon={Plus} onClick={() => setIsModalOpen(true)}>
+            Buka Form Cash Opname
+          </TombolUtama>
+        </AksiHeader>
       </div>
 
       {/* 3 Summary Stat Cards */}

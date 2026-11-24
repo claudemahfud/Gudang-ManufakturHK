@@ -31,6 +31,7 @@ import {
 import { formatRupiah } from '@/shared/lib/utils';
 import { useDivision } from '@/shared/context/DivisionContext';
 import DateTimeFilterBar from '@/shared/components/ui/DateTimeFilterBar';
+import { AksiHeader, GrupIkon, TombolIkon } from '@/shared/components/ui/AksiHeader';
 
 interface ProductRow {
   sku: string;
@@ -130,22 +131,12 @@ export default function ProdukTerjualView() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
-          <button
-            onClick={fetchData}
-            className="inline-flex items-center gap-2 px-3.5 py-2 bg-white hover:bg-gray-50 border border-gray-200 text-gray-700 rounded-xl text-xs font-semibold transition shadow-sm"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-            <span>Segarkan</span>
-          </button>
-          <button
-            onClick={() => window.print()}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-gray-900 hover:bg-gray-800 text-white rounded-xl text-xs font-semibold transition shadow-sm"
-          >
-            <Printer className="w-3.5 h-3.5" />
-            <span>Cetak Rekap</span>
-          </button>
-        </div>
+        <AksiHeader>
+          <GrupIkon>
+            <TombolIkon ikon={RefreshCw} label="Segarkan data" onClick={fetchData} putar={loading} />
+            <TombolIkon ikon={Printer} label="Cetak rekap" onClick={() => window.print()} />
+          </GrupIkon>
+        </AksiHeader>
       </div>
 
       {/* 4 Summary Stat Cards */}
