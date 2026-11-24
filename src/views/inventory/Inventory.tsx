@@ -241,6 +241,21 @@ export default function Inventory() {
     setFormError(null);
   };
 
+  // Esc menutup pop-up (konfirmasi hapus dulu bila terbuka), kecuali sedang menyimpan/menghapus
+  useEffect(() => {
+    if (!modalOpen && !deleteTarget) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape' || submitting || deleting) return;
+      if (deleteTarget) setDeleteTarget(null);
+      else {
+        setModalOpen(false);
+        setFormError(null);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [modalOpen, deleteTarget, submitting, deleting]);
+
   // ============================================================
   // SECTION: Submit Create / Edit Item
   // ============================================================
