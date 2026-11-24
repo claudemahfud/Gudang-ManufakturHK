@@ -242,14 +242,16 @@ body:has(:is(.fixed.inset-0, [role="dialog"], [aria-modal="true"])) .assistive-p
   table.tabel-kartu > tfoot > tr + tr {
     margin-top: 0.75rem;
   }
-  table.tabel-kartu > tbody > tr:not([class*='bg-']) {
-    background-color: #fff;
+  /* Kartu putih; status baris (kelas bg-red-* / bg-amber-*, bukan hover:bg-*) mewarnai latar & tepi */
+  table.tabel-kartu > tbody > tr {
+    background-color: #fff !important;
   }
-  /* Warna tepi mengikuti status baris (merah = habis, kuning = kritis) */
-  table.tabel-kartu > tbody > tr[class*='bg-red'] {
+  table.tabel-kartu > tbody > tr:is([class^='bg-red-'], [class*=' bg-red-']) {
+    background-color: rgb(254 242 242) !important;
     border-color: rgb(239 68 68) !important;
   }
-  table.tabel-kartu > tbody > tr[class*='bg-amber'] {
+  table.tabel-kartu > tbody > tr:is([class^='bg-amber-'], [class*=' bg-amber-']) {
+    background-color: rgb(255 251 235) !important;
     border-color: rgb(245 158 11) !important;
   }
   /* Baris memuat / kosong: tanpa bingkai kartu */
