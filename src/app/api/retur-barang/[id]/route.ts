@@ -4,6 +4,7 @@ import { returBarang, logs } from '@/shared/lib/db/schema';
 import { requireAuthRole, ROLES_WAREHOUSE } from '@/shared/lib/auth/rbac';
 import { and, eq, ne } from 'drizzle-orm';
 import { BusinessError, decrementStock, errorResponse, incrementStock } from '@/shared/lib/stock';
+import { batalkanReturPelanggan, returTerkelola } from '@/shared/lib/retur-pelanggan';
 
 // ============================================================
 // API: /api/retur-barang/[id]
@@ -34,6 +35,9 @@ export async function PUT(
     const updatedResult = await db.transaction(async (tx) => {
       const [current] = await tx.select().from(returBarang).where(eq(returBarang.id, id)).for('update').limit(1);
       if (!current) throw new BusinessError('Data tidak ditemukan', 404);
+      if (returTerkelola(current)) {
+        throw new BusinessError('Retur pelanggan dari Barang Masuk sudah final; hapus retur untuk membatalkannya.');
+      }
 
       // Retur yang sudah masuk stok tidak bisa diubah statusnya lewat sini
       // (hapus retur bila ingin membatalkan, stok akan ditarik kembali).
@@ -85,6 +89,11 @@ export async function DELETE(
     const user = authResult.user?.name || authResult.user?.username || 'System';
 
     await db.transaction(async (tx) => {
+      const [cek] = await tx.select().from(returBarang).where(eq(returBarang.id, id)).for('update').limit(1);
+      if (cek && returTerkelola(cek)) {
+        await batalkanReturPelanggan(tx, id, user);
+        return;
+      }
       const [item] = await tx.delete(returBarang).where(eq(returBarang.id, id)).returning();
       if (!item) throw new BusinessError('Data tidak ditemukan', 404);
 

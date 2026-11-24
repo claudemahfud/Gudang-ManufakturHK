@@ -11,6 +11,7 @@ import DocumentModalViewer, { DocumentData } from '@/shared/components/documents
 import { exportToCsv, exportRekapToPdfA4Landscape } from '@/shared/lib/exportDoc';
 import DateTimeFilterBar from '@/shared/components/ui/DateTimeFilterBar';
 import PoDalamProses from './PoDalamProses';
+import FormReturPelanggan from './FormReturPelanggan';
 import { AksiHeader, GrupIkon, TombolIkon, TombolUtama } from '@/shared/components/ui/AksiHeader';
 
 // ============================================================
@@ -28,7 +29,8 @@ interface ItemMasuk {
   hargaBeli: string | number | null;
   totalBeli?: string | number | null;
   supplier: string | null;
-  skemaBayar?: 'lunas' | 'hutang' | null;
+  skemaBayar?: 'lunas' | 'hutang' | 'retur' | null;
+  jenis?: 'PEMBELIAN' | 'RETUR_PELANGGAN';
   jatuhTempo?: string | null;
   noFaktur: string | null;
   keterangan: string | null;
@@ -39,6 +41,7 @@ interface InventoryOption {
   sku: string;
   namaBarang: string;
   hargaBeli: string | number | null;
+  hargaJual?: string | number | null;
   stok?: string | number | null;
   supplier?: string | null;
 }
@@ -65,6 +68,7 @@ export default function BarangMasuk() {
 
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [jenisMasuk, setJenisMasuk] = useState<'PEMBELIAN' | 'RETUR'>('PEMBELIAN');
   const [isCameraOpen, setIsCameraOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [selectedDocument, setSelectedDocument] = useState<DocumentData | null>(null);
@@ -211,6 +215,7 @@ export default function BarangMasuk() {
       ...initialForm,
       supplier: suppliers[0]?.nama || '',
     });
+    setJenisMasuk('PEMBELIAN');
     setIsModalOpen(true);
   };
 
@@ -302,7 +307,12 @@ export default function BarangMasuk() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Yakin ingin membatalkan/menghapus data barang masuk ini? Stok inventory akan dikurangi kembali.')) return;
+    const row = data.find((d) => d.id === id);
+    const pesan =
+      row?.jenis === 'RETUR_PELANGGAN'
+        ? 'Batalkan retur pelanggan ini? Stok dikurangi kembali, potongan piutang dan refund ikut dibalik.'
+        : 'Yakin ingin membatalkan/menghapus data barang masuk ini? Stok inventory akan dikurangi kembali.';
+    if (!confirm(pesan)) return;
 
     try {
       const res = await fetch(`/api/barang-masuk/${id}`, { method: 'DELETE' });
@@ -312,7 +322,7 @@ export default function BarangMasuk() {
         fetchData();
         fetchInventory();
       } else {
-        showToast('error', json.error || 'Gagal menghapus', json.penyebab || 'Data tidak dapat dihapus', 'Hapus Gagal');
+        showToast('error', json.message || json.error || 'Gagal menghapus', json.penyebab || 'Data tidak dapat dihapus', 'Hapus Gagal');
       }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Gangguan jaringan';
@@ -610,7 +620,11 @@ export default function BarangMasuk() {
                         <div className="text-[11px] text-gray-400">@{formatRupiah(row.hargaBeli)}</div>
                       </td>
                       <td className="py-3.5 px-4 whitespace-nowrap text-xs text-gray-800">
-                        {row.supplier ? (
+                        {row.supplier && row.jenis === 'RETUR_PELANGGAN' ? (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-amber-50 text-amber-800 font-medium border border-amber-200">
+                            👤 {row.supplier}
+                          </span>
+                        ) : row.supplier ? (
                           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-blue-50 text-blue-800 font-medium border border-blue-200">
                             🏢 {row.supplier}
                           </span>
@@ -619,7 +633,12 @@ export default function BarangMasuk() {
                         )}
                       </td>
                       <td className="py-3.5 px-4 whitespace-nowrap">
-                        {row.skemaBayar === 'hutang' ? (
+                        {row.jenis === 'RETUR_PELANGGAN' ? (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-200">
+                            <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                            Retur Pelanggan
+                          </span>
+                        ) : row.skemaBayar === 'hutang' ? (
                           <div>
                             <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-200">
                               <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
@@ -686,10 +705,33 @@ export default function BarangMasuk() {
             {/* Modal Header (Fixed Top) */}
             <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between shrink-0 bg-white">
               <div>
-                <h2 className="font-bold text-gray-900 text-base lg:text-lg">Catat Barang Masuk (Purchasing)</h2>
+                <h2 className="font-bold text-gray-900 text-base lg:text-lg">
+                  Catat Barang Masuk ({jenisMasuk === 'RETUR' ? 'Retur Pelanggan' : 'Purchasing'})
+                </h2>
                 <p className="text-xs text-gray-500 mt-0.5">
-                  Input muatan masuk dari Suplier, tentukan harga beli dan skema pembayaran (Kas / Hutang).
+                  {jenisMasuk === 'RETUR'
+                    ? 'Barang dikembalikan pelanggan: stok, piutang, kas, dan menu Retur Barang diperbarui sekaligus.'
+                    : 'Input muatan masuk dari Suplier, tentukan harga beli dan skema pembayaran (Kas / Hutang).'}
                 </p>
+                <div className="mt-3 inline-flex rounded-xl bg-gray-100 p-1" role="tablist" aria-label="Jenis barang masuk">
+                  {([
+                    ['PEMBELIAN', '1. Purchasing'],
+                    ['RETUR', '2. Retur dari Pelanggan'],
+                  ] as const).map(([v, t]) => (
+                    <button
+                      key={v}
+                      type="button"
+                      role="tab"
+                      aria-selected={jenisMasuk === v}
+                      onClick={() => setJenisMasuk(v)}
+                      className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition ${
+                        jenisMasuk === v ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-800'
+                      }`}
+                    >
+                      {t}
+                    </button>
+                  ))}
+                </div>
               </div>
               <button
                 type="button"
@@ -702,6 +744,18 @@ export default function BarangMasuk() {
             </div>
 
             {/* Modal Body (Landscape 2 Columns on Desktop) */}
+            {jenisMasuk === 'RETUR' ? (
+              <FormReturPelanggan
+                inventoryList={inventoryList}
+                showToast={showToast}
+                onBatal={() => setIsModalOpen(false)}
+                onTersimpan={() => {
+                  setIsModalOpen(false);
+                  fetchData();
+                  fetchInventory();
+                }}
+              />
+            ) : (
             <form onSubmit={handleSubmit} className="flex-1 flex flex-col overflow-hidden">
               <div className="flex-1 overflow-y-auto p-6">
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 lg:gap-6">
@@ -1007,6 +1061,7 @@ export default function BarangMasuk() {
                 </button>
               </div>
             </form>
+            )}
           </div>
         </div>
       )}
