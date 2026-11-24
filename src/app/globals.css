@@ -264,6 +264,17 @@ body:has(:is(.fixed.inset-0, [role="dialog"], [aria-modal="true"])) .assistive-p
   table.tabel-kartu td[colspan] {
     text-align: center !important;
   }
+  /* Teks utuh di kartu: batalkan pemotongan (truncate / max-w) bawaan tabel */
+  table.tabel-kartu td .truncate,
+  table.tabel-kartu td.truncate {
+    overflow: visible;
+    white-space: normal;
+    text-overflow: clip;
+  }
+  table.tabel-kartu td,
+  table.tabel-kartu td [class*='max-w-'] {
+    max-width: none !important;
+  }
   table.tabel-kartu td[data-aksi] {
     grid-column: 1 / -1;
     padding-top: 0.75rem !important;
