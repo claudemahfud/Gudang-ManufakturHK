@@ -247,8 +247,8 @@ export default function Kontak() {
 
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md lg:max-w-3xl max-h-[90vh] flex flex-col overflow-hidden border border-gray-100 animate-in zoom-in-95 duration-150">
-            <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between shrink-0 bg-white">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg lg:max-w-4xl max-h-[90vh] flex flex-col overflow-hidden border border-gray-100 animate-in zoom-in-95 duration-150">
+            <div className="px-6 sm:px-8 py-4 border-b border-gray-100 flex items-center justify-between shrink-0 bg-white">
               <h2 className="font-bold text-gray-800 text-base lg:text-lg">Tambah Kontak Baru</h2>
               <button 
                 type="button"
@@ -260,7 +260,7 @@ export default function Kontak() {
               </button>
             </div>
             <form onSubmit={handleSubmit} className="flex-1 flex flex-col overflow-hidden">
-              <div className="flex-1 overflow-y-auto p-6">
+              <div className="flex-1 overflow-y-auto p-6 sm:px-8">
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
                   {/* Kolom Kiri */}
                   <div className="space-y-4">
@@ -330,7 +330,7 @@ export default function Kontak() {
               </div>
 
               {/* Action Buttons (Fixed Footer) */}
-              <div className="px-6 py-3.5 border-t border-gray-100 bg-gray-50/80 flex justify-end gap-2 shrink-0">
+              <div className="px-6 sm:px-8 py-3.5 border-t border-gray-100 bg-gray-50/80 flex justify-end gap-2 shrink-0">
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}

@@ -282,8 +282,8 @@ function ModalResep({
   };
 
   return (
-    <Bingkai judul={`Resep: ${resep.produk.namaBarang}`} sub={`${resep.produk.sku} · takaran per batch dalam satuan stok bahan`} onClose={onClose} lebar="max-w-4xl">
-      <div className="flex-1 overflow-y-auto p-5 space-y-5">
+    <Bingkai judul={`Resep: ${resep.produk.namaBarang}`} sub={`${resep.produk.sku} · takaran per batch dalam satuan stok bahan`} onClose={onClose} lebar="max-w-5xl">
+      <div className="flex-1 overflow-y-auto p-5 sm:px-8 space-y-5">
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           <label className="text-xs font-semibold text-gray-700 space-y-1">
             <span>Hasil per batch (unit)</span>
@@ -412,7 +412,7 @@ function ModalResep({
           ))}
         </section>
       </div>
-      <div className="px-5 py-4 border-t border-gray-100 flex justify-end gap-2">
+      <div className="px-5 sm:px-8 py-4 border-t border-gray-100 flex justify-end gap-2">
         <button type="button" onClick={onClose} className="h-10 px-4 rounded-xl border border-gray-200 text-sm font-semibold text-gray-700 hover:bg-gray-50">
           Batal
         </button>

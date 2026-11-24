@@ -828,9 +828,9 @@ export default function Inventory() {
       {/* ============================================================ */}
       {modalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg lg:max-w-5xl max-h-[92vh] flex flex-col overflow-hidden relative border border-gray-100 animate-in fade-in zoom-in-95 duration-200">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-xl lg:max-w-6xl max-h-[92vh] flex flex-col overflow-hidden relative border border-gray-100 animate-in fade-in zoom-in-95 duration-200">
             {/* Modal Header (Fixed Top) */}
-            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 shrink-0 bg-white">
+            <div className="flex items-center justify-between px-6 sm:px-8 py-4 border-b border-gray-100 shrink-0 bg-white">
               <div>
                 <h3 className="text-lg font-bold text-gray-900">
                   {modalMode === 'create' ? 'Tambah Master Barang Baru' : `Edit Barang: ${form.sku}`}
@@ -858,7 +858,7 @@ export default function Inventory() {
 
             {/* Form Body (Landscape 2 Columns on Desktop) */}
             <form onSubmit={handleFormSubmit} className="flex-1 flex flex-col overflow-hidden">
-              <div className="flex-1 overflow-y-auto p-6">
+              <div className="flex-1 overflow-y-auto p-6 sm:px-8">
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 lg:gap-6">
                   {/* Kolom Kiri: Identitas Produk & Spesifikasi */}
                   <div className="space-y-4">
@@ -1219,7 +1219,7 @@ export default function Inventory() {
               </div>
 
               {/* Action Buttons (Fixed Bottom Footer) */}
-              <div className="flex items-center justify-between gap-3 px-6 py-3.5 border-t border-gray-100 shrink-0 bg-gray-50/80">
+              <div className="flex items-center justify-between gap-3 px-6 sm:px-8 py-3.5 border-t border-gray-100 shrink-0 bg-gray-50/80">
                 {modalMode === 'edit' ? (
                   <button
                     type="button"
@@ -1266,7 +1266,7 @@ export default function Inventory() {
       {/* ============================================================ */}
       {deleteTarget && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-150">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 text-center space-y-4 border border-gray-100 animate-in zoom-in-95 duration-150">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6 text-center space-y-4 border border-gray-100 animate-in zoom-in-95 duration-150">
             <div className="w-14 h-14 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto">
               <Trash2 className="w-7 h-7" />
             </div>

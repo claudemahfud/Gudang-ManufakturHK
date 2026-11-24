@@ -1,7 +1,7 @@
 import { eq } from 'drizzle-orm';
 import { db } from '@/shared/lib/db';
 import { barangMasuk, hutangSupplier, inventory, keuangan } from '@/shared/lib/db/schema';
-import { incrementStock } from '@/shared/lib/stock';
+import { BusinessError, incrementStock } from '@/shared/lib/stock';
 
 // ============================================================
 // Pencatatan Barang Masuk (dipakai Barang Masuk manual & Faktur Pembelian dari PO)
@@ -28,9 +28,57 @@ export interface BarangMasukInput {
   user: string;
 }
 
+const ALIAS_KARTON = ['karton', 'ctn', 'dus', 'dos'];
+
+/**
+ * Ubah qty & harga dari satuan input ke satuan dasar stok (pcs).
+ * Karton memakai isi per karton dari master Inventory (setting_pcs); satuan lain belum punya konversi.
+ */
+export function konversiKePcs(
+  satuan: string | null | undefined,
+  qty: number,
+  hargaBeli: number,
+  inv: { pakaiKarton: boolean; settingPcs: number } | null | undefined
+) {
+  const s = String(satuan || 'pcs').trim().toLowerCase();
+  if (s === 'pcs' || s === '') return { qtyPcs: qty, hargaPcs: hargaBeli, isi: 1, label: 'pcs' };
+  if (ALIAS_KARTON.includes(s)) {
+    const isi = inv?.pakaiKarton ? Number(inv.settingPcs) || 1 : 1;
+    if (!inv || !inv.pakaiKarton || isi <= 1) {
+      throw new BusinessError('Barang ini belum diatur isi per karton. Isi "Setting pcs per karton" di master Inventory, atau catat dalam pcs.');
+    }
+    return { qtyPcs: qty * isi, hargaPcs: hargaBeli / isi, isi, label: 'karton' };
+  }
+  throw new BusinessError(`Satuan "${satuan}" belum punya konversi ke pcs. Gunakan pcs atau karton.`);
+}
+
 /** Catat satu baris barang masuk, perbarui HPP rata-rata tertimbang, tambah stok cabang. */
-export async function catatBarangMasuk(tx: Tx, it: BarangMasukInput) {
-  const totalBeli = it.qty * it.hargaBeli;
+export async function catatBarangMasuk(tx: Tx, input: BarangMasukInput) {
+  // Nilai pembelian mengikuti satuan input (mis. 1 karton x Rp 15.000)
+  const totalBeli = input.qty * input.hargaBeli;
+
+  // FOR UPDATE: dua penerimaan bersamaan antre, sehingga rata-rata HPP
+  // dihitung dari stok & harga terbaru, bukan nilai basi.
+  const [existingInv] = await tx
+    .select()
+    .from(inventory)
+    .where(eq(inventory.sku, input.sku))
+    .for('update')
+    .limit(1);
+
+  // Stok & HPP selalu disimpan per pcs; catatan menyimpan qty/harga per pcs
+  const k = konversiKePcs(input.satuan, input.qty, input.hargaBeli, existingInv);
+  const catatanSatuan =
+    k.isi > 1
+      ? `Input: ${input.qty} karton (isi ${k.isi} pcs) @ Rp ${input.hargaBeli.toLocaleString('id-ID')}/karton`
+      : null;
+  const it = {
+    ...input,
+    qty: k.qtyPcs,
+    satuan: 'pcs',
+    hargaBeli: Math.round(k.hargaPcs * 100) / 100,
+    keterangan: [catatanSatuan, input.keterangan].filter(Boolean).join(' · ') || null,
+  };
 
   const [row] = await tx
     .insert(barangMasuk)
@@ -53,15 +101,6 @@ export async function catatBarangMasuk(tx: Tx, it: BarangMasukInput) {
     })
     .returning();
 
-  // FOR UPDATE: dua penerimaan bersamaan antre, sehingga rata-rata HPP
-  // dihitung dari stok & harga terbaru, bukan nilai basi.
-  const [existingInv] = await tx
-    .select()
-    .from(inventory)
-    .where(eq(inventory.sku, it.sku))
-    .for('update')
-    .limit(1);
-
   if (existingInv) {
     // Moving Weighted Average Cost (rata-rata tertimbang)
     const curStock = Number(existingInv.stok) || 0;
@@ -70,7 +109,7 @@ export async function catatBarangMasuk(tx: Tx, it: BarangMasukInput) {
 
     let finalHargaBeli = it.hargaBeli;
     if (newStock > 0 && curStock > 0 && it.hargaBeli > 0) {
-      finalHargaBeli = Math.round((curStock * curPrice + it.qty * it.hargaBeli) / newStock);
+      finalHargaBeli = Math.round(((curStock * curPrice + it.qty * it.hargaBeli) / newStock) * 100) / 100;
     } else if (it.hargaBeli <= 0) {
       finalHargaBeli = curPrice;
     }

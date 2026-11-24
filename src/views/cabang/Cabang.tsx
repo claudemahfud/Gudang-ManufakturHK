@@ -340,8 +340,8 @@ export default function CabangView() {
       {/* Modal Tambah Cabang Baru — Desktop Landscape */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-gray-900/40 backdrop-blur-xs animate-in fade-in duration-150">
-          <div className="bg-white rounded-2xl lg:rounded-3xl shadow-2xl border border-gray-200 w-full max-w-md lg:max-w-3xl max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-150">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 shrink-0 bg-white">
+          <div className="bg-white rounded-2xl lg:rounded-3xl shadow-2xl border border-gray-200 w-full max-w-lg lg:max-w-4xl max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between px-6 sm:px-8 py-4 border-b border-gray-100 shrink-0 bg-white">
               <div className="flex items-center gap-2">
                 <Building2 className="w-5 h-5 text-gray-900" />
                 <h3 className="font-bold text-gray-900 text-sm sm:text-base">Tambah Cabang Baru</h3>
@@ -357,7 +357,7 @@ export default function CabangView() {
             </div>
 
             <form onSubmit={handleCreateBranch} className="flex-1 flex flex-col overflow-hidden">
-              <div className="flex-1 overflow-y-auto p-6">
+              <div className="flex-1 overflow-y-auto p-6 sm:px-8">
                 {errorMsg && (
                   <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 text-xs rounded-xl flex items-center gap-2">
                     <AlertCircle className="w-4 h-4 flex-shrink-0" />
@@ -460,7 +460,7 @@ export default function CabangView() {
               </div>
 
               {/* Action Buttons (Fixed Footer) */}
-              <div className="px-6 py-3.5 border-t border-gray-100 bg-gray-50/80 flex items-center justify-end gap-2 shrink-0">
+              <div className="px-6 sm:px-8 py-3.5 border-t border-gray-100 bg-gray-50/80 flex items-center justify-end gap-2 shrink-0">
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}

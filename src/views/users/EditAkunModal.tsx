@@ -141,8 +141,8 @@ export default function EditAkunModal({
 
   const profilKunci = !bolehKelolaAkun;
   return (
-    <Bingkai judul="Edit Akun" sub={`${pengguna.namaLengkap} · @${pengguna.username}`} onClose={onClose} lebar="max-w-4xl">
-      <div className="flex-1 overflow-y-auto p-5 space-y-5">
+    <Bingkai judul="Edit Akun" sub={`${pengguna.namaLengkap} · @${pengguna.username}`} onClose={onClose} lebar="max-w-5xl">
+      <div className="flex-1 overflow-y-auto p-5 sm:px-8 space-y-5">
         {profilKunci && (
           <p className="flex items-start gap-2 p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-700">
             <ShieldCheck className="w-4 h-4 text-slate-500 shrink-0 mt-0.5" aria-hidden="true" />
@@ -263,7 +263,7 @@ export default function EditAkunModal({
         {galat && <p role="alert" className="p-3 rounded-xl bg-red-50 border border-red-200 text-xs font-semibold text-red-800">{galat}</p>}
       </div>
 
-      <div className="px-5 py-4 border-t border-gray-100 bg-gray-50/60 flex flex-wrap items-center justify-between gap-3 shrink-0">
+      <div className="px-5 sm:px-8 py-4 border-t border-gray-100 bg-gray-50/60 flex flex-wrap items-center justify-between gap-3 shrink-0">
         {bolehKelolaAkun && !diriSendiri ? (
           konfirmasiHapus ? (
             <div className="flex items-center gap-2 text-xs">
