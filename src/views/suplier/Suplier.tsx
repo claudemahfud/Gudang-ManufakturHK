@@ -256,7 +256,7 @@ export default function SuplierView() {
 
       {/* 2. Kartu Ringkasan & Dampak Neraca */}
       <section className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-4">
+        <div className="hover-lift bg-white p-5 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-4">
           <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
             <Building2 className="w-6 h-6" />
           </div>
@@ -273,7 +273,7 @@ export default function SuplierView() {
           </div>
         </div>
 
-        <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-4">
+        <div className="hover-lift bg-white p-5 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-4">
           <div className="w-12 h-12 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
             <CreditCard className="w-6 h-6" />
           </div>
@@ -290,7 +290,7 @@ export default function SuplierView() {
           </div>
         </div>
 
-        <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-4">
+        <div className="hover-lift bg-white p-5 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-4">
           <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
             <CheckCircle2 className="w-6 h-6" />
           </div>
@@ -331,19 +331,16 @@ export default function SuplierView() {
           <table className="w-full text-left border-collapse text-sm">
             <thead>
               <tr className="bg-gray-50/80 border-b border-gray-100 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                <th className="py-3.5 px-4">Nama Suplier / Pabrik</th>
-                <th className="py-3.5 px-4">Kontak & Telepon</th>
-                <th className="py-3.5 px-4">Alamat Gudang / Kantor</th>
-                <th className="py-3.5 px-4 text-center">Produk Disuplai</th>
-                <th className="py-3.5 px-4 text-right">Sisa Hutang Kredit</th>
-                <th className="py-3.5 px-4">Catatan / Spesialisasi</th>
+                <th className="py-3.5 px-4">Suplier / Telepon</th>
+                <th className="py-3.5 px-4">Alamat / Email</th>
+                <th className="py-3.5 px-4">Produk / Hutang</th>
                 <th className="py-3.5 px-4 text-center">Aksi</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 text-gray-700">
               {loading ? (
                 <tr>
-                  <td colSpan={7} className="py-16 text-center">
+                  <td colSpan={4} className="py-16 text-center">
                     <div className="flex flex-col items-center justify-center gap-2">
                       <div className="w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin" />
                       <span className="text-xs font-medium text-gray-500">Memuat data suplier...</span>
@@ -352,7 +349,7 @@ export default function SuplierView() {
                 </tr>
               ) : filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="py-16 text-center text-gray-400">
+                  <td colSpan={4} className="py-16 text-center text-gray-400">
                     <div className="flex flex-col items-center justify-center gap-2">
                       <Factory className="w-10 h-10 text-gray-300" />
                       <p className="font-semibold text-gray-600 text-base">Belum Ada Suplier</p>
@@ -376,80 +373,51 @@ export default function SuplierView() {
               ) : (
                 filtered.map((item) => (
                   <tr key={item.id} className="hover:bg-emerald-50/20 transition-colors">
-                    {/* Nama Suplier */}
-                    <td className="py-3.5 px-4 font-semibold text-gray-900 whitespace-nowrap">
-                      <div className="flex items-center gap-2">
-                        <div className="w-7 h-7 rounded-lg bg-emerald-100 text-emerald-800 font-bold flex items-center justify-center text-xs">
+                    {/* Suplier: nama + telepon (2 baris) */}
+                    <td className="py-3.5 px-4">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-800 font-bold flex items-center justify-center text-xs shrink-0">
                           {item.nama.charAt(0).toUpperCase()}
                         </div>
-                        <div>
-                          <span>{item.nama}</span>
-                          <span className="block text-[10px] text-gray-400 font-normal">Pemasok Resmi</span>
+                        <div className="min-w-0">
+                          <div className="font-semibold text-gray-900">{item.nama}</div>
+                          <div className="flex items-center gap-1 text-[11px] text-gray-500 font-mono mt-0.5">
+                            <Phone className="w-3 h-3 text-gray-400 shrink-0" />
+                            <span>{item.telepon || '-'}</span>
+                          </div>
                         </div>
                       </div>
                     </td>
 
-                    {/* Kontak & Telepon */}
+                    {/* Alamat + email (2 baris) */}
+                    <td className="py-3.5 px-4 text-xs max-w-xs">
+                      <div className="flex items-center gap-1.5 text-gray-700" title={item.alamat || ''}>
+                        <MapPin className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+                        <span className="truncate">{item.alamat || '-'}</span>
+                      </div>
+                      <div className="flex items-center gap-1.5 text-[11px] text-gray-500 mt-0.5">
+                        <Mail className="w-3 h-3 text-gray-400 shrink-0" />
+                        <span className="truncate">{item.email || '-'}</span>
+                      </div>
+                    </td>
+
+                    {/* Produk disuplai + sisa hutang (2 baris) */}
                     <td className="py-3.5 px-4 text-xs whitespace-nowrap">
-                      {item.telepon ? (
-                        <div className="flex items-center gap-1.5 text-gray-800 font-mono">
-                          <Phone className="w-3.5 h-3.5 text-gray-400" />
-                          <span>{item.telepon}</span>
-                        </div>
-                      ) : (
-                        <span className="text-gray-400">-</span>
-                      )}
-                      {item.email && (
-                        <div className="flex items-center gap-1.5 text-gray-500 text-[11px] mt-0.5">
-                          <Mail className="w-3 h-3 text-gray-400" />
-                          <span>{item.email}</span>
-                        </div>
-                      )}
-                    </td>
-
-                    {/* Alamat */}
-                    <td className="py-3.5 px-4 text-xs max-w-xs truncate text-gray-600" title={item.alamat || ''}>
-                      {item.alamat ? (
-                        <div className="flex items-center gap-1.5">
-                          <MapPin className="w-3.5 h-3.5 text-gray-400 shrink-0" />
-                          <span className="truncate">{item.alamat}</span>
-                        </div>
-                      ) : (
-                        <span className="text-gray-400">-</span>
-                      )}
-                    </td>
-
-                    {/* Jumlah Produk */}
-                    <td className="py-3.5 px-4 text-center whitespace-nowrap">
-                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-gray-100 text-gray-700">
-                        <Package className="w-3 h-3 text-gray-500" />
+                      <div className="flex items-center gap-1.5 font-semibold text-gray-800">
+                        <Package className="w-3.5 h-3.5 text-gray-400" />
                         <span>{item.jumlahProduk} SKU</span>
-                      </span>
-                    </td>
-
-                    {/* Sisa Hutang */}
-                    <td className="py-3.5 px-4 text-right whitespace-nowrap">
+                      </div>
                       {item.totalHutangAktif > 0 ? (
-                        <div className="inline-block text-right">
-                          <span className="font-mono font-bold text-xs text-amber-700 block">
-                            {formatRupiah(item.totalHutangAktif)}
-                          </span>
-                          <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-red-600 bg-red-50 px-1.5 py-0.5 rounded">
-                            <Clock className="w-2.5 h-2.5" />
-                            <span>Kredit Belum Lunas</span>
-                          </span>
+                        <div className="flex items-center gap-1 text-[11px] font-semibold text-amber-700 mt-0.5">
+                          <Clock className="w-3 h-3" />
+                          <span>Hutang {formatRupiah(item.totalHutangAktif)}</span>
                         </div>
                       ) : (
-                        <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
+                        <div className="flex items-center gap-1 text-[11px] font-semibold text-emerald-700 mt-0.5">
                           <CheckCircle2 className="w-3 h-3" />
-                          <span>Lunas (Rp 0)</span>
-                        </span>
+                          <span>Lunas</span>
+                        </div>
                       )}
-                    </td>
-
-                    {/* Catatan */}
-                    <td className="py-3.5 px-4 text-xs text-gray-500 max-w-xs truncate" title={item.keterangan || ''}>
-                      {item.keterangan || '-'}
                     </td>
 
                     {/* Aksi */}
