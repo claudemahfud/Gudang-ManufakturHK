@@ -7,7 +7,7 @@ import Sidebar from '@/shared/components/layout/Sidebar';
 import Header from '@/shared/components/layout/Header';
 import { useSession } from 'next-auth/react';
 import AssistivePosButton from '@/shared/components/pos/AssistivePosButton';
-import { ShieldCheck, HeartPulse } from 'lucide-react';
+import { HeartPulse } from 'lucide-react';
 import { rolesOf } from '@/shared/lib/auth/roles';
 import { usePintasanSinkron } from '@/shared/lib/pintasan-sinkron';
 import { useLabelTabelHp } from '@/shared/lib/label-tabel';
@@ -119,17 +119,8 @@ function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
           </div>
 
           {/* Semantic <footer> at base of content */}
-          <footer className="mt-8 py-3.5 px-4 md:px-6 bg-white/70 border-t border-slate-200/80 text-[11px] text-slate-500 flex flex-wrap items-center justify-between gap-3">
-            <div className="flex items-center gap-2">
-              <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-              <span>Gudang Manufaktur & F&B Hub • Multi-Cabang & RLS Aktif</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block animate-pulse" />
-              <span>Sistem Operasional Normal</span>
-              <span className="text-slate-300">|</span>
-              <span className="text-slate-400">v2.2 Enterprise</span>
-            </div>
+          <footer className="mt-8 py-3.5 px-4 md:px-6 bg-white/70 border-t border-slate-200/80 text-[11px] text-slate-500 text-center">
+            ©Hikimori 2026
           </footer>
         </main>
       </div>
