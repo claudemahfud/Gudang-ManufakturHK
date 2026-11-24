@@ -287,9 +287,9 @@ export default function PoDalamProses({ onReceived, notify }: { onReceived: () =
             role="dialog"
             aria-modal="true"
             aria-labelledby="faktur-title"
-            className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[92vh] flex flex-col border border-gray-100 animate-in fade-in zoom-in-95 duration-200"
+            className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[92vh] flex flex-col border border-gray-100 animate-in fade-in zoom-in-95 duration-200"
           >
-            <div className="flex items-start justify-between gap-4 px-6 py-4 border-b border-gray-100">
+            <div className="flex items-start justify-between gap-4 px-6 sm:px-8 py-4 border-b border-gray-100">
               <div>
                 <h3 id="faktur-title" className="text-lg font-bold text-gray-900">
                   Faktur Pembelian
@@ -309,7 +309,7 @@ export default function PoDalamProses({ onReceived, notify }: { onReceived: () =
               </button>
             </div>
 
-            <div className="overflow-y-auto px-6 py-4 space-y-4">
+            <div className="overflow-y-auto px-6 sm:px-8 py-4 space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
                 <label className="block text-xs font-semibold text-gray-700">
                   No. Faktur Suplier
@@ -421,7 +421,7 @@ export default function PoDalamProses({ onReceived, notify }: { onReceived: () =
               </p>
             </div>
 
-            <div className="flex flex-wrap items-center justify-between gap-3 px-6 py-4 border-t border-gray-100">
+            <div className="flex flex-wrap items-center justify-between gap-3 px-6 sm:px-8 py-4 border-t border-gray-100">
               <div className="text-sm text-gray-600">
                 {bolehHpp && (
                   <>
@@ -459,7 +459,7 @@ export default function PoDalamProses({ onReceived, notify }: { onReceived: () =
             role="alertdialog"
             aria-modal="true"
             aria-labelledby="cacat-title"
-            className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 text-center space-y-4 border border-gray-100 animate-in fade-in zoom-in-95 duration-200"
+            className="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6 text-center space-y-4 border border-gray-100 animate-in fade-in zoom-in-95 duration-200"
           >
             <div className="w-14 h-14 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center mx-auto">
               <AlertTriangle className="w-7 h-7" />

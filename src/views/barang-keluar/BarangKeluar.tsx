@@ -608,10 +608,10 @@ export default function BarangKeluar() {
             role="dialog"
             aria-modal="true"
             aria-labelledby="supervisor-auth-title"
-            className="bg-white rounded-3xl shadow-2xl border border-gray-200 w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-150"
+            className="bg-white rounded-3xl shadow-2xl border border-gray-200 w-full max-w-lg overflow-hidden animate-in zoom-in-95 duration-150"
           >
             {/* Modal Header */}
-            <header className="p-5 border-b border-gray-100 flex items-start justify-between bg-gradient-to-r from-red-50/80 via-white to-amber-50/50">
+            <header className="p-5 sm:px-8 border-b border-gray-100 flex items-start justify-between bg-gradient-to-r from-red-50/80 via-white to-amber-50/50">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-2xl bg-red-600 text-white flex items-center justify-center shadow-xs">
                   <ShieldAlert className="w-5 h-5" />

@@ -725,8 +725,8 @@ export default function LaporanRusakReturView() {
       {/* Modal Input Catat Barang Rusak Baru — Desktop Landscape */}
       {isInputModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-5 animate-in fade-in duration-200">
-          <div className="bg-white rounded-2xl lg:rounded-3xl w-full max-w-lg lg:max-w-3xl max-h-[90vh] overflow-hidden shadow-2xl border border-gray-100 flex flex-col animate-in zoom-in-95 duration-150">
-            <div className="p-5 border-b border-gray-100 flex items-center justify-between bg-red-50/50 shrink-0">
+          <div className="bg-white rounded-2xl lg:rounded-3xl w-full max-w-xl lg:max-w-4xl max-h-[90vh] overflow-hidden shadow-2xl border border-gray-100 flex flex-col animate-in zoom-in-95 duration-150">
+            <div className="p-5 sm:px-8 border-b border-gray-100 flex items-center justify-between bg-red-50/50 shrink-0">
               <div className="flex items-center gap-2">
                 <AlertOctagon className="w-5 h-5 text-red-600 shrink-0" />
                 <div>
@@ -744,7 +744,7 @@ export default function LaporanRusakReturView() {
             </div>
 
             <form onSubmit={handleSubmitRusak} className="flex-1 flex flex-col overflow-hidden">
-              <div className="p-6 overflow-y-auto space-y-4">
+              <div className="p-6 sm:px-8 overflow-y-auto space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {/* Left Column */}
                   <div className="space-y-4">
