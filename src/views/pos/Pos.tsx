@@ -49,8 +49,11 @@ import {
   KeyRound,
   ShieldCheck,
   Camera,
+  Download,
 } from 'lucide-react';
 import { formatRupiah } from '@/shared/lib/utils';
+import GeserKonfirmasi from '@/shared/components/ui/GeserKonfirmasi';
+import { unduhElemenPng } from '@/shared/lib/unduh-png';
 import { ROUTES } from '@/router/routes';
 import type { InventoryItem } from '@/shared/types';
 import { useDivision, DivisionMode } from '@/shared/context/DivisionContext';
@@ -173,6 +176,9 @@ export default function PosView() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
   const [lastReceipt, setLastReceipt] = useState<any>(null);
+  // Konfirmasi bayar 2 langkah: klik tombol -> geser bar penuh ke kanan
+  const [geserBayar, setGeserBayar] = useState(false);
+  const [mengunduhNota, setMengunduhNota] = useState(false);
   const [mobileCartOpen, setMobileCartOpen] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [waPhone, setWaPhone] = useState('');
@@ -485,6 +491,7 @@ export default function PosView() {
     if (cart.length === 0) return;
     setUangDiterima(grandTotal);
     setCheckoutError(null);
+    setGeserBayar(false);
     setIsCheckoutModalOpen(true);
   };
 
@@ -1200,6 +1207,24 @@ export default function PosView() {
 
             {/* Modal Footer (Fixed Bottom) */}
             <div className="p-4 border-t border-slate-800 flex items-center justify-end gap-2 bg-slate-950 shrink-0">
+              {geserBayar ? (
+                <div className="w-full space-y-2">
+                  <GeserKonfirmasi
+                    label={`Geser untuk bayar ${formatRupiah(grandTotal)}`}
+                    onKonfirmasi={handleProcessCheckout}
+                    memproses={isSubmitting}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setGeserBayar(false)}
+                    disabled={isSubmitting}
+                    className="w-full py-1.5 text-xs font-semibold text-slate-400 hover:text-white transition disabled:opacity-40"
+                  >
+                    Batal konfirmasi
+                  </button>
+                </div>
+              ) : (
+              <>
               <button
                 type="button"
                 onClick={() => setIsCheckoutModalOpen(false)}
@@ -1209,7 +1234,14 @@ export default function PosView() {
               </button>
               <button
                 type="button"
-                onClick={handleProcessCheckout}
+                onClick={() => {
+                  // Validasi uang dulu agar bar geser hanya muncul bila pembayaran bisa diproses
+                  if (metodePembayaran === 'Tunai' && uangDiterima < grandTotal) {
+                    void handleProcessCheckout();
+                    return;
+                  }
+                  setGeserBayar(true);
+                }}
                 disabled={isSubmitting}
                 className="px-6 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs transition shadow-lg shadow-emerald-500/20 disabled:opacity-50 flex items-center gap-2"
               >
@@ -1225,6 +1257,8 @@ export default function PosView() {
                   </>
                 )}
               </button>
+              </>
+              )}
             </div>
           </div>
         </div>
@@ -1251,6 +1285,29 @@ export default function PosView() {
 
             {/* Thermal Receipt Container (Styled strictly for 58mm printer) */}
             <div className="p-4 sm:p-6 sm:px-8 bg-slate-950/60 overflow-y-auto max-h-[65vh]">
+              <div className="flex justify-end max-w-[280px] sm:max-w-[300px] mx-auto mb-2">
+                <button
+                  type="button"
+                  disabled={mengunduhNota}
+                  onClick={async () => {
+                    const el = document.getElementById('thermal-receipt-58mm');
+                    if (!el) return;
+                    setMengunduhNota(true);
+                    try {
+                      await unduhElemenPng(el, `nota-${lastReceipt.trxId}.png`);
+                    } catch {
+                      alert('Gagal membuat gambar nota. Coba lagi.');
+                    } finally {
+                      setMengunduhNota(false);
+                    }
+                  }}
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-[11px] font-semibold text-slate-200 transition disabled:opacity-50"
+                  title="Simpan nota sebagai gambar PNG"
+                >
+                  <Download className="w-3.5 h-3.5" aria-hidden="true" />
+                  <span>{mengunduhNota ? 'Menyiapkan...' : 'Unduh PNG'}</span>
+                </button>
+              </div>
               <div
                 id="thermal-receipt-58mm"
                 className="bg-white text-black p-4 rounded-xl shadow-lg font-mono text-[11px] leading-tight max-w-[280px] sm:max-w-[300px] mx-auto border border-gray-200"
