@@ -34,6 +34,7 @@ import {
 import { PENENTU_MULTI_ROLE, punyaRole } from '@/shared/lib/auth/roles';
 import AturRoleModal from './AturRoleModal';
 import { roleUtamaDi } from '@/shared/lib/auth/roles';
+import ResetPasswordModal from './ResetPasswordModal';
 
 interface UserItem {
   id: string;
@@ -83,6 +84,7 @@ export default function Users() {
   const bolehKelolaAkun = punyaRole(sesi, ['Administrator']);
   const bolehAturRole = punyaRole(sesi, [PENENTU_MULTI_ROLE]);
   const [aturRole, setAturRole] = useState<UserItem | null>(null);
+  const [resetPw, setResetPw] = useState<UserItem | null>(null);
   const [data, setData] = useState<UserItem[]>([]);
   const [branches, setBranches] = useState<CabangOption[]>([]);
   const [loading, setLoading] = useState(true);
@@ -431,6 +433,14 @@ export default function Users() {
                         )}
                         {bolehKelolaAkun && (
                           <button
+                            onClick={() => setResetPw(row)}
+                            className="text-slate-700 hover:text-slate-950 text-xs font-semibold px-2 py-1 rounded hover:bg-slate-100 transition"
+                          >
+                            Reset Password
+                          </button>
+                        )}
+                        {bolehKelolaAkun && (
+                          <button
                             onClick={() => handleDelete(row.username)}
                             className="text-red-500 hover:text-red-700 text-xs font-semibold px-2 py-1 rounded hover:bg-red-50 transition"
                           >
@@ -463,6 +473,18 @@ export default function Users() {
       </section>
 
       {/* Modal Tambah Pengguna Baru — Desktop Landscape */}
+      {resetPw && (
+        <ResetPasswordModal
+          pengguna={resetPw}
+          onClose={() => setResetPw(null)}
+          onSelesai={(pesan, ok) => {
+            setToast({ message: pesan, type: ok ? 'success' : 'error' });
+            setTimeout(() => setToast(null), 5000);
+            if (ok) setResetPw(null);
+          }}
+        />
+      )}
+
       {aturRole && (
         <AturRoleModal
           pengguna={aturRole}
