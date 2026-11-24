@@ -12,7 +12,6 @@
 
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
-import { formatTanggal } from '@/shared/lib/utils';
 import type { UserRole } from '@/shared/types';
 import {
   Users as UsersIcon,
@@ -333,20 +332,19 @@ export default function Users() {
                 <th className="py-3.5 px-4">Divisi Ditugaskan</th>
                 <th className="py-3.5 px-4">Cabang Penempatan</th>
                 <th className="py-3.5 px-4">Email</th>
-                <th className="py-3.5 px-4">Terdaftar</th>
                 <th className="py-3.5 px-4 text-center">Aksi</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
               {loading ? (
                 <tr>
-                  <td colSpan={8} className="py-12 text-center text-gray-400">
+                  <td colSpan={7} className="py-12 text-center text-gray-400">
                     Memuat daftar pengguna...
                   </td>
                 </tr>
               ) : data.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="py-12 text-center text-gray-400">
+                  <td colSpan={7} className="py-12 text-center text-gray-400">
                     Belum ada pengguna terdaftar
                   </td>
                 </tr>
@@ -401,9 +399,6 @@ export default function Users() {
                         </div>
                       </td>
                       <td className="py-3.5 px-4 text-gray-500 text-[11px]">{row.email || '-'}</td>
-                      <td className="py-3.5 px-4 text-[11px] text-gray-500 whitespace-nowrap">
-                        {formatTanggal(row.createdAt)}
-                      </td>
                       <td className="py-3.5 px-4 text-center whitespace-nowrap">
                         {(bolehKelolaAkun || bolehAturRole) && (
                           <button
