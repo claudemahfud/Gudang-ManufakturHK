@@ -59,6 +59,7 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
       gramasi,
       varian,
       hargaBeli,
+      hargaBeliKarton,
       hargaJual,
       supplier,
       settingPcs,
@@ -93,6 +94,11 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
     if (hargaBeliBaru !== undefined && (!Number.isFinite(hargaBeliBaru) || hargaBeliBaru < 0)) {
       return NextResponse.json({ success: false, error: 'Harga beli tidak valid' }, { status: 400 });
     }
+    const hargaKartonBaru =
+      hargaBeliKarton !== undefined && canViewCostPrice(authResult.user) ? Number(hargaBeliKarton) : undefined;
+    if (hargaKartonBaru !== undefined && (!Number.isFinite(hargaKartonBaru) || hargaKartonBaru < 0)) {
+      return NextResponse.json({ success: false, error: 'Harga beli per karton tidak valid' }, { status: 400 });
+    }
 
     const [updated] = await db
       .update(inventory)
@@ -102,6 +108,7 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
         ...(gramasi !== undefined && { gramasi: gramasi?.trim() || null }),
         ...(varian !== undefined && { varian: varian?.trim() || null }),
         ...(hargaBeliBaru !== undefined && { hargaBeli: String(hargaBeliBaru) }),
+        ...(hargaKartonBaru !== undefined && { hargaBeliKarton: String(hargaKartonBaru) }),
         ...(hargaJualBaru !== undefined && { hargaJual: String(hargaJualBaru) }),
         ...(supplier !== undefined && { supplier: supplier?.trim() || null }),
         ...(settingPcs !== undefined && { settingPcs: Math.max(1, Number(settingPcs) || 1) }),
@@ -124,6 +131,7 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
     // HPP rahasia tidak dikirim ke role yang tidak berhak melihatnya
     if (!canViewCostPrice(authResult.user)) {
       updated.hargaBeli = null;
+      updated.hargaBeliKarton = '0';
     }
 
     return NextResponse.json({

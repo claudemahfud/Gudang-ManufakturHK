@@ -31,6 +31,7 @@ export const inventory = pgTable('inventory', {
   varian: varchar('varian', { length: 100 }),
   stok: integer('stok').notNull().default(0),
   hargaBeli: decimal('harga_beli', { precision: 15, scale: 2 }).default('0'), // Harga yang dibayar ke Supplier
+  hargaBeliKarton: decimal('harga_beli_karton', { precision: 15, scale: 2 }).notNull().default('0'), // Harga beli 1 karton dari Supplier (beda dari harga pcs)
   hargaJual: decimal('harga_jual', { precision: 15, scale: 2 }).default('0'), // Harga jual kembali ke Customer
   supplier: varchar('supplier', { length: 150 }), // Pemasok / Asal Barang
   settingPcs: integer('setting_pcs').notNull().default(1),

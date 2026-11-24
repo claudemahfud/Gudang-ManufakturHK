@@ -195,7 +195,7 @@ export default function MasterResep() {
               {!loading && tampil.length === 0 && (
                 <tr>
                   <td colSpan={8} className="px-4 py-10 text-center text-gray-500 text-sm">
-                    Belum ada produk F&B. Tambahkan produk jadi di Master Inventory (divisi F&B).
+                    Belum ada produk F&B. Tambahkan produk jadi di Master Barang (divisi F&B).
                   </td>
                 </tr>
               )}
