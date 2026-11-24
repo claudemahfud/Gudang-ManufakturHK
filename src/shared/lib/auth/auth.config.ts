@@ -14,7 +14,12 @@ export const authConfig = {
     error: '/login',
   },
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger, session }) {
+      // Nama tampilan diperbarui lewat update({ name }) setelah profil/nama akun berubah.
+      // Hanya nama tampilan; role & hak akses tetap dibaca dari DB di server (requireAuthRole).
+      if (trigger === 'update' && typeof session?.name === 'string' && session.name.trim()) {
+        token.name = session.name.trim().slice(0, 150);
+      }
       if (user) {
         token.username = (user as any).username;
         token.role = (user as any).role;

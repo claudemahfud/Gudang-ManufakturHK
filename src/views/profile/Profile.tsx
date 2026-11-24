@@ -128,7 +128,7 @@ export default function Profile() {
         setNewPassword('');
         setConfirmPassword('');
         fetchProfile();
-        if (update) update();
+        if (update) await update({ name: (json.data?.namaLengkap ?? namaLengkap).trim() });
       } else {
         showToast(json.message || 'Gagal menyimpan perubahan', 'error');
       }
