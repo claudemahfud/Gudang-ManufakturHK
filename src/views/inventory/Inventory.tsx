@@ -784,13 +784,21 @@ export default function Inventory() {
               </p>
             </div>
           ) : (
-            <ul className="divide-y divide-gray-100">
+            <ul className="space-y-3 bg-slate-100 p-3">
               {items.map((item) => {
-                const baris = kelasBarisStok(item.stok, item.stokMinimum);
                 const habis = item.stok <= 0;
                 const kritis = !habis && item.stok <= (item.stokMinimum ?? 10);
                 return (
-                  <li key={item.id} className={`px-4 py-4 ${baris.kelas.split(' ')[0] || ''}`}>
+                  <li
+                    key={item.id}
+                    className={`rounded-2xl border-2 border-l-[6px] px-4 py-4 shadow-[0_8px_20px_-8px_rgba(15,23,42,0.35)] ${
+                      habis
+                        ? 'border-red-500 bg-red-50'
+                        : kritis
+                          ? 'border-amber-500 bg-amber-50'
+                          : 'border-emerald-500 bg-white'
+                    }`}
+                  >
                     {/* Judul + aksi */}
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
