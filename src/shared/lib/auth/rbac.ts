@@ -163,7 +163,7 @@ export async function requireAuthRole(allowedRoles?: UserRole[]) {
   // Role dibaca ulang dari DB: role yang dicabut / akun yang dinonaktifkan langsung berlaku di API
   if (user.username) {
     const [segar] = await db
-      .select({ role: users.role, rolesTambahan: users.rolesTambahan, aktif: users.aktif })
+      .select({ role: users.role, rolesTambahan: users.rolesTambahan, aktif: users.aktif, namaLengkap: users.namaLengkap })
       .from(users)
       .where(eq(users.username, user.username))
       .limit(1);
@@ -179,6 +179,8 @@ export async function requireAuthRole(allowedRoles?: UserRole[]) {
       };
     }
     user.role = segar.role;
+    // Nama segar: log aktivitas tidak memakai nama lama yang tersimpan di token
+    user.name = segar.namaLengkap;
     user.roles = rolesOf({ role: segar.role, roles: segar.rolesTambahan });
   }
   const userRole = user.role as UserRole;

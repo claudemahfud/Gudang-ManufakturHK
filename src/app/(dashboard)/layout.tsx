@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useSyncExternalStore } from 'react';
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { usePathname } from 'next/navigation';
 import { SessionProvider } from 'next-auth/react';
 import Sidebar from '@/shared/components/layout/Sidebar';
@@ -45,7 +45,24 @@ function subscribeSidebarPref(onChange: () => void) {
 }
 
 function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
-  const { data: session } = useSession();
+  const { data: session, update } = useSession();
+  const namaSesi = session?.user?.name;
+  const adaSesi = Boolean(session);
+  const sudahCekNama = useRef(false);
+
+  // Nama di token bisa basi (diubah Administrator / dari perangkat lain): samakan dengan DB
+  useEffect(() => {
+    if (!adaSesi || sudahCekNama.current) return;
+    sudahCekNama.current = true;
+    fetch('/api/profile')
+      .then((r) => r.json())
+      .then((j) => {
+        const namaDb = j?.data?.namaLengkap;
+        if (j?.success && namaDb && namaDb !== namaSesi) update({ name: namaDb });
+      })
+      .catch(() => {});
+    // sekali per pemuatan halaman (dijaga ref)
+  }, [adaSesi, namaSesi, update]);
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   // Sidebar desktop bisa disembunyikan; pilihan diingat per perangkat
