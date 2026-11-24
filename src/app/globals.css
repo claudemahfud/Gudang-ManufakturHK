@@ -159,13 +159,49 @@ tbody tr {
   }
 }
 
+/* Kartu di dalam grid (statistik, ringkasan, pilihan) di semua halaman: terangkat tegas.
+   Kartu berisi tabel / form / grafik tidak ikut agar area kerja besar tidak bergeser. */
+.grid > :is(div, article, section, a, button, label)[class*="rounded-"][class*="border"]:not(:has(table, form, input, select, textarea, .recharts-wrapper)) {
+  transition:
+    translate 220ms var(--ease-out),
+    box-shadow 220ms var(--ease-out),
+    background-color 150ms ease,
+    border-color 150ms ease,
+    color 150ms ease,
+    scale 160ms var(--ease-out);
+}
+
+/* Tombol aksi utama (warna solid) naik sedikit saat hover */
+:is(button, a)[class*="rounded"]:is([class*="bg-emerald-6"], [class*="bg-emerald-7"], [class*="bg-gray-900"], [class*="bg-slate-900"], [class*="bg-blue-6"], [class*="bg-red-6"]):not(:disabled) {
+  transition:
+    translate 180ms var(--ease-out),
+    box-shadow 180ms var(--ease-out),
+    background-color 150ms ease,
+    color 150ms ease,
+    opacity 150ms ease,
+    scale 160ms var(--ease-out);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .grid > :is(div, article, section, a, button, label)[class*="rounded-"][class*="border"]:not(:has(table, form, input, select, textarea, .recharts-wrapper)):hover {
+    translate: 0 -6px;
+    box-shadow: 0 20px 36px -14px rgb(15 23 42 / 0.35);
+  }
+  :is(button, a)[class*="rounded"]:is([class*="bg-emerald-6"], [class*="bg-emerald-7"], [class*="bg-gray-900"], [class*="bg-slate-900"], [class*="bg-blue-6"], [class*="bg-red-6"]):not(:disabled):hover {
+    translate: 0 -3px;
+    box-shadow: 0 12px 22px -10px rgb(15 23 42 / 0.4);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   /* Tetap fade (membantu pemahaman), tanpa perpindahan posisi / skala */
   .animate-in {
     animation-name: enter-fade;
   }
   .hover-lift:hover,
-  tbody tr:hover {
+  tbody tr:hover,
+  .grid > :is(div, article, section, a, button, label)[class*="rounded-"][class*="border"]:not(:has(table, form, input, select, textarea, .recharts-wrapper)):hover,
+  :is(button, a)[class*="rounded"]:is([class*="bg-emerald-6"], [class*="bg-emerald-7"], [class*="bg-gray-900"], [class*="bg-slate-900"], [class*="bg-blue-6"], [class*="bg-red-6"]):not(:disabled):hover {
     translate: none;
   }
   button:not(:disabled):active {
