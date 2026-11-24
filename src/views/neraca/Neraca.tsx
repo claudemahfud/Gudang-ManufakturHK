@@ -157,13 +157,13 @@ export default function NeracaView() {
       {/* Grid Detail Neraca: Aset vs Kewajiban & Ekuitas */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Kolom Kiri: ASET */}
-        <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm space-y-4">
-          <div className="flex items-center justify-between pb-3 border-b border-gray-100">
+        <div className="bg-white rounded-2xl border border-gray-200 p-4 sm:p-6 shadow-sm space-y-4">
+          <div className="flex items-center justify-between gap-3 pb-3 border-b border-gray-100">
             <div className="flex items-center gap-2">
               <div className="w-2.5 h-2.5 rounded-full bg-blue-600" />
               <h2 className="font-bold text-gray-900 text-sm">ASET (AKTIVA)</h2>
             </div>
-            <span className="text-xs font-mono font-bold text-gray-900">
+            <span className="text-xs font-mono font-bold text-gray-900 whitespace-nowrap shrink-0">
               {formatRp(data?.aset?.totalAset || 0)}
             </span>
           </div>
@@ -174,59 +174,59 @@ export default function NeracaView() {
             </div>
 
             {/* Saldo Kas & Bank */}
-            <div className="flex items-center justify-between p-3 rounded-xl bg-gray-50 border border-gray-100">
-              <div className="flex items-center gap-3">
+            <div className="flex items-center justify-between gap-3 p-3 rounded-xl bg-gray-50 border border-gray-100">
+              <div className="flex items-center gap-3 min-w-0">
                 <Wallet className="w-4 h-4 text-gray-500" />
                 <div>
                   <div className="text-xs font-bold text-gray-800">Kas & Setara Kas (Bank)</div>
                   <div className="text-[11px] text-gray-400">Total likuiditas di kasir & rekening operasional</div>
                 </div>
               </div>
-              <span className="text-xs font-mono font-bold text-gray-900">
+              <span className="text-xs font-mono font-bold text-gray-900 whitespace-nowrap shrink-0">
                 {formatRp(data?.aset?.kasBank || 0)}
               </span>
             </div>
 
             {/* Piutang Usaha (Faktur Penjualan belum lunas) */}
-            <div className="flex items-center justify-between p-3 rounded-xl bg-gray-50 border border-gray-100">
-              <div className="flex items-center gap-3">
+            <div className="flex items-center justify-between gap-3 p-3 rounded-xl bg-gray-50 border border-gray-100">
+              <div className="flex items-center gap-3 min-w-0">
                 <HandCoins className="w-4 h-4 text-gray-500" />
                 <div>
                   <div className="text-xs font-bold text-gray-800">Piutang Usaha</div>
                   <div className="text-[11px] text-gray-400">Sisa tagihan faktur penjualan ke pelanggan</div>
                 </div>
               </div>
-              <span className="text-xs font-mono font-bold text-gray-900">
+              <span className="text-xs font-mono font-bold text-gray-900 whitespace-nowrap shrink-0">
                 {formatRp(data?.aset?.piutangUsaha || 0)}
               </span>
             </div>
 
             {/* Persediaan Stok Gudang */}
             <div className="p-3 rounded-xl bg-gray-50 border border-gray-100 space-y-2">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3 min-w-0">
                   <Package className="w-4 h-4 text-gray-500" />
                   <div>
                     <div className="text-xs font-bold text-gray-800">Persediaan Barang Dagang & Bahan Baku</div>
                     <div className="text-[11px] text-gray-400">Nilai modal HPP barang aktif di gudang</div>
                   </div>
                 </div>
-                <span className="text-xs font-mono font-bold text-gray-900">
+                <span className="text-xs font-mono font-bold text-gray-900 whitespace-nowrap shrink-0">
                   {formatRp(data?.aset?.persediaan || 0)}
                 </span>
               </div>
 
               {divisi === 'SEMUA' && data?.aset?.persediaanBreakdown && (
-                <div className="mt-2 pt-2 border-t border-gray-200/60 grid grid-cols-2 gap-2 text-[11px]">
-                  <div className="flex justify-between px-2 py-1 bg-white rounded-lg border border-gray-200/60">
+                <div className="mt-2 pt-2 border-t border-gray-200/60 grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px]">
+                  <div className="flex justify-between gap-2 px-2.5 py-1.5 bg-white rounded-lg border border-gray-200/60">
                     <span className="text-gray-500">Stok Manufaktur:</span>
-                    <span className="font-mono font-semibold text-gray-800">
+                    <span className="font-mono font-semibold text-gray-800 whitespace-nowrap shrink-0">
                       {formatRp(data.aset.persediaanBreakdown.manufaktur)}
                     </span>
                   </div>
-                  <div className="flex justify-between px-2 py-1 bg-white rounded-lg border border-gray-200/60">
+                  <div className="flex justify-between gap-2 px-2.5 py-1.5 bg-white rounded-lg border border-gray-200/60">
                     <span className="text-gray-500">Stok Bahan F&B:</span>
-                    <span className="font-mono font-semibold text-gray-800">
+                    <span className="font-mono font-semibold text-gray-800 whitespace-nowrap shrink-0">
                       {formatRp(data.aset.persediaanBreakdown.fnb)}
                     </span>
                   </div>
@@ -236,31 +236,31 @@ export default function NeracaView() {
 
             <div className="pt-2 border-t border-gray-100 flex justify-between items-center text-xs font-bold text-gray-900">
               <span>Total Aset Lancar</span>
-              <span className="font-mono">{formatRp(data?.aset?.totalAsetLancar || 0)}</span>
+              <span className="font-mono whitespace-nowrap shrink-0">{formatRp(data?.aset?.totalAsetLancar || 0)}</span>
             </div>
           </div>
         </div>
 
         {/* Kolom Kanan: KEWAJIBAN & EKUITAS */}
-        <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm space-y-6">
+        <div className="bg-white rounded-2xl border border-gray-200 p-4 sm:p-6 shadow-sm space-y-6">
           {/* KEWAJIBAN */}
           <div className="space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-gray-100">
+            <div className="flex items-center justify-between gap-3 pb-3 border-b border-gray-100">
               <div className="flex items-center gap-2">
                 <div className="w-2.5 h-2.5 rounded-full bg-amber-500" />
                 <h2 className="font-bold text-gray-900 text-sm">KEWAJIBAN (LIABILITAS)</h2>
               </div>
-              <span className="text-xs font-mono font-bold text-gray-900">
+              <span className="text-xs font-mono font-bold text-gray-900 whitespace-nowrap shrink-0">
                 {formatRp(data?.kewajiban?.totalKewajiban || 0)}
               </span>
             </div>
 
-            <div className="flex items-center justify-between p-3 rounded-xl bg-gray-50 border border-gray-100">
+            <div className="flex items-center justify-between gap-3 p-3 rounded-xl bg-gray-50 border border-gray-100">
               <div>
                 <div className="text-xs font-bold text-gray-800">Hutang Usaha & Supplier</div>
                 <div className="text-[11px] text-gray-400">Kewajiban tempo pengadaan bahan mentah & logistik</div>
               </div>
-              <span className="text-xs font-mono font-bold text-amber-700">
+              <span className="text-xs font-mono font-bold text-amber-700 whitespace-nowrap shrink-0">
                 {formatRp(data?.kewajiban?.hutangUsaha || 0)}
               </span>
             </div>
@@ -268,29 +268,29 @@ export default function NeracaView() {
 
           {/* EKUITAS */}
           <div className="space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-gray-100">
+            <div className="flex items-center justify-between gap-3 pb-3 border-b border-gray-100">
               <div className="flex items-center gap-2">
                 <div className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
                 <h2 className="font-bold text-gray-900 text-sm">EKUITAS BERSIH</h2>
               </div>
-              <span className="text-xs font-mono font-bold text-emerald-700">
+              <span className="text-xs font-mono font-bold text-emerald-700 whitespace-nowrap shrink-0">
                 {formatRp(data?.ekuitas?.totalEkuitas || 0)}
               </span>
             </div>
 
-            <div className="flex items-center justify-between p-3 rounded-xl bg-emerald-50/50 border border-emerald-100">
+            <div className="flex items-center justify-between gap-3 p-3 rounded-xl bg-emerald-50/50 border border-emerald-100">
               <div>
                 <div className="text-xs font-bold text-emerald-950">Modal Disetor & Laba Ditahan</div>
                 <div className="text-[11px] text-emerald-700">Kekayaan bersih konsolidasi perusahaan</div>
               </div>
-              <span className="text-xs font-mono font-bold text-emerald-800">
+              <span className="text-xs font-mono font-bold text-emerald-800 whitespace-nowrap shrink-0">
                 {formatRp(data?.ekuitas?.modalDanLaba || 0)}
               </span>
             </div>
 
             <div className="pt-2 border-t border-gray-100 flex justify-between items-center text-xs font-bold text-gray-900">
               <span>Total Kewajiban + Ekuitas</span>
-              <span className="font-mono">
+              <span className="font-mono whitespace-nowrap shrink-0">
                 {formatRp((data?.kewajiban?.totalKewajiban || 0) + (data?.ekuitas?.totalEkuitas || 0))}
               </span>
             </div>
