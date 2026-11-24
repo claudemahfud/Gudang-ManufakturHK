@@ -13,8 +13,8 @@ import {
 import { BusinessError, incrementStock, normalizeSku, parsePositiveInt } from '@/shared/lib/stock';
 import { batalkanFakturPenjualan, buatFakturPenjualan } from '@/shared/lib/faktur-penjualan';
 import { DAPUR_PUSAT } from '@/shared/lib/dapur-pusat';
-import { generateTrxId } from '@/shared/lib/utils';
 import { roleUtamaDi } from '@/shared/lib/auth/roles';
+import { nomorUrut } from '@/shared/lib/nomor-urut';
 
 // ============================================================
 // Order Franchise -> Dapur Pusat.
@@ -111,7 +111,7 @@ export async function buatOrder(
   const [order] = await tx
     .insert(orderFranchise)
     .values({
-      noOrder: generateTrxId('OF'),
+      noOrder: await nomorUrut(tx, 'OF'),
       tanggal: new Date(),
       franchise: o.franchise,
       status: 'diajukan',
@@ -162,7 +162,7 @@ export async function kirimOrder(tx: Tx, id: string, u: Pelaku, tempoHari = TEMP
 
   const tanggal = new Date();
   const hari = Number.isInteger(tempoHari) && tempoHari >= 0 && tempoHari <= 365 ? tempoHari : TEMPO_DEFAULT_HARI;
-  const noFaktur = generateTrxId('FJ');
+  const noFaktur = await nomorUrut(tx, 'FJ');
   await buatFakturPenjualan(tx, {
     noFaktur,
     tanggal,
