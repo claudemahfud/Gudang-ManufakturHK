@@ -1,19 +1,19 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/shared/lib/db';
 import { users, logs } from '@/shared/lib/db/schema';
-import { auth } from '@/shared/lib/auth/config';
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { hashPassword } from '@/shared/lib/auth/password';
+import { requireAuthRole } from '@/shared/lib/auth/rbac';
 
 export async function PUT(
   req: Request,
   { params }: { params: Promise<{ username: string }> }
 ) {
   try {
-    const session = await auth();
-    if (!session || (session.user as any)?.role !== 'Administrator') {
-      return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 403 });
-    }
+    // Administrator sebagai role utama atau role tambahan (dibaca segar dari DB)
+    const authResult = await requireAuthRole(['Administrator']);
+    if (!authResult.authorized) return authResult.response;
+    const session = { user: authResult.user };
 
     const { username } = await params;
     const body = await req.json();
@@ -22,6 +22,8 @@ export async function PUT(
     const updateData: any = {
       namaLengkap,
       role,
+      // Role utama yang baru tidak perlu tercatat lagi sebagai role tambahan
+      ...(role ? { rolesTambahan: sql`array_remove(${users.rolesTambahan}, ${String(role)})` } : {}),
       email: email || null,
       aktif: typeof aktif === 'boolean' ? aktif : true,
       updatedAt: new Date(),
@@ -62,10 +64,10 @@ export async function DELETE(
   { params }: { params: Promise<{ username: string }> }
 ) {
   try {
-    const session = await auth();
-    if (!session || (session.user as any)?.role !== 'Administrator') {
-      return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 403 });
-    }
+    // Administrator sebagai role utama atau role tambahan (dibaca segar dari DB)
+    const authResult = await requireAuthRole(['Administrator']);
+    if (!authResult.authorized) return authResult.response;
+    const session = { user: authResult.user };
 
     const { username } = await params;
 

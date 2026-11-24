@@ -3,6 +3,7 @@ import { db } from '@/shared/lib/db';
 import { barangKeluar, inventory } from '@/shared/lib/db/schema';
 import { requireAuthRole, ROLES_PROFIT_MARGIN } from '@/shared/lib/auth/rbac';
 import { desc, and, gte, lte, eq, sql } from 'drizzle-orm';
+import { roleUtamaDi } from '@/shared/lib/auth/roles';
 
 // ============================================================
 // API: /api/laporan/penjualan
@@ -71,7 +72,7 @@ export async function GET(req: Request) {
 
     // Isolasi Cabang: Karyawan cabang hanya dapat melihat transaksi di cabangnya
     const userCabang = (authResult.user as any)?.cabang || 'Pusat';
-    const isExecutive = ['Administrator', 'Direktur Utama', 'Manager', 'Manager Umum', 'Finance & Accounting'].includes(authResult.userRole);
+    const isExecutive = roleUtamaDi(authResult.user, ['Administrator', 'Direktur Utama', 'Manager', 'Manager Umum', 'Finance & Accounting']);
     let effectiveCabang: string | null = null;
     if (!isExecutive && userCabang !== 'ALL' && userCabang !== 'Pusat') {
       effectiveCabang = userCabang;

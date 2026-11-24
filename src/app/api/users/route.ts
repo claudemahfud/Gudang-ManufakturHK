@@ -1,9 +1,10 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/shared/lib/db';
 import { users, logs } from '@/shared/lib/db/schema';
-import { auth } from '@/shared/lib/auth/config';
 import { desc, eq } from 'drizzle-orm';
 import { hashPassword } from '@/shared/lib/auth/password';
+import { requireAuthRole } from '@/shared/lib/auth/rbac';
+import { PENENTU_MULTI_ROLE } from '@/shared/lib/auth/roles';
 
 // ============================================================
 // API: /api/users
@@ -12,10 +13,9 @@ import { hashPassword } from '@/shared/lib/auth/password';
 
 export async function GET() {
   try {
-    const session = await auth();
-    if (!session || (session.user as any)?.role !== 'Administrator') {
-      return NextResponse.json({ success: false, message: 'Hanya Administrator yang berhak' }, { status: 403 });
-    }
+    // Direktur Utama ikut melihat daftar untuk menetapkan role tambahan (multi-role)
+    const authResult = await requireAuthRole(['Administrator', PENENTU_MULTI_ROLE]);
+    if (!authResult.authorized) return authResult.response;
 
     const list = await db
       .select({
@@ -23,6 +23,7 @@ export async function GET() {
         username: users.username,
         namaLengkap: users.namaLengkap,
         role: users.role,
+        rolesTambahan: users.rolesTambahan,
         email: users.email,
         aktif: users.aktif,
         divisiAssigned: users.divisiAssigned,
@@ -40,10 +41,10 @@ export async function GET() {
 
 export async function POST(req: Request) {
   try {
-    const session = await auth();
-    if (!session || (session.user as any)?.role !== 'Administrator') {
-      return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 403 });
-    }
+    // Administrator sebagai role utama atau role tambahan (dibaca segar dari DB)
+    const authResult = await requireAuthRole(['Administrator']);
+    if (!authResult.authorized) return authResult.response;
+    const session = { user: authResult.user };
 
     const body = await req.json();
     const { username, namaLengkap, role, email, password } = body;

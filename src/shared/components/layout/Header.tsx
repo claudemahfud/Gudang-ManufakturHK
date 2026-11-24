@@ -22,6 +22,7 @@ import {
 import { useDivision } from '@/shared/context/DivisionContext';
 import { ROUTES } from '@/router/routes';
 import CreativeMegaMenu from './CreativeMegaMenu';
+import { labelRole, rolesOf } from '@/shared/lib/auth/roles';
 
 // ============================================================
 // SHARED COMPONENT: Header
@@ -187,7 +188,7 @@ export default function Header({ onMenuClick, title }: HeaderProps) {
           <div className="hidden sm:block text-left">
             {/* Dual Line: Name & Role */}
             <div className="text-xs font-bold text-slate-900 leading-tight">{user?.name}</div>
-            <div className="text-[11px] text-slate-600 font-medium leading-none mt-0.5">{user?.role}</div>
+            <div className="text-[11px] text-slate-600 font-medium leading-none mt-0.5">{labelRole(user)}</div>
           </div>
           <ChevronDown className="w-3.5 h-3.5 text-slate-500" />
         </button>
@@ -198,7 +199,9 @@ export default function Header({ onMenuClick, title }: HeaderProps) {
             {/* 1. Header Profile (Triple Line: Nama, Role, Mode) */}
             <div className="px-4 py-3 border-b border-gray-100 space-y-0.5">
               <div className="text-xs font-extrabold text-slate-950 leading-tight">{user?.name}</div>
-              <div className="text-[11px] font-semibold text-slate-600 leading-none">{user?.role}</div>
+              <div className="text-[11px] font-semibold text-slate-600 leading-none" title={rolesOf(user).join(', ')}>
+                {rolesOf(user).join(' · ')}
+              </div>
               <div className="text-[11px] text-slate-500 pt-0.5">
                 Mode: <strong className="text-slate-900">{isManufaktur ? 'Manufaktur' : 'Food & Beverages'}</strong>
               </div>
@@ -286,7 +289,7 @@ export default function Header({ onMenuClick, title }: HeaderProps) {
       <CreativeMegaMenu
         isOpen={showMegaMenu}
         onClose={() => setShowMegaMenu(false)}
-        userRole={user?.role}
+        userRoles={rolesOf(user)}
       />
     </header>
   );

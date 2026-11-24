@@ -43,15 +43,15 @@ import {
 } from 'lucide-react';
 import { ROUTES } from '@/router/routes';
 import { useDivision } from '@/shared/context/DivisionContext';
-import type { UserRole } from '@/shared/types';
 
 interface MegaMenuProps {
-  userRole?: UserRole;
+  userRoles?: string[];
   isOpen: boolean;
   onClose: () => void;
 }
 
-export default function CreativeMegaMenu({ userRole, isOpen, onClose }: MegaMenuProps) {
+export default function CreativeMegaMenu({ userRoles = [], isOpen, onClose }: MegaMenuProps) {
+  const ada = (daftar: string[]) => daftar.some((r) => userRoles.includes(r));
   const router = useRouter();
   const { division, isManufaktur, isFnb, cabang } = useDivision();
   const menuRef = useRef<HTMLDivElement>(null);
@@ -127,7 +127,7 @@ export default function CreativeMegaMenu({ userRole, isOpen, onClose }: MegaMenu
             href: ROUTES.KALKULATOR_HPP,
             icon: ChefHat,
             fnbOnly: true,
-            restricted: !['Administrator', 'Manager', 'Manager Umum', 'Direktur Utama', 'Kepala Gudang'].includes(userRole || ''),
+            restricted: !ada(['Administrator', 'Manager', 'Manager Umum', 'Direktur Utama', 'Kepala Gudang']),
           },
           {
             title: 'Produksi Dapur',
@@ -135,7 +135,7 @@ export default function CreativeMegaMenu({ userRole, isOpen, onClose }: MegaMenu
             href: ROUTES.PRODUKSI_DAPUR,
             icon: CookingPot,
             fnbOnly: true,
-            restricted: !['Administrator', 'Manager', 'Manager Umum', 'Direktur Utama', 'Kepala Gudang'].includes(userRole || ''),
+            restricted: !ada(['Administrator', 'Manager', 'Manager Umum', 'Direktur Utama', 'Kepala Gudang']),
           },
           {
             title: 'Order Franchise',
@@ -150,7 +150,7 @@ export default function CreativeMegaMenu({ userRole, isOpen, onClose }: MegaMenu
             href: ROUTES.MONITOR_FRANCHISE,
             icon: MonitorDot,
             fnbOnly: true,
-            restricted: !['Administrator', 'Manager', 'Manager Umum', 'Direktur Utama', 'Finance & Accounting'].includes(userRole || ''),
+            restricted: !ada(['Administrator', 'Manager', 'Manager Umum', 'Direktur Utama', 'Finance & Accounting']),
           },
         ]
       : []),
@@ -181,7 +181,7 @@ export default function CreativeMegaMenu({ userRole, isOpen, onClose }: MegaMenu
       desc: 'Analisis omzet, margin & tren sales',
       href: ROUTES.LAPORAN_PENJUALAN,
       icon: TrendingUp,
-      restricted: !['Administrator', 'Manager', 'Manager Umum', 'Direktur Utama', 'Finance & Accounting'].includes(userRole || ''),
+      restricted: !ada(['Administrator', 'Manager', 'Manager Umum', 'Direktur Utama', 'Finance & Accounting']),
     },
     {
       title: 'Produk Detil Terjual',
@@ -240,28 +240,28 @@ export default function CreativeMegaMenu({ userRole, isOpen, onClose }: MegaMenu
       desc: 'Pencatatan kas masuk dan kas keluar',
       href: ROUTES.KEUANGAN,
       icon: Wallet,
-      restricted: !['Administrator', 'Manager', 'Manager Umum', 'Direktur Utama', 'Finance & Accounting'].includes(userRole || ''),
+      restricted: !ada(['Administrator', 'Manager', 'Manager Umum', 'Direktur Utama', 'Finance & Accounting']),
     },
     {
       title: 'Piutang Pelanggan',
       desc: 'Tagihan faktur, cicilan & jatuh tempo',
       href: ROUTES.PIUTANG,
       icon: HandCoins,
-      restricted: !['Administrator', 'Manager', 'Manager Umum', 'Direktur Utama', 'Finance & Accounting'].includes(userRole || ''),
+      restricted: !ada(['Administrator', 'Manager', 'Manager Umum', 'Direktur Utama', 'Finance & Accounting']),
     },
     {
       title: 'Neraca Keuangan',
       desc: 'Laporan aset, kewajiban & ekuitas',
       href: ROUTES.NERACA,
       icon: Scale,
-      restricted: !['Administrator', 'Manager', 'Manager Umum', 'Direktur Utama', 'Finance & Accounting'].includes(userRole || ''),
+      restricted: !ada(['Administrator', 'Manager', 'Manager Umum', 'Direktur Utama', 'Finance & Accounting']),
     },
     {
       title: 'Biaya Operasional',
       desc: 'Beban operasional harian & bulanan',
       href: ROUTES.BIAYA_OPERASIONAL,
       icon: Receipt,
-      restricted: !['Administrator', 'Manager', 'Manager Umum', 'Direktur Utama', 'Finance & Accounting'].includes(userRole || ''),
+      restricted: !ada(['Administrator', 'Manager', 'Manager Umum', 'Direktur Utama', 'Finance & Accounting']),
     },
     {
       title: 'Setting Profil Akun',
@@ -274,14 +274,14 @@ export default function CreativeMegaMenu({ userRole, isOpen, onClose }: MegaMenu
       desc: 'Isolasi data & penempatan lokasi cabang',
       href: ROUTES.CABANG,
       icon: Building2,
-      restricted: !['Administrator', 'Manager', 'Manager Umum', 'Direktur Utama'].includes(userRole || ''),
+      restricted: !ada(['Administrator', 'Manager', 'Manager Umum', 'Direktur Utama']),
     },
     {
       title: 'Manajemen Pengguna',
       desc: 'Hak akses RBAC & proteksi akun bawahan',
       href: ROUTES.USERS,
       icon: Users,
-      restricted: userRole !== 'Administrator',
+      restricted: !ada(['Administrator', 'Direktur Utama']),
     },
   ];
 

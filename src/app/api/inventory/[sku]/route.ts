@@ -10,6 +10,7 @@ import {
   ROLES_STOCK_ADJUST,
   ROLES_WAREHOUSE,
 } from '@/shared/lib/auth/rbac';
+import { punyaRole } from '@/shared/lib/auth/roles';
 
 // ============================================================
 // API ROUTE: Detail Item Inventory (Update & Delete)
@@ -26,7 +27,6 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
   try {
     const authResult = await requireAuthRole(ROLES_WAREHOUSE);
     if (!authResult.authorized) return authResult.response;
-    const userRole = authResult.userRole;
     const actor = authResult.user?.name || authResult.user?.username || 'System';
 
     const { sku } = await params;
@@ -81,7 +81,7 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ success: false, error: 'Harga jual tidak valid' }, { status: 400 });
     }
     const hargaJualBerubah = hargaJualBaru !== undefined && hargaJualBaru !== Number(existing.hargaJual ?? 0);
-    if (hargaJualBerubah && !ROLES_STOCK_ADJUST.includes(userRole)) {
+    if (hargaJualBerubah && !punyaRole(authResult.user, ROLES_STOCK_ADJUST)) {
       return NextResponse.json(
         { success: false, error: 'Perubahan harga jual hanya untuk pimpinan / Kepala Gudang.' },
         { status: 403 }
@@ -89,7 +89,7 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
     }
 
     // --- Harga beli / HPP: hanya role yang boleh melihat HPP; lainnya diabaikan ---
-    const hargaBeliBaru = hargaBeli !== undefined && canViewCostPrice(userRole) ? Number(hargaBeli) : undefined;
+    const hargaBeliBaru = hargaBeli !== undefined && canViewCostPrice(authResult.user) ? Number(hargaBeli) : undefined;
     if (hargaBeliBaru !== undefined && (!Number.isFinite(hargaBeliBaru) || hargaBeliBaru < 0)) {
       return NextResponse.json({ success: false, error: 'Harga beli tidak valid' }, { status: 400 });
     }
@@ -122,7 +122,7 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
     }
 
     // HPP rahasia tidak dikirim ke role yang tidak berhak melihatnya
-    if (!canViewCostPrice(userRole)) {
+    if (!canViewCostPrice(authResult.user)) {
       updated.hargaBeli = null;
     }
 

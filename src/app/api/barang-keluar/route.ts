@@ -8,6 +8,7 @@ import { buatFakturPenjualan, type BarisInput } from '@/shared/lib/faktur-penjua
 import type { MetodeBayar } from '@/shared/lib/faktur-hitung';
 import { generateTrxId } from '@/shared/lib/utils';
 import { eq, desc, and, gte, lte } from 'drizzle-orm';
+import { roleUtamaDi } from '@/shared/lib/auth/roles';
 
 // ============================================================
 // API: /api/barang-keluar
@@ -29,9 +30,8 @@ export async function GET(req: Request) {
     const channel = searchParams.get('channel');
 
     const user = session.user as any;
-    const userRole = user?.role;
     const userCabang = user?.cabang || 'Pusat';
-    const isExecutive = ['Administrator', 'Direktur Utama', 'Manager', 'Manager Umum'].includes(userRole);
+    const isExecutive = roleUtamaDi(user, ['Administrator', 'Direktur Utama', 'Manager', 'Manager Umum']);
 
     let conditions: any[] = [];
 
@@ -102,7 +102,7 @@ export async function POST(req: Request) {
   try {
     const authResult = await requireAuthRole(ROLES_STOCK_OUT);
     if (!authResult.authorized) return authResult.response;
-    const sessionUser = authResult.user as { name?: string; username?: string; role?: string; cabang?: string };
+    const sessionUser = authResult.user as { name?: string; username?: string; role?: string; roles?: string[]; cabang?: string };
 
     const body = await req.json();
     const { items } = body;
@@ -130,7 +130,7 @@ export async function POST(req: Request) {
     };
 
     const user = sessionUser?.name || sessionUser?.username || 'System';
-    const isExecutive = ['Administrator', 'Direktur Utama', 'Manager', 'Manager Umum'].includes(sessionUser?.role ?? '');
+    const isExecutive = roleUtamaDi(sessionUser, ['Administrator', 'Direktur Utama', 'Manager', 'Manager Umum']);
     const userCabang = sessionUser?.cabang || 'Pusat';
     const cabangToSave = (!isExecutive && userCabang !== 'ALL' && userCabang !== 'Pusat')
       ? userCabang

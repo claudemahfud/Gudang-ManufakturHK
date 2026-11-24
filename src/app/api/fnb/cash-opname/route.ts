@@ -3,6 +3,7 @@ import { db } from '@/shared/lib/db';
 import { cashOpname, logs } from '@/shared/lib/db/schema';
 import { requireAuthRole, ROLES_POS } from '@/shared/lib/auth/rbac';
 import { desc } from 'drizzle-orm';
+import { roleUtamaDi } from '@/shared/lib/auth/roles';
 
 // ============================================================
 // API: /api/fnb/cash-opname
@@ -15,8 +16,8 @@ export async function GET() {
     const authResult = await requireAuthRole(ROLES_POS);
     if (!authResult.authorized) return authResult.response;
 
-    const { user, userRole } = authResult;
-    const isExecutive = ['Administrator', 'Direktur Utama', 'Manager', 'Manager Umum'].includes(userRole);
+    const { user } = authResult;
+    const isExecutive = roleUtamaDi(user, ['Administrator', 'Direktur Utama', 'Manager', 'Manager Umum']);
 
     let list = await db.select().from(cashOpname).orderBy(desc(cashOpname.tanggal)).limit(100);
 
