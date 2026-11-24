@@ -11,6 +11,7 @@ import { HeartPulse } from 'lucide-react';
 import { rolesOf } from '@/shared/lib/auth/roles';
 import { usePintasanSinkron } from '@/shared/lib/pintasan-sinkron';
 import { useLabelTabelHp } from '@/shared/lib/label-tabel';
+import { useGesekSidebar } from '@/shared/lib/gesek-sidebar';
 
 // ============================================================
 // LAYOUT: Dashboard (semua halaman authenticated)
@@ -74,6 +75,9 @@ function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
   // Sidebar desktop bisa disembunyikan; pilihan diingat per perangkat
   const desktopSidebarOpen = useSyncExternalStore(subscribeSidebarPref, readSidebarPref, () => true);
   const userRoles = rolesOf(session?.user as { role?: string; roles?: string[] } | undefined);
+
+  // HP/tablet: geser kanan = buka sidebar, geser kiri = tutup (lihat gesek-sidebar.ts)
+  useGesekSidebar(sidebarOpen, setSidebarOpen);
 
   const toggleSidebar = () => {
     if (window.matchMedia('(min-width: 1024px)').matches) {
