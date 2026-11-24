@@ -32,6 +32,7 @@ import { formatRupiah } from '@/shared/lib/utils';
 import { useDivision } from '@/shared/context/DivisionContext';
 import DateTimeFilterBar from '@/shared/components/ui/DateTimeFilterBar';
 import { AksiHeader, GrupIkon, TombolIkon } from '@/shared/components/ui/AksiHeader';
+import MemuatProgres from '@/shared/components/ui/MemuatProgres';
 
 interface ProductRow {
   sku: string;
@@ -304,7 +305,7 @@ export default function ProdukTerjualView() {
               {loading ? (
                 <tr>
                   <td colSpan={8} className="py-12 text-center text-gray-400">
-                    Memuat data rekap produk...
+                    <MemuatProgres teks="Memuat data rekap produk..." />
                   </td>
                 </tr>
               ) : filteredData.length === 0 ? (

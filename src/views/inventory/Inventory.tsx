@@ -13,6 +13,7 @@ import { Factory, Coffee, Download, Trash2, AlertCircle, Sparkles, Info, Plus } 
 import { exportToCsv } from '@/shared/lib/export';
 import { ToastFloater, ToastData } from '@/shared/components/ui/ToastFloater';
 import { AksiHeader, GrupIkon, TombolIkon, TombolUtama } from '@/shared/components/ui/AksiHeader';
+import MemuatProgres from '@/shared/components/ui/MemuatProgres';
 
 // ============================================================
 // SECTION: Interfaces & Initial State
@@ -643,9 +644,8 @@ export default function Inventory() {
                 <tr>
                   <td colSpan={7} className="py-16 text-center">
                     <div className="flex flex-col items-center justify-center gap-2">
-                      <div className="w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin" />
                       <span className="text-xs font-medium text-gray-500">
-                        Memuat data inventory...
+                        <MemuatProgres teks="Memuat data inventory..." />
                       </span>
                     </div>
                   </td>

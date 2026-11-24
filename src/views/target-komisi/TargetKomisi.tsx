@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { formatRupiah } from '@/shared/lib/utils';
+import MemuatProgres from '@/shared/components/ui/MemuatProgres';
 
 // ============================================================
 // PAGE: Target & Komisi Salesman
@@ -153,7 +154,7 @@ export default function TargetKomisi() {
               {loading ? (
                 <tr>
                   <td colSpan={7} className="py-12 text-center text-gray-400">
-                    Memuat target...
+                    <MemuatProgres teks="Memuat target..." />
                   </td>
                 </tr>
               ) : data.length === 0 ? (

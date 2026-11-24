@@ -8,6 +8,7 @@ import { exportToCsv, exportRekapToPdfA4Landscape } from '@/shared/lib/exportDoc
 import DateTimeFilterBar from '@/shared/components/ui/DateTimeFilterBar';
 import { useDivision } from '@/shared/context/DivisionContext';
 import { AksiHeader, GrupIkon, TombolIkon, TombolUtama } from '@/shared/components/ui/AksiHeader';
+import MemuatProgres from '@/shared/components/ui/MemuatProgres';
 
 // ============================================================
 // PAGE: Mutasi Barang
@@ -372,7 +373,7 @@ export default function MutasiBarang() {
               {loading ? (
                 <tr>
                   <td colSpan={8} className="py-12 text-center text-gray-400">
-                    Memuat data...
+                    <MemuatProgres teks="Memuat data..." />
                   </td>
                 </tr>
               ) : filteredData.length === 0 ? (

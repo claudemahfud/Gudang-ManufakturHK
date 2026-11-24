@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { formatTanggal, formatRupiah } from '@/shared/lib/utils';
+import MemuatProgres from '@/shared/components/ui/MemuatProgres';
 
 // ============================================================
 // PAGE: Biaya Operasional
@@ -164,7 +165,7 @@ export default function BiayaOperasional() {
               {loading ? (
                 <tr>
                   <td colSpan={6} className="py-12 text-center text-gray-400">
-                    Memuat data biaya...
+                    <MemuatProgres teks="Memuat data biaya..." />
                   </td>
                 </tr>
               ) : data.length === 0 ? (
