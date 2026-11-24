@@ -13,6 +13,7 @@ export const users = pgTable('users', {
   email: varchar('email', { length: 100 }),
   passwordHash: text('password_hash').notNull(),
   foto: text('foto'), // data URL 256px (migrasi 013)
+  pinResetHash: text('pin_reset_hash'), // PIN Reset Total Superuser, scrypt (migrasi 014); jangan pernah dikirim ke browser
   aktif: boolean('aktif').notNull().default(true),
   divisiAssigned: varchar('divisi_assigned', { length: 30 }).notNull().default('ALL'), // 'ALL' (Pimpinan) | 'MANUFAKTUR' | 'FNB' (Bawahan)
   cabang: varchar('cabang', { length: 50 }).notNull().default('Pusat'),

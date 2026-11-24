@@ -15,7 +15,7 @@ const PUBLIC_ROUTES = [ROUTES.LOGIN, ROUTES.FORGOT_PASSWORD, '/api/public'];
 const ROUTE_ROLES: Record<string, string[]> = {
   // Page routes
   [ROUTES.USERS]: ['Administrator', 'Direktur Utama'], // Direktur: atur multi-role (API dijaga terpisah)
-  [ROUTES.PENGATURAN_PERUSAHAAN]: ['Direktur Utama'],
+  [ROUTES.PENGATURAN_PERUSAHAAN]: ['Direktur Utama', 'Administrator'], // Administrator: hanya Zona Bahaya (Reset Total)
   [ROUTES.LOGS]: ['Administrator', 'Manager', 'Manager Umum', 'Direktur Utama'],
   [ROUTES.KEUANGAN]: ['Administrator', 'Manager', 'Manager Umum', 'Direktur Utama', 'Kepala Gudang', 'Finance & Accounting'],
   [ROUTES.BIAYA_OPERASIONAL]: ['Administrator', 'Manager', 'Manager Umum', 'Direktur Utama', 'Finance & Accounting'],
