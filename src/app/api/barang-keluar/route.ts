@@ -167,7 +167,7 @@ export async function POST(req: Request) {
     // Nomor diambil di dalam transaksi: gagal simpan = nomor tidak terpakai
     let noFaktur = '';
     const hasil = await db.transaction(async (tx) => {
-      noFaktur = await nomorUrut(tx, 'FPJ');
+      noFaktur = await nomorUrut(tx, 'FKT');
       return buatFakturPenjualan(tx, {
         noFaktur,
         tanggal: trxDate,
