@@ -221,13 +221,42 @@ body:has(:is(.fixed.inset-0, [role="dialog"], [aria-modal="true"])) .assistive-p
   table.tabel-kartu > thead {
     display: none;
   }
+  /* Latar abu-abu di belakang kartu + jarak antarkartu agar batasnya tegas */
+  table.tabel-kartu > tbody,
+  table.tabel-kartu > tfoot {
+    padding: 0.75rem;
+    background: rgb(241 245 249);
+  }
   table.tabel-kartu > tbody > tr,
   table.tabel-kartu > tfoot > tr {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 0.85rem 1rem;
     padding: 1rem;
-    border-bottom: 1px solid rgb(241 245 249);
+    border: 2px solid rgb(16 185 129) !important;
+    border-left-width: 6px !important;
+    border-radius: 1rem;
+    box-shadow: 0 8px 20px -8px rgb(15 23 42 / 0.35);
+  }
+  table.tabel-kartu > tbody > tr + tr,
+  table.tabel-kartu > tfoot > tr + tr {
+    margin-top: 0.75rem;
+  }
+  table.tabel-kartu > tbody > tr:not([class*='bg-']) {
+    background-color: #fff;
+  }
+  /* Warna tepi mengikuti status baris (merah = habis, kuning = kritis) */
+  table.tabel-kartu > tbody > tr[class*='bg-red'] {
+    border-color: rgb(239 68 68) !important;
+  }
+  table.tabel-kartu > tbody > tr[class*='bg-amber'] {
+    border-color: rgb(245 158 11) !important;
+  }
+  /* Baris memuat / kosong: tanpa bingkai kartu */
+  table.tabel-kartu > tbody > tr:has(> td[colspan]:only-child) {
+    border: 0 !important;
+    box-shadow: none;
+    background: transparent;
   }
   table.tabel-kartu > tbody > tr > td,
   table.tabel-kartu > tfoot > tr > td {
