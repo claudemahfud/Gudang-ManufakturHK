@@ -162,7 +162,7 @@ export async function kirimOrder(tx: Tx, id: string, u: Pelaku, tempoHari = TEMP
 
   const tanggal = new Date();
   const hari = Number.isInteger(tempoHari) && tempoHari >= 0 && tempoHari <= 365 ? tempoHari : TEMPO_DEFAULT_HARI;
-  const noFaktur = await nomorUrut(tx, 'FPJ');
+  const noFaktur = await nomorUrut(tx, 'FKT');
   await buatFakturPenjualan(tx, {
     noFaktur,
     tanggal,
