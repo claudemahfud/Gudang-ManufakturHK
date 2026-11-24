@@ -112,17 +112,17 @@ body {
   --tw-enter-translate-x: -100%;
 }
 
-/* Kartu / tautan menu: terangkat halus saat hover (hanya perangkat ber-mouse) */
+/* Kartu / tautan menu: terangkat tegas saat hover (hanya perangkat ber-mouse) */
 @utility hover-lift {
   transition:
-    translate 200ms var(--ease-out),
-    box-shadow 200ms var(--ease-out),
+    translate 220ms var(--ease-out),
+    box-shadow 220ms var(--ease-out),
     background-color 150ms ease,
     border-color 150ms ease;
   @media (hover: hover) and (pointer: fine) {
     &:hover {
-      translate: 0 -2px;
-      box-shadow: 0 10px 24px -14px rgb(15 23 42 / 0.25);
+      translate: 0 -6px;
+      box-shadow: 0 20px 36px -14px rgb(15 23 42 / 0.35);
     }
   }
 }
@@ -140,7 +140,20 @@ body {
 
   /* Baris tabel: warna hover berpindah halus, tidak berkedip */
   tbody tr {
-    transition: background-color 150ms ease;
+    transition:
+      background-color 150ms ease,
+      translate 200ms var(--ease-out),
+      box-shadow 200ms var(--ease-out);
+  }
+
+  /* Baris data (>= 2 sel) terangkat tegas saat hover; baris memuat/kosong tidak ikut */
+  @media (hover: hover) and (pointer: fine) {
+    tbody tr:has(> td + td):hover {
+      position: relative;
+      z-index: 1;
+      translate: 0 -4px;
+      box-shadow: 0 14px 28px -12px rgb(15 23 42 / 0.3);
+    }
   }
 }
 
@@ -149,7 +162,8 @@ body {
   .animate-in {
     animation-name: enter-fade;
   }
-  .hover-lift:hover {
+  .hover-lift:hover,
+  tbody tr:hover {
     translate: none;
   }
   button:not(:disabled):active {
