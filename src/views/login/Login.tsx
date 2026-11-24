@@ -232,6 +232,7 @@ export default function Login() {
                 </>
               )}
             </button>
+            <p className="text-center text-xs text-slate-400">©Hikimori 2026</p>
           </form>
         </div>
 
