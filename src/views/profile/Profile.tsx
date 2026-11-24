@@ -11,6 +11,7 @@ import React, { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { useDivision, DivisionMode } from '@/shared/context/DivisionContext';
 import { formatTanggal } from '@/shared/lib/utils';
+import { siapkanFoto, umumkanFotoBerubah, useFotoProfil } from '@/shared/lib/foto-profil';
 import {
   User,
   Shield,
@@ -162,9 +163,7 @@ export default function Profile() {
       {/* 1. Header (Triple Line Archetype) */}
       <header className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/90 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div className="flex items-start sm:items-center gap-4">
-          <div className="w-16 h-16 rounded-3xl bg-slate-900 text-white flex items-center justify-center font-extrabold text-2xl shadow-md shrink-0">
-            {profile?.namaLengkap?.[0]?.toUpperCase() || 'U'}
-          </div>
+          <FotoProfil inisial={profile?.namaLengkap?.[0]?.toUpperCase() || 'U'} onPesan={showToast} />
           <div className="space-y-1">
             {/* Line 1: Overline */}
             <div className="flex items-center gap-2">
@@ -457,6 +456,71 @@ export default function Profile() {
           </button>
         </div>
       </form>
+    </div>
+  );
+}
+
+/** Foto profil: ketuk untuk unggah/ganti (diperkecil 256px di browser), tombol hapus. */
+function FotoProfil({ inisial, onPesan }: { inisial: string; onPesan: (pesan: string, jenis: 'success' | 'error') => void }) {
+  const fotoAwal = useFotoProfil();
+  const [foto, setFoto] = useState<string | null | undefined>(undefined);
+  const [proses, setProses] = useState(false);
+  const tampil = foto === undefined ? fotoAwal : foto;
+
+  const simpan = async (baru: string | null) => {
+    setProses(true);
+    try {
+      const res = await fetch('/api/profile/foto', {
+        method: baru ? 'PUT' : 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: baru ? JSON.stringify({ foto: baru }) : undefined,
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok || !json.success) throw new Error(json.message || 'Gagal menyimpan foto');
+      setFoto(baru);
+      umumkanFotoBerubah(baru);
+      onPesan(baru ? 'Foto profil diperbarui' : 'Foto profil dihapus', 'success');
+    } catch (e) {
+      onPesan(e instanceof Error ? e.message : 'Gagal menyimpan foto', 'error');
+    } finally {
+      setProses(false);
+    }
+  };
+
+  return (
+    <div className="flex flex-col items-center gap-1.5 shrink-0">
+      <label className={`relative w-16 h-16 rounded-3xl overflow-hidden shadow-md cursor-pointer group ${proses ? 'opacity-60' : ''}`} title="Ganti foto profil">
+        {tampil ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={tampil} alt="Foto profil" className="w-full h-full object-cover" />
+        ) : (
+          <span className="w-full h-full bg-slate-900 text-white flex items-center justify-center font-extrabold text-2xl">{inisial}</span>
+        )}
+        <span className="absolute inset-x-0 bottom-0 bg-black/55 text-white text-[9px] font-semibold text-center py-0.5">
+          {proses ? '...' : 'Ganti'}
+        </span>
+        <input
+          type="file"
+          accept="image/*"
+          className="sr-only"
+          disabled={proses}
+          onChange={async (e) => {
+            const f = e.target.files?.[0];
+            e.target.value = '';
+            if (!f) return;
+            try {
+              await simpan(await siapkanFoto(f));
+            } catch (err) {
+              onPesan(err instanceof Error ? err.message : 'Foto tidak bisa diproses', 'error');
+            }
+          }}
+        />
+      </label>
+      {tampil && (
+        <button type="button" onClick={() => simpan(null)} disabled={proses} className="text-[10px] font-semibold text-red-600 hover:underline disabled:opacity-50">
+          Hapus foto
+        </button>
+      )}
     </div>
   );
 }
