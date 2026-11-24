@@ -31,7 +31,8 @@ export default function LoncengNotifikasi() {
   const { division } = useDivision();
   const [buka, setBuka] = useState(false);
   const [daftar, setDaftar] = useState<Notif[]>([]);
-  const [dilihat, setDilihat] = useState<string[]>([]);
+  // Aman untuk hidrasi: daftar awal kosong, jadi badge baru muncul setelah fetch
+  const [dilihat, setDilihat] = useState<string[]>(() => (typeof window === 'undefined' ? [] : bacaDilihat()));
   const [memuat, setMemuat] = useState(false);
   const [gagal, setGagal] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -52,10 +53,12 @@ export default function LoncengNotifikasi() {
   }, [division]);
 
   useEffect(() => {
-    setDilihat(bacaDilihat());
-    muat();
+    const awal = setTimeout(muat, 0);
     const t = setInterval(muat, 120_000);
-    return () => clearInterval(t);
+    return () => {
+      clearTimeout(awal);
+      clearInterval(t);
+    };
   }, [muat]);
 
   // Tutup saat klik di luar / Esc
