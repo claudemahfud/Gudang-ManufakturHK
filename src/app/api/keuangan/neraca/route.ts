@@ -16,7 +16,8 @@ export async function GET(req: NextRequest) {
     if (!authResult.authorized) return authResult.response;
 
     const { searchParams } = new URL(req.url);
-    const divisiParam = searchParams.get('divisi'); // 'MANUFAKTUR' | 'FNB' | undefined (semua)
+    // Neraca per divisi saja (Manufaktur / F&B), tidak ada konsolidasi gabungan
+    const divisiParam = searchParams.get('divisi') === 'FNB' ? 'FNB' : 'MANUFAKTUR';
 
     // 1. Ambil Nilai Persediaan Stok dari Inventory
     let invItems = await db
@@ -28,7 +29,7 @@ export async function GET(req: NextRequest) {
       })
       .from(inventory);
 
-    if (divisiParam && divisiParam !== 'SEMUA') {
+    if (divisiParam) {
       invItems = invItems.filter((i) => i.divisi === divisiParam);
     }
 
@@ -59,7 +60,7 @@ export async function GET(req: NextRequest) {
       })
       .from(keuangan);
 
-    if (divisiParam && divisiParam !== 'SEMUA') {
+    if (divisiParam) {
       keuItems = keuItems.filter((k) => k.divisi === divisiParam);
     }
 
@@ -81,7 +82,7 @@ export async function GET(req: NextRequest) {
     let totalHutangUsaha = 0;
     try {
       const hutangRows: any[] = await db.execute(
-        sql`SELECT COALESCE(SUM(sisa_hutang), 0) as total FROM hutang_supplier WHERE status != 'LUNAS'`
+        sql`SELECT COALESCE(SUM(sisa_hutang), 0) as total FROM hutang_supplier WHERE status != 'LUNAS' AND divisi = ${divisiParam}`
       );
       if (hutangRows && hutangRows.length > 0) {
         totalHutangUsaha = Number(hutangRows[0]?.total || 0);
@@ -93,7 +94,7 @@ export async function GET(req: NextRequest) {
     // 4. Piutang Usaha: sisa tagihan Faktur Penjualan yang dihutangkan ke pelanggan.
     //    Barangnya sudah keluar dari persediaan, uangnya belum masuk kas.
     const piutangRows = (await db.execute(
-      divisiParam && divisiParam !== 'SEMUA'
+      divisiParam
         ? sql`SELECT COALESCE(SUM(sisa_piutang), 0) AS total FROM faktur_penjualan WHERE sisa_piutang > 0 AND divisi = ${divisiParam}`
         : sql`SELECT COALESCE(SUM(sisa_piutang), 0) AS total FROM faktur_penjualan WHERE sisa_piutang > 0`
     )) as unknown as { total: string | number }[];
@@ -109,7 +110,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({
       success: true,
       data: {
-        divisi: divisiParam || 'SEMUA',
+        divisi: divisiParam,
         aset: {
           kasBank: saldoKasBank,
           piutangUsaha: totalPiutangUsaha,
