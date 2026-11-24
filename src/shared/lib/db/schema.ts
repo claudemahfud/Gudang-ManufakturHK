@@ -58,7 +58,8 @@ export const barangMasuk = pgTable('barang_masuk', {
   totalBeli: decimal('total_beli', { precision: 15, scale: 2 }).default('0'),
   supplier: varchar('supplier', { length: 150 }).notNull(), // Wajib ada supplier pemasok
   noFaktur: varchar('no_faktur', { length: 100 }),
-  skemaBayar: varchar('skema_bayar', { length: 30 }).notNull().default('lunas'), // 'lunas' | 'hutang'
+  skemaBayar: varchar('skema_bayar', { length: 30 }).notNull().default('lunas'), // 'lunas' | 'hutang' | 'retur'
+  jenis: varchar('jenis', { length: 30 }).notNull().default('PEMBELIAN'), // PEMBELIAN | RETUR_PELANGGAN
   jatuhTempo: timestamp('jatuh_tempo'),
   divisi: varchar('divisi', { length: 30 }).notNull().default('MANUFAKTUR'),
   cabang: varchar('cabang', { length: 50 }).notNull().default('Pusat'),
@@ -126,7 +127,7 @@ export const fakturPenjualan = pgTable('faktur_penjualan', {
 export const piutangMutasi = pgTable('piutang_mutasi', {
   id: uuid('id').primaryKey().defaultRandom(),
   noFaktur: varchar('no_faktur', { length: 100 }).notNull(),
-  jenis: varchar('jenis', { length: 20 }).notNull(), // bayar | ubah_tempo
+  jenis: varchar('jenis', { length: 20 }).notNull(), // bayar | ubah_tempo | retur | refund | batal_retur | batal_refund
   tanggal: timestamp('tanggal').notNull().defaultNow(),
   jumlah: decimal('jumlah', { precision: 15, scale: 2 }).notNull().default('0'),
   metode: varchar('metode', { length: 20 }), // tunai | transfer
@@ -207,6 +208,15 @@ export const returBarang = pgTable('retur_barang', {
   divisi: varchar('divisi', { length: 30 }).notNull().default('MANUFAKTUR'),
   status: varchar('status', { length: 30 }).notNull().default('pending'),
   cabang: varchar('cabang', { length: 50 }).notNull().default('Pusat'),
+  // Retur pelanggan lewat Barang Masuk (migrasi 007). Baris lama: semua bawaan.
+  noFaktur: varchar('no_faktur', { length: 100 }),
+  kondisi: varchar('kondisi', { length: 20 }).notNull().default('layak'), // layak (masuk stok) | rusak (barang rusak)
+  nilai: decimal('nilai', { precision: 15, scale: 2 }).notNull().default('0'),
+  potongPiutang: decimal('potong_piutang', { precision: 15, scale: 2 }).notNull().default('0'),
+  refund: decimal('refund', { precision: 15, scale: 2 }).notNull().default('0'),
+  metodeRefund: varchar('metode_refund', { length: 20 }),
+  barangMasukId: uuid('barang_masuk_id'),
+  barangRusakId: uuid('barang_rusak_id'),
   createdBy: varchar('created_by', { length: 50 }),
   createdAt: timestamp('created_at').defaultNow(),
 });

@@ -52,7 +52,7 @@ interface Audit {
 
 interface Mutasi {
   id: string;
-  jenis: 'bayar' | 'ubah_tempo';
+  jenis: 'bayar' | 'ubah_tempo' | 'retur' | 'refund' | 'batal_retur' | 'batal_refund';
   tanggal: string;
   jumlah: string;
   metode: 'tunai' | 'transfer' | null;
@@ -817,7 +817,13 @@ function ModalRiwayat({ faktur, onClose, notify }: { faktur: Faktur; onClose: ()
   const uangMuka = useMemo(
     () =>
       mutasi
-        ? Math.round((n(faktur.dibayar) - mutasi.filter((m) => m.jenis === 'bayar').reduce((t, m) => t + n(m.jumlah), 0)) * 100) / 100
+        ? Math.round(
+            (n(faktur.dibayar) -
+              mutasi.filter((m) => m.jenis === 'bayar').reduce((t, m) => t + n(m.jumlah), 0) +
+              mutasi.filter((m) => m.jenis === 'refund').reduce((t, m) => t + n(m.jumlah), 0) -
+              mutasi.filter((m) => m.jenis === 'batal_refund').reduce((t, m) => t + n(m.jumlah), 0)) *
+              100
+          ) / 100
         : 0,
     [mutasi, faktur.dibayar]
   );
@@ -841,12 +847,22 @@ function ModalRiwayat({ faktur, onClose, notify }: { faktur: Faktur; onClose: ()
             {mutasi.map((m) => (
               <li key={m.id} className="pl-5 relative">
                 <span
-                  className={`absolute -left-[7px] top-1 w-3 h-3 rounded-full ${m.jenis === 'bayar' ? 'bg-emerald-500' : 'bg-amber-500'}`}
+                  className={`absolute -left-[7px] top-1 w-3 h-3 rounded-full ${
+                    m.jenis === 'bayar' ? 'bg-emerald-500' : m.jenis === 'ubah_tempo' ? 'bg-amber-500' : 'bg-rose-500'
+                  }`}
                 />
                 <div className="text-sm font-semibold text-gray-900">
                   {m.jenis === 'bayar'
                     ? `${n(m.sisaSetelah) <= 0 ? 'Pelunasan' : 'Cicilan'} ${formatRupiah(m.jumlah)} (${m.metode === 'tunai' ? 'Tunai' : 'Transfer'})`
-                    : 'Jatuh tempo dimundurkan'}
+                    : m.jenis === 'retur'
+                      ? `Retur barang, piutang dipotong ${formatRupiah(m.jumlah)}`
+                      : m.jenis === 'batal_retur'
+                        ? `Retur dibatalkan, piutang kembali ${formatRupiah(m.jumlah)}`
+                        : m.jenis === 'refund'
+                          ? `Refund retur ${formatRupiah(m.jumlah)} (${m.metode === 'transfer' ? 'Transfer' : 'Tunai'})`
+                          : m.jenis === 'batal_refund'
+                            ? `Refund retur dibatalkan ${formatRupiah(m.jumlah)}`
+                            : 'Jatuh tempo dimundurkan'}
                 </div>
                 <div className="text-xs text-gray-500">
                   {formatTanggal(m.tanggal)} · sisa {formatRupiah(m.sisaSetelah)}

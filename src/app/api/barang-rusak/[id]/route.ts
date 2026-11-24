@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/shared/lib/db';
-import { barangRusak, logs } from '@/shared/lib/db/schema';
+import { barangRusak, logs, returBarang } from '@/shared/lib/db/schema';
 import { requireAuthRole, ROLES_WAREHOUSE } from '@/shared/lib/auth/rbac';
 import { eq } from 'drizzle-orm';
 import { BusinessError, errorResponse, incrementStock } from '@/shared/lib/stock';
@@ -24,6 +24,9 @@ export async function DELETE(
 
     await db.transaction(async (tx) => {
       // Hapus & ambil barisnya dalam satu langkah (aman dari klik ganda)
+      const [retur] = await tx.select({ id: returBarang.id }).from(returBarang).where(eq(returBarang.barangRusakId, id)).limit(1);
+      if (retur) throw new BusinessError('Catatan rusak ini berasal dari retur pelanggan. Batalkan lewat menu Retur Barang.');
+
       const [item] = await tx.delete(barangRusak).where(eq(barangRusak.id, id)).returning();
       if (!item) throw new BusinessError('Data tidak ditemukan', 404);
 
