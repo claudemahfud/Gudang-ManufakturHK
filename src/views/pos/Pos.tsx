@@ -304,6 +304,8 @@ export default function PosView() {
   const subtotal = useMemo(() => cart.reduce((acc, c) => acc + c.hargaJual * c.qty, 0), [cart]);
   const nominalDiskon = useMemo(() => (subtotal * Number(diskonPct || 0)) / 100, [subtotal, diskonPct]);
   const grandTotal = useMemo(() => Math.max(0, subtotal - nominalDiskon), [subtotal, nominalDiskon]);
+  // Tunai: selisih uang diterima dengan tagihan. Kurang > 0 = tombol bayar dikunci.
+  const kurangBayar = metodePembayaran === 'Tunai' ? Math.max(0, grandTotal - (uangDiterima || 0)) : 0;
   const kembalian = useMemo(
     () => (metodePembayaran === 'Tunai' ? Math.max(0, uangDiterima - grandTotal) : 0),
     [metodePembayaran, uangDiterima, grandTotal]
@@ -1169,14 +1171,16 @@ export default function PosView() {
                       </div>
 
                       {/* Kembalian Calculation */}
-                      <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 flex justify-between items-center text-sm">
-                        <span className="text-slate-400 font-medium">Kembalian:</span>
-                        <span
-                          className={`font-mono font-black text-lg ${
-                            kembalian >= 0 ? 'text-emerald-400' : 'text-red-400'
-                          }`}
-                        >
-                          {formatRupiah(kembalian)}
+                      <div
+                        className={`p-4 rounded-xl border flex justify-between items-center text-sm ${
+                          kurangBayar > 0 ? 'bg-red-950/40 border-red-800' : 'bg-slate-950 border-slate-800'
+                        }`}
+                      >
+                        <span className={`font-medium ${kurangBayar > 0 ? 'text-red-300' : 'text-slate-400'}`}>
+                          {kurangBayar > 0 ? 'Uang Kurang:' : 'Kembalian:'}
+                        </span>
+                        <span className={`font-mono font-black text-lg ${kurangBayar > 0 ? 'text-red-400' : 'text-emerald-400'}`}>
+                          {formatRupiah(kurangBayar > 0 ? kurangBayar : kembalian)}
                         </span>
                       </div>
                     </div>
@@ -1235,19 +1239,18 @@ export default function PosView() {
               <button
                 type="button"
                 onClick={() => {
-                  // Validasi uang dulu agar bar geser hanya muncul bila pembayaran bisa diproses
-                  if (metodePembayaran === 'Tunai' && uangDiterima < grandTotal) {
-                    void handleProcessCheckout();
-                    return;
-                  }
+                  if (kurangBayar > 0) return;
                   // Geser-untuk-bayar hanya di layar sentuh (HP/tablet); desktop langsung proses
                   if (window.matchMedia('(pointer: coarse)').matches) setGeserBayar(true);
                   else void handleProcessCheckout();
                 }}
-                disabled={isSubmitting}
-                className="px-6 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs transition shadow-lg shadow-emerald-500/20 disabled:opacity-50 flex items-center gap-2"
+                disabled={isSubmitting || kurangBayar > 0}
+                title={kurangBayar > 0 ? `Uang diterima kurang ${formatRupiah(kurangBayar)}` : undefined}
+                className="px-6 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs transition shadow-lg shadow-emerald-500/20 disabled:bg-slate-700 disabled:text-slate-400 disabled:shadow-none disabled:cursor-not-allowed flex items-center gap-2"
               >
-                {isSubmitting ? (
+                {kurangBayar > 0 && !isSubmitting ? (
+                  <span>Uang Kurang {formatRupiah(kurangBayar)}</span>
+                ) : isSubmitting ? (
                   <>
                     <span className="w-3.5 h-3.5 border-2 border-slate-950 border-t-transparent rounded-full animate-spin" />
                     <span>Memproses...</span>
