@@ -61,63 +61,140 @@ const labelTgl = (iso: string) => {
   return `${t}/${b}`;
 };
 
-function TabelRekap({
-  judul,
-  ikon: Ikon,
-  baris,
-  kolomNama,
-}: {
-  judul: string;
-  ikon: typeof Package;
-  baris: BarisRekap[];
-  kolomNama: string;
-}) {
+const fmtSumbu = (v: number) =>
+  v >= 1_000_000 ? `${(v / 1_000_000).toFixed(1)}jt` : v >= 1000 ? `${Math.round(v / 1000)}rb` : String(v);
+
+function TabelIsi({ baris, kolomNama }: { baris: BarisRekap[]; kolomNama: string }) {
+  if (baris.length === 0) {
+    return <p className="px-4 py-6 text-center text-xs text-gray-400">Belum ada penjualan pada periode ini</p>;
+  }
+  return (
+    <div className="overflow-x-auto border-t border-gray-100">
+      <table className="w-full text-left text-xs">
+        <thead className="bg-gray-50/80 text-[10px] font-semibold uppercase tracking-wider text-gray-500">
+          <tr>
+            <th className="py-2.5 px-4">{kolomNama}</th>
+            <th className="py-2.5 px-3 text-right">Trx</th>
+            <th className="py-2.5 px-3 text-right">Qty</th>
+            <th className="py-2.5 px-3 text-right">Omzet</th>
+            <th className="py-2.5 px-3 text-right">Laba</th>
+            <th className="py-2.5 px-4">Porsi</th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-gray-100 text-gray-700">
+          {baris.map((b) => (
+            <tr key={b.kunci}>
+              <td className="py-2.5 px-4 font-semibold text-gray-900">{b.label}</td>
+              <td className="py-2.5 px-3 text-right tabular-nums">{b.trx}</td>
+              <td className="py-2.5 px-3 text-right tabular-nums">{b.qty.toLocaleString('id-ID')}</td>
+              <td className="py-2.5 px-3 text-right tabular-nums font-semibold text-gray-900 whitespace-nowrap">
+                {formatRupiah(b.omzet)}
+              </td>
+              <td className={`py-2.5 px-3 text-right tabular-nums whitespace-nowrap ${b.laba < 0 ? 'text-red-600' : 'text-emerald-700'}`}>
+                {formatRupiah(b.laba)}
+                <span className="block text-[10px] text-gray-400">{b.margin}%</span>
+              </td>
+              <td className="py-2.5 px-4 min-w-[90px]">
+                <span className="block text-[10px] text-gray-500 tabular-nums">{b.persen}%</span>
+                <span className="mt-1 block h-1.5 rounded-full bg-gray-100 overflow-hidden">
+                  <span className="block h-full rounded-full bg-emerald-500" style={{ width: `${Math.min(100, b.persen)}%` }} />
+                </span>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+type KunciTab = 'tren' | 'jalur' | 'metode' | 'sales' | 'produk' | 'pelanggan';
+const TAB: { kunci: KunciTab; label: string; ikon: typeof Package; kolom: string }[] = [
+  { kunci: 'tren', label: 'Tren Harian', ikon: BarChart3, kolom: 'Tanggal' },
+  { kunci: 'jalur', label: 'Jalur', ikon: Route, kolom: 'Jalur' },
+  { kunci: 'metode', label: 'Metode Bayar', ikon: CreditCard, kolom: 'Metode' },
+  { kunci: 'sales', label: 'Salesman / Kasir', ikon: UserRound, kolom: 'Salesman / Kasir' },
+  { kunci: 'produk', label: 'Produk Top 10', ikon: Package, kolom: 'Produk' },
+  { kunci: 'pelanggan', label: 'Pelanggan Top 10', ikon: Users, kolom: 'Pelanggan' },
+];
+
+/** Satu kotak grafik analitik; tiap bagian rekap menjadi tab: grafik + tabel ringkas. */
+function GrafikAnalitik({ data }: { data: DataRekap }) {
+  const [tab, setTab] = useState<KunciTab>('tren');
+  const aktif = TAB.find((t) => t.kunci === tab)!;
+  const baris =
+    tab === 'tren'
+      ? data.perHari.map((h) => ({ ...h, label: labelTgl(h.kunci) }))
+      : tab === 'jalur'
+        ? data.perJalur
+        : tab === 'metode'
+          ? data.perMetode
+          : tab === 'sales'
+            ? data.perSales
+            : tab === 'produk'
+              ? data.perProduk
+              : data.perPelanggan;
+  const grafik = baris.map((b) => ({ nama: b.label.length > 22 ? `${b.label.slice(0, 21)}…` : b.label, omzet: b.omzet, laba: b.laba }));
+  const tinggi = tab === 'tren' ? 240 : Math.max(160, grafik.length * 44 + 40);
+
   return (
     <article className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-      <header className="flex items-center gap-2 px-4 py-3 border-b border-gray-100">
-        <Ikon className="w-4 h-4 text-emerald-600" aria-hidden="true" />
-        <h3 className="text-sm font-bold text-gray-800">{judul}</h3>
-      </header>
-      {baris.length === 0 ? (
-        <p className="px-4 py-6 text-center text-xs text-gray-400">Belum ada penjualan pada periode ini</p>
-      ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
-            <thead className="bg-gray-50/80 text-[10px] font-semibold uppercase tracking-wider text-gray-500">
-              <tr>
-                <th className="py-2.5 px-4">{kolomNama}</th>
-                <th className="py-2.5 px-3 text-right">Trx</th>
-                <th className="py-2.5 px-3 text-right">Qty</th>
-                <th className="py-2.5 px-3 text-right">Omzet</th>
-                <th className="py-2.5 px-3 text-right">Laba</th>
-                <th className="py-2.5 px-4">Porsi</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100 text-gray-700">
-              {baris.map((b) => (
-                <tr key={b.kunci}>
-                  <td className="py-2.5 px-4 font-semibold text-gray-900">{b.label}</td>
-                  <td className="py-2.5 px-3 text-right tabular-nums">{b.trx}</td>
-                  <td className="py-2.5 px-3 text-right tabular-nums">{b.qty.toLocaleString('id-ID')}</td>
-                  <td className="py-2.5 px-3 text-right tabular-nums font-semibold text-gray-900 whitespace-nowrap">
-                    {formatRupiah(b.omzet)}
-                  </td>
-                  <td className={`py-2.5 px-3 text-right tabular-nums whitespace-nowrap ${b.laba < 0 ? 'text-red-600' : 'text-emerald-700'}`}>
-                    {formatRupiah(b.laba)}
-                    <span className="block text-[10px] text-gray-400">{b.margin}%</span>
-                  </td>
-                  <td className="py-2.5 px-4 min-w-[90px]">
-                    <span className="block text-[10px] text-gray-500 tabular-nums">{b.persen}%</span>
-                    <span className="mt-1 block h-1.5 rounded-full bg-gray-100 overflow-hidden">
-                      <span className="block h-full rounded-full bg-emerald-500" style={{ width: `${Math.min(100, b.persen)}%` }} />
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      <header className="px-4 pt-4">
+        <h3 className="text-sm font-bold text-gray-800 flex items-center gap-2">
+          <BarChart3 className="w-4 h-4 text-emerald-600" aria-hidden="true" />
+          Grafik Analitik Tren
+        </h3>
+        <div role="tablist" aria-label="Bagian grafik analitik" className="mt-3 flex gap-1.5 overflow-x-auto pb-3 -mx-1 px-1">
+          {TAB.map((t) => (
+            <button
+              key={t.kunci}
+              type="button"
+              role="tab"
+              aria-selected={tab === t.kunci}
+              onClick={() => setTab(t.kunci)}
+              className={`inline-flex shrink-0 items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition ${
+                tab === t.kunci ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
+              }`}
+            >
+              <t.ikon className="w-3.5 h-3.5" aria-hidden="true" />
+              {t.label}
+            </button>
+          ))}
         </div>
-      )}
+      </header>
+
+      <div role="tabpanel" aria-label={aktif.label}>
+        {baris.length === 0 ? (
+          <p className="px-4 py-10 text-center text-xs text-gray-400 border-t border-gray-100">Belum ada penjualan pada periode ini</p>
+        ) : (
+          <>
+            <div className="px-2 pb-2" style={{ height: tinggi }}>
+              <ResponsiveContainer width="100%" height="100%">
+                {tab === 'tren' ? (
+                  <BarChart data={grafik} margin={{ top: 5, right: 10, left: -10, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F3F4F6" />
+                    <XAxis dataKey="nama" tick={{ fill: '#6B7280', fontSize: 10 }} axisLine={false} tickLine={false} />
+                    <YAxis tick={{ fill: '#6B7280', fontSize: 10 }} axisLine={false} tickLine={false} tickFormatter={fmtSumbu} />
+                    <Tooltip formatter={(v) => formatRupiah(Number(v))} />
+                    <Bar dataKey="omzet" name="Omzet" fill="#10B981" radius={[6, 6, 0, 0]} maxBarSize={36} />
+                    <Bar dataKey="laba" name="Laba" fill="#0EA5E9" radius={[6, 6, 0, 0]} maxBarSize={36} />
+                  </BarChart>
+                ) : (
+                  <BarChart data={grafik} layout="vertical" margin={{ top: 5, right: 16, left: 0, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#F3F4F6" />
+                    <XAxis type="number" tick={{ fill: '#6B7280', fontSize: 10 }} axisLine={false} tickLine={false} tickFormatter={fmtSumbu} />
+                    <YAxis type="category" dataKey="nama" width={110} tick={{ fill: '#374151', fontSize: 10 }} axisLine={false} tickLine={false} />
+                    <Tooltip formatter={(v) => formatRupiah(Number(v))} />
+                    <Bar dataKey="omzet" name="Omzet" fill="#10B981" radius={[0, 6, 6, 0]} maxBarSize={16} />
+                    <Bar dataKey="laba" name="Laba" fill="#0EA5E9" radius={[0, 6, 6, 0]} maxBarSize={16} />
+                  </BarChart>
+                )}
+              </ResponsiveContainer>
+            </div>
+            <TabelIsi baris={baris} kolomNama={aktif.kolom} />
+          </>
+        )}
+      </div>
     </article>
   );
 }
@@ -223,38 +300,8 @@ export default function RekapGlobal() {
             ))}
           </div>
 
-          {/* Tren harian */}
-          {data.perHari.length > 1 && (
-            <article className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
-              <h3 className="text-sm font-bold text-gray-800 mb-3">Tren Omzet & Laba Harian</h3>
-              <div className="h-56">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={data.perHari.map((h) => ({ ...h, tgl: labelTgl(h.kunci) }))} margin={{ top: 5, right: 5, left: -10, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F3F4F6" />
-                    <XAxis dataKey="tgl" tick={{ fill: '#6B7280', fontSize: 10 }} axisLine={false} tickLine={false} />
-                    <YAxis
-                      tick={{ fill: '#6B7280', fontSize: 10 }}
-                      axisLine={false}
-                      tickLine={false}
-                      tickFormatter={(v: number) => (v >= 1_000_000 ? `${(v / 1_000_000).toFixed(1)}jt` : v >= 1000 ? `${Math.round(v / 1000)}rb` : String(v))}
-                    />
-                    <Tooltip formatter={(v) => formatRupiah(Number(v))} />
-                    <Bar dataKey="omzet" name="Omzet" fill="#10B981" radius={[6, 6, 0, 0]} maxBarSize={36} />
-                    <Bar dataKey="laba" name="Laba" fill="#0EA5E9" radius={[6, 6, 0, 0]} maxBarSize={36} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            </article>
-          )}
-
-          {/* Rincian */}
-          <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-            <TabelRekap judul="Per Jalur Penjualan" ikon={Route} baris={data.perJalur} kolomNama="Jalur" />
-            <TabelRekap judul="Per Metode Bayar" ikon={CreditCard} baris={data.perMetode} kolomNama="Metode" />
-            <TabelRekap judul="Per Salesman / Kasir" ikon={UserRound} baris={data.perSales} kolomNama="Salesman / Kasir" />
-            <TabelRekap judul="Produk Terlaris (Top 10)" ikon={Package} baris={data.perProduk} kolomNama="Produk" />
-            <TabelRekap judul="Pelanggan Terbesar (Top 10)" ikon={Users} baris={data.perPelanggan} kolomNama="Pelanggan" />
-          </div>
+          {/* Rincian: satu kotak grafik, tiap bagian jadi tab */}
+          <GrafikAnalitik data={data} />
         </div>
       ) : null}
     </section>
