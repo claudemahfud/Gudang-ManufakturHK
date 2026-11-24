@@ -152,6 +152,8 @@ export async function POST(req: Request) {
       : (body.cabang || 'Pusat');
     const divisiToSave = body.divisi || 'MANUFAKTUR';
     const skuNorm = sku.trim().toUpperCase();
+    // Kredit tanpa nomor faktur: buat nomor agar baris barang masuk & hutangnya tetap tertaut
+    const noFakturFinal = noFaktur?.trim() || (paymentScheme === 'hutang' ? `BM-${Date.now()}` : null);
 
     let insertedRecord: any = null;
 
@@ -166,7 +168,7 @@ export async function POST(req: Request) {
         satuan: satuan || 'pcs',
         hargaBeli: unitPrice,
         supplier: supplier.trim(),
-        noFaktur: noFaktur?.trim() || null,
+        noFaktur: noFakturFinal,
         skemaBayar: paymentScheme,
         jatuhTempo: parsedJatuhTempo,
         divisi: divisiToSave,
@@ -182,7 +184,7 @@ export async function POST(req: Request) {
         tanggal: parsedTanggal,
         total: totalBeli,
         supplier: supplier.trim(),
-        noFaktur: noFaktur?.trim() || null,
+        noFaktur: noFakturFinal,
         skemaBayar: paymentScheme,
         jatuhTempo: parsedJatuhTempo,
         divisi: divisiToSave,

@@ -229,21 +229,6 @@ export default function RekapGlobal() {
 
   if (tanpaAkses) return null;
 
-  const t = data?.total;
-  const kpi = [
-    { label: 'Omzet (Netto)', nilai: formatRupiah(t?.omzet || 0), sub: `${t?.trx || 0} transaksi`, warna: 'text-gray-900' },
-    { label: 'Laba Kotor', nilai: formatRupiah(t?.laba || 0), sub: `Margin ${t?.margin || 0}%`, warna: (t?.laba || 0) < 0 ? 'text-red-600' : 'text-emerald-700' },
-    { label: 'HPP Modal', nilai: formatRupiah(t?.hpp || 0), sub: 'Harga beli x qty', warna: 'text-gray-900' },
-    { label: 'Qty Terjual', nilai: `${(t?.qty || 0).toLocaleString('id-ID')} pcs`, sub: `${data?.perProduk.length || 0} produk teratas`, warna: 'text-gray-900' },
-    {
-      label: 'Rata-rata / Transaksi',
-      nilai: formatRupiah(t && t.trx ? t.omzet / t.trx : 0),
-      sub: 'Nilai per nota',
-      warna: 'text-gray-900',
-    },
-    { label: 'Potongan Diskon', nilai: formatRupiah(t?.diskon || 0), sub: 'Diskon item', warna: 'text-amber-700' },
-  ];
-
   return (
     <section aria-label="Rekap Penjualan Global" className="space-y-4">
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3">
@@ -286,17 +271,6 @@ export default function RekapGlobal() {
         <p className="p-4 rounded-2xl bg-red-50 border border-red-200 text-sm text-red-800">{galat}</p>
       ) : data ? (
         <div className={`space-y-4 transition-opacity ${memuat ? 'opacity-60' : ''}`}>
-          {/* Angka utama */}
-          <div className="grid grid-cols-2 lg:grid-cols-6 gap-3">
-            {kpi.map((k) => (
-              <div key={k.label} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
-                <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">{k.label}</p>
-                <p className={`mt-1 text-base lg:text-lg font-bold tabular-nums ${k.warna}`}>{k.nilai}</p>
-                <p className="text-[11px] text-gray-500">{k.sub}</p>
-              </div>
-            ))}
-          </div>
-
           {/* Rincian: satu kotak grafik, tiap bagian jadi tab */}
           <GrafikAnalitik data={data} />
         </div>

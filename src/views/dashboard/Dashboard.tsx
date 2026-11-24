@@ -22,6 +22,7 @@ import { ROUTES } from '@/router/routes';
 import type { InventoryItem } from '@/shared/types';
 import { useDivision } from '@/shared/context/DivisionContext';
 import RekapGlobal from './RekapGlobal';
+import KesehatanBisnis from './KesehatanBisnis';
 import {
   ArrowDownToLine,
   Truck,
@@ -243,7 +244,10 @@ export default function Dashboard() {
         </div>
       </header>
 
-      {/* Rekap penjualan global: tampilan utama (hanya role yang boleh melihat laba) */}
+      {/* Keuangan & kesehatan bisnis (khusus Direktur Utama & Manager) */}
+      <KesehatanBisnis />
+
+      {/* Grafik analitik penjualan (hanya role yang boleh melihat laba) */}
       <RekapGlobal />
 
       {/* ============================================================ */}

@@ -4,6 +4,7 @@ import { barangRusak, logs, returBarang } from '@/shared/lib/db/schema';
 import { requireAuthRole, ROLES_WAREHOUSE } from '@/shared/lib/auth/rbac';
 import { eq } from 'drizzle-orm';
 import { BusinessError, errorResponse, incrementStock } from '@/shared/lib/stock';
+import { balikJurnal } from '@/shared/lib/jurnal';
 
 // ============================================================
 // API: /api/barang-rusak/[id]
@@ -31,6 +32,7 @@ export async function DELETE(
       if (!item) throw new BusinessError('Data tidak ditemukan', 404);
 
       await incrementStock(tx, item.sku, item.qty, item.cabang);
+      await balikJurnal(tx, { referensi: item.id, sumber: ['RUSAK'], keterangan: `Batal barang rusak ${item.sku} x${item.qty}`, user });
 
       await tx.insert(logs).values({
         user,

@@ -329,3 +329,17 @@ body:has(:is(.fixed.inset-0, [role="dialog"], [aria-modal="true"])) .assistive-p
     scale: none;
   }
 }
+
+/* Cetak laporan keuangan: hanya kertas laporan, tanpa sidebar/header, tanpa potongan tinggi layar */
+@media print {
+  body:has([data-cetak-laporan]) aside,
+  body:has([data-cetak-laporan]) header.sticky {
+    display: none !important;
+  }
+  body:has([data-cetak-laporan]) .h-screen,
+  body:has([data-cetak-laporan]) .overflow-hidden:has(main),
+  body:has([data-cetak-laporan]) main {
+    height: auto !important;
+    overflow: visible !important;
+  }
+}

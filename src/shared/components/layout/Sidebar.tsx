@@ -39,6 +39,7 @@ import {
   ShieldAlert,
   Coins,
   Scale,
+  BookOpen,
   ChevronDown,
   X,
   ExternalLink,
@@ -208,13 +209,32 @@ export const MENU_HIERARCHY: ParentMenuItem[] = [
     id: 'keuangan',
     title: 'Keuangan & Neraca',
     icon: Wallet,
-    roles: ['Administrator', 'Manager', 'Manager Umum', 'Direktur Utama', 'Finance & Accounting'],
+    // Pembukuan: Direktur Utama & Manager; Piutang tetap untuk role lamanya
+    roles: ['Direktur Utama', 'Manager', 'Manager Umum', 'Administrator', 'Finance & Accounting'],
     items: [
       {
-        label: 'Arus Kas Keuangan',
+        label: 'Laporan Keuangan',
+        icon: Scale,
+        href: ROUTES.LAPORAN_KEUANGAN,
+        roles: ['Direktur Utama', 'Manager', 'Manager Umum'],
+      },
+      {
+        label: 'Jurnal & Buku Besar',
+        icon: BookOpen,
+        href: ROUTES.JURNAL,
+        roles: ['Direktur Utama', 'Manager', 'Manager Umum'],
+      },
+      {
+        label: 'Kas & Bank',
         icon: Wallet,
         href: ROUTES.KEUANGAN,
-        roles: ['Administrator', 'Manager', 'Manager Umum', 'Direktur Utama', 'Finance & Accounting'],
+        roles: ['Direktur Utama', 'Manager', 'Manager Umum'],
+      },
+      {
+        label: 'Hutang Suplier',
+        icon: Truck,
+        href: ROUTES.HUTANG,
+        roles: ['Direktur Utama', 'Manager', 'Manager Umum'],
       },
       {
         label: 'Piutang Pelanggan',
@@ -223,16 +243,10 @@ export const MENU_HIERARCHY: ParentMenuItem[] = [
         roles: ['Administrator', 'Manager', 'Manager Umum', 'Direktur Utama', 'Finance & Accounting'],
       },
       {
-        label: 'Neraca Posisi Keuangan',
-        icon: Scale,
-        href: ROUTES.NERACA,
-        roles: ['Administrator', 'Manager', 'Manager Umum', 'Direktur Utama', 'Finance & Accounting'],
-      },
-      {
         label: 'Biaya Operasional',
         icon: Receipt,
         href: ROUTES.BIAYA_OPERASIONAL,
-        roles: ['Administrator', 'Manager', 'Manager Umum', 'Direktur Utama', 'Finance & Accounting'],
+        roles: ['Direktur Utama', 'Manager', 'Manager Umum'],
       },
     ],
   },

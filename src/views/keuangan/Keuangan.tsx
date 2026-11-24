@@ -1,15 +1,18 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Download, Plus } from 'lucide-react';
+import { Download, Lock, Plus } from 'lucide-react';
 import { formatTanggal, formatRupiah } from '@/shared/lib/utils';
 import { exportToCsv } from '@/shared/lib/export';
 import { AksiHeader, GrupIkon, TombolIkon, TombolUtama } from '@/shared/components/ui/AksiHeader';
 import MemuatProgres from '@/shared/components/ui/MemuatProgres';
+import { useDivision } from '@/shared/context/DivisionContext';
+import { AKUN_KAS, ambil, KotakTerlarang, TIPE_AKUN, type Akun } from '@/views/laporan-keuangan/util';
 
 // ============================================================
-// PAGE: Arus Kas & Keuangan
+// PAGE: Kas & Bank
 // Route: /keuangan
+// Catatan manual (punya akunKode) dijurnal ke akun lawan; baris otomatis dari transaksi terkunci.
 // ============================================================
 
 interface ItemKeuangan {
@@ -17,33 +20,56 @@ interface ItemKeuangan {
   tanggal: string;
   jenis: string; // masuk | keluar
   kategori: string;
+  akunKode: string | null;
   jumlah: string;
   keterangan: string | null;
   createdBy: string | null;
 }
 
+const KODE_KAS = AKUN_KAS.map((a) => a.kode);
+// Akun lawan yang boleh dipilih per jenis transaksi kas
+const TIPE_LAWAN: Record<string, Akun['tipe'][]> = {
+  masuk: ['PENDAPATAN', 'EKUITAS', 'KEWAJIBAN', 'ASET'],
+  keluar: ['BEBAN', 'ASET', 'KEWAJIBAN', 'EKUITAS'],
+};
+const LABEL_TIPE: Record<Akun['tipe'], string> = {
+  ASET: 'Aset (non-kas)',
+  KEWAJIBAN: 'Kewajiban',
+  EKUITAS: 'Ekuitas',
+  PENDAPATAN: 'Pendapatan',
+  BEBAN: 'Beban',
+};
+
+const formAwal = () => ({
+  tanggal: new Date().toISOString().split('T')[0],
+  jenis: 'masuk',
+  akunKode: '',
+  akunKas: '1-1100',
+  jumlah: '',
+  keterangan: '',
+});
+
 export default function Keuangan() {
+  const { division, cabang } = useDivision();
+  const [akun, setAkun] = useState<Akun[]>([]);
+  const [terlarang, setTerlarang] = useState(false);
   const [data, setData] = useState<ItemKeuangan[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
-  const [form, setForm] = useState({
-    tanggal: new Date().toISOString().split('T')[0],
-    jenis: 'masuk',
-    kategori: 'Pendapatan Lain-lain',
-    jumlah: '',
-    keterangan: '',
-  });
+  const [form, setForm] = useState(formAwal);
 
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
   const fetchData = async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/keuangan');
+      const res = await fetch(`/api/keuangan?divisi=${division}`);
+      if (res.status === 401 || res.status === 403) return setTerlarang(true);
       const json = await res.json();
       if (json.success) setData(json.data);
+      else showToast(json.message || 'Gagal memuat data keuangan', 'error');
     } catch {
       showToast('Gagal memuat data keuangan', 'error');
     } finally {
@@ -53,7 +79,19 @@ export default function Keuangan() {
 
   useEffect(() => {
     fetchData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [division]);
+
+  useEffect(() => {
+    ambil<Akun[]>('/api/akuntansi/akun').then((h) => {
+      if (h.ok) setAkun(h.data);
+    });
   }, []);
+
+  const pilihanAkun = TIPE_AKUN.filter((t) => TIPE_LAWAN[form.jenis].includes(t)).map((t) => ({
+    tipe: t,
+    akun: akun.filter((a) => a.posting && a.tipe === t && !KODE_KAS.includes(a.kode)),
+  }));
 
   const showToast = (message: string, type: 'success' | 'error') => {
     setToast({ message, type });
@@ -73,8 +111,8 @@ export default function Keuangan() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (submitting) return;
-    if (!form.jumlah) {
-      showToast('Jumlah nominal wajib diisi', 'error');
+    if (!form.jumlah || !form.akunKode) {
+      showToast('Akun dan nominal wajib diisi', 'error');
       return;
     }
 
@@ -83,19 +121,13 @@ export default function Keuangan() {
       const res = await fetch('/api/keuangan', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
+        body: JSON.stringify({ ...form, jumlah: Number(form.jumlah), divisi: division, cabang }),
       });
       const json = await res.json();
       if (json.success) {
         showToast('Transaksi keuangan berhasil dicatat!', 'success');
         setIsModalOpen(false);
-        setForm({
-          tanggal: new Date().toISOString().split('T')[0],
-          jenis: 'masuk',
-          kategori: 'Pendapatan Lain-lain',
-          jumlah: '',
-          keterangan: '',
-        });
+        setForm(formAwal());
         fetchData();
       } else {
         showToast(json.message || 'Gagal menyimpan', 'error');
@@ -115,7 +147,7 @@ export default function Keuangan() {
       if (json.success) {
         showToast('Transaksi dihapus', 'success');
         fetchData();
-      }
+      } else showToast(json.message || 'Transaksi ini tidak bisa dihapus', 'error');
     } catch {
       showToast('Gagal menghapus', 'error');
     }
@@ -123,7 +155,7 @@ export default function Keuangan() {
 
   const handleExportExcel = () => {
     exportToCsv({
-      filename: 'Buku_Kas_Keuangan',
+      filename: 'Kas_dan_Bank',
       data,
       columns: [
         { header: 'Tanggal', accessor: (r) => formatTanggal(r.tanggal) },
@@ -135,6 +167,8 @@ export default function Keuangan() {
       ],
     });
   };
+
+  if (terlarang) return <KotakTerlarang />;
 
   return (
     <div className="space-y-6">
@@ -152,9 +186,9 @@ export default function Keuangan() {
 
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-800">Arus Kas & Keuangan</h1>
+          <h1 className="text-2xl font-bold text-gray-800">Kas & Bank</h1>
           <p className="text-sm text-gray-500 mt-1">
-            Monitoring pemasukan penjualan distributor, pembayaran supplier, dan arus kas harian
+            Mutasi kas tunai, bank & QRIS. Transaksi penjualan, pembelian & biaya tercatat otomatis; pemasukan/pengeluaran lain dicatat di sini.
           </p>
         </div>
         <AksiHeader>
@@ -245,12 +279,22 @@ export default function Keuangan() {
                     <td className="py-3.5 px-4 text-gray-700">{row.keterangan || '-'}</td>
                     <td className="py-3.5 px-4 text-xs text-gray-500">{row.createdBy || '-'}</td>
                     <td className="py-3.5 px-4 text-center">
-                      <button
-                        onClick={() => handleDelete(row.id)}
-                        className="text-red-500 hover:text-red-700 text-xs font-semibold px-2 py-1 rounded hover:bg-red-50 transition"
-                      >
-                        Hapus
-                      </button>
+                      {row.akunKode ? (
+                        <button
+                          onClick={() => handleDelete(row.id)}
+                          className="text-red-500 hover:text-red-700 text-xs font-semibold px-2 py-1 rounded hover:bg-red-50 transition"
+                        >
+                          Hapus
+                        </button>
+                      ) : (
+                        <span
+                          title="Dicatat otomatis dari transaksi"
+                          aria-label="Dicatat otomatis dari transaksi"
+                          className="inline-flex text-gray-400"
+                        >
+                          <Lock className="w-4 h-4" aria-hidden="true" />
+                        </span>
+                      )}
                     </td>
                   </tr>
                 ))
@@ -294,7 +338,7 @@ export default function Keuangan() {
                         <label className="block text-xs font-semibold text-gray-700 mb-1">Tipe Arus Kas *</label>
                         <select
                           value={form.jenis}
-                          onChange={(e) => setForm({ ...form, jenis: e.target.value })}
+                          onChange={(e) => setForm({ ...form, jenis: e.target.value, akunKode: '' })}
                           className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm focus:border-emerald-500 outline-none"
                         >
                           <option value="masuk">Uang Masuk (Debit)</option>
@@ -304,18 +348,48 @@ export default function Keuangan() {
                     </div>
 
                     <div>
-                      <label className="block text-xs font-semibold text-gray-700 mb-1">Kategori Transaksi *</label>
-                      <input
-                        type="text"
+                      <label className="block text-xs font-semibold text-gray-700 mb-1">
+                        {form.jenis === 'masuk' ? 'Sumber Dana (Akun) *' : 'Keperluan (Akun) *'}
+                      </label>
+                      <select
                         required
-                        placeholder="Contoh: Pelunasan Nota #01, Pembayaran Supplier, dll"
-                        value={form.kategori}
-                        onChange={(e) => setForm({ ...form, kategori: e.target.value })}
+                        value={form.akunKode}
+                        onChange={(e) => setForm({ ...form, akunKode: e.target.value })}
                         className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm focus:border-emerald-500 outline-none"
-                      />
+                      >
+                        <option value="">— Pilih akun —</option>
+                        {pilihanAkun.map((g) =>
+                          g.akun.length ? (
+                            <optgroup key={g.tipe} label={LABEL_TIPE[g.tipe]}>
+                              {g.akun.map((a) => (
+                                <option key={a.kode} value={a.kode}>
+                                  {a.kode} · {a.nama}
+                                </option>
+                              ))}
+                            </optgroup>
+                          ) : null
+                        )}
+                      </select>
                       <p className="text-[11px] text-gray-400 mt-1">
-                        Pembayaran faktur penjualan dicatat lewat menu Piutang Pelanggan agar sisa tagihannya ikut berkurang.
+                        Pembayaran faktur penjualan dicatat lewat menu Piutang Pelanggan, pembayaran suplier lewat Hutang Suplier.
                       </p>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-700 mb-1">
+                        {form.jenis === 'masuk' ? 'Diterima ke *' : 'Dibayar dari *'}
+                      </label>
+                      <select
+                        value={form.akunKas}
+                        onChange={(e) => setForm({ ...form, akunKas: e.target.value })}
+                        className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm focus:border-emerald-500 outline-none"
+                      >
+                        {AKUN_KAS.map((k) => (
+                          <option key={k.kode} value={k.kode}>
+                            {k.kode} · {k.nama}
+                          </option>
+                        ))}
+                      </select>
                     </div>
                   </div>
 

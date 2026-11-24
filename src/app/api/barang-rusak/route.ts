@@ -1,9 +1,10 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/shared/lib/db';
-import { barangRusak, logs } from '@/shared/lib/db/schema';
+import { barangRusak, inventory, logs } from '@/shared/lib/db/schema';
 import { requireAuthRole, ROLES_WAREHOUSE } from '@/shared/lib/auth/rbac';
-import { desc } from 'drizzle-orm';
+import { desc, eq } from 'drizzle-orm';
 import { decrementStock, errorResponse, normalizeSku, resolveRequestCabang } from '@/shared/lib/stock';
+import { AKUN, posting } from '@/shared/lib/jurnal';
 
 // ============================================================
 // API: /api/barang-rusak
@@ -79,6 +80,23 @@ export async function POST(req: Request) {
           createdBy: user,
         })
         .returning();
+
+      // Jurnal: kerugian barang rusak senilai HPP, persediaan berkurang
+      const [hb] = await tx.select({ hargaBeli: inventory.hargaBeli, divisi: inventory.divisi }).from(inventory).where(eq(inventory.sku, normalizedSku)).limit(1);
+      const nilai = Math.round((Number(hb?.hargaBeli) || 0) * parsedQty * 100) / 100;
+      await posting(tx, {
+        tanggal: inserted.tanggal,
+        divisi: hb?.divisi ?? divisi,
+        cabang,
+        sumber: 'RUSAK',
+        referensi: inserted.id,
+        keterangan: `Barang rusak ${normalizedSku} x${parsedQty}${keterangan ? `: ${keterangan}` : ''}`,
+        user,
+        baris: [
+          { akun: AKUN.KERUGIAN_RUSAK, debit: nilai },
+          { akun: AKUN.PERSEDIAAN, kredit: nilai },
+        ],
+      });
 
       await tx.insert(logs).values({
         user,

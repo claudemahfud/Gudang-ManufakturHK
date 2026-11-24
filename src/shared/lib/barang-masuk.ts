@@ -2,6 +2,7 @@ import { eq } from 'drizzle-orm';
 import { db } from '@/shared/lib/db';
 import { barangMasuk, hutangSupplier, inventory, keuangan } from '@/shared/lib/db/schema';
 import { BusinessError, incrementStock } from '@/shared/lib/stock';
+import { AKUN, posting } from '@/shared/lib/jurnal';
 
 // ============================================================
 // Pencatatan Barang Masuk (dipakai Barang Masuk manual & Faktur Pembelian dari PO)
@@ -168,9 +169,14 @@ export interface PembayaranPembelianInput {
   user: string;
 }
 
-/** Lunas = kas keluar; hutang = kewajiban di Hutang Supplier (neraca). */
+/**
+ * Lunas = kas keluar; hutang = kewajiban di Hutang Supplier (neraca).
+ * Jurnal: Dr Persediaan / Cr Kas Tunai (lunas) atau Cr Hutang Usaha (kredit).
+ */
 export async function catatPembayaranPembelian(tx: Tx, p: PembayaranPembelianInput) {
   if (p.total <= 0) return;
+  // Nomor faktur hutang wajib sama dengan barang_masuk.no_faktur (pembatalan mencari hutang lewat nomor ini)
+  const noFaktur = p.noFaktur || `BM-${Date.now()}`;
 
   if (p.skemaBayar === 'lunas') {
     await tx.insert(keuangan).values({
@@ -186,7 +192,7 @@ export async function catatPembayaranPembelian(tx: Tx, p: PembayaranPembelianInp
   } else {
     await tx.insert(hutangSupplier).values({
       supplier: p.supplier,
-      noFaktur: p.noFaktur || `BM-${Date.now()}`,
+      noFaktur,
       tanggal: p.tanggal,
       jatuhTempo: p.jatuhTempo,
       totalHutang: String(p.total),
@@ -196,6 +202,20 @@ export async function catatPembayaranPembelian(tx: Tx, p: PembayaranPembelianInp
       catatan: `Pengadaan barang masuk kredit ${p.uraian}`,
     });
   }
+
+  await posting(tx, {
+    tanggal: p.tanggal,
+    divisi: p.divisi,
+    cabang: p.cabang,
+    sumber: 'PEMBELIAN',
+    referensi: noFaktur,
+    keterangan: `Pembelian ${p.skemaBayar === 'lunas' ? 'tunai' : 'kredit'} dari ${p.supplier}: ${p.uraian}`,
+    user: p.user,
+    baris: [
+      { akun: AKUN.PERSEDIAAN, debit: p.total },
+      { akun: p.skemaBayar === 'lunas' ? AKUN.KAS_TUNAI : AKUN.HUTANG_USAHA, kredit: p.total },
+    ],
+  });
 }
 
 /** Jatuh tempo default 30 hari untuk skema hutang; null untuk lunas. */
