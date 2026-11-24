@@ -5,7 +5,7 @@ import { requireAuthRole, ROLES_WAREHOUSE } from '@/shared/lib/auth/rbac';
 import { eq, desc, and, gte, lte, or } from 'drizzle-orm';
 import { catatBarangMasuk, catatPembayaranPembelian, resolveJatuhTempo } from '@/shared/lib/barang-masuk';
 import { catatReturPelanggan } from '@/shared/lib/retur-pelanggan';
-import { errorResponse, normalizeSku, parsePositiveInt, resolveRequestCabang } from '@/shared/lib/stock';
+import { BusinessError, errorResponse, normalizeSku, parsePositiveInt, resolveRequestCabang } from '@/shared/lib/stock';
 import { roleUtamaDi } from '@/shared/lib/auth/roles';
 
 // ============================================================
@@ -173,6 +173,7 @@ export async function POST(req: Request) {
         cabang: cabangToSave,
         keterangan: keterangan || null,
         user,
+        isiKarton: Number(body.isiKarton) || null,
       });
       insertedRecord = row;
 
@@ -207,6 +208,7 @@ export async function POST(req: Request) {
       { status: 201 }
     );
   } catch (err: any) {
+    if (err instanceof BusinessError) return errorResponse(err, 'BARANG_MASUK_POST');
     console.error('Error in POST /api/barang-masuk:', err);
     return NextResponse.json(
       {

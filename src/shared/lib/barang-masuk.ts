@@ -26,6 +26,8 @@ export interface BarangMasukInput {
   cabang: string;
   keterangan: string | null;
   user: string;
+  /** Isi per karton dari form, dipakai (dan disimpan ke master) bila master belum punya */
+  isiKarton?: number | null;
 }
 
 const ALIAS_KARTON = ['karton', 'ctn', 'dus', 'dos'];
@@ -38,14 +40,18 @@ export function konversiKePcs(
   satuan: string | null | undefined,
   qty: number,
   hargaBeli: number,
-  inv: { pakaiKarton: boolean; settingPcs: number } | null | undefined
+  inv: { pakaiKarton: boolean; settingPcs: number } | null | undefined,
+  isiInput?: number | null
 ) {
   const s = String(satuan || 'pcs').trim().toLowerCase();
   if (s === 'pcs' || s === '') return { qtyPcs: qty, hargaPcs: hargaBeli, isi: 1, label: 'pcs' };
   if (ALIAS_KARTON.includes(s)) {
-    const isi = inv?.pakaiKarton ? Number(inv.settingPcs) || 1 : 1;
-    if (!inv || !inv.pakaiKarton || isi <= 1) {
-      throw new BusinessError('Barang ini belum diatur isi per karton. Isi "Setting pcs per karton" di master Inventory, atau catat dalam pcs.');
+    // Isi master menang; isi dari form hanya untuk barang yang belum punya setting karton
+    const isiMaster = inv?.pakaiKarton ? Number(inv.settingPcs) || 1 : 1;
+    const isiForm = Math.floor(Number(isiInput) || 0);
+    const isi = isiMaster > 1 ? isiMaster : isiForm;
+    if (!Number.isFinite(isi) || isi <= 1) {
+      throw new BusinessError('Isi per karton belum diatur. Isi jumlah pcs per karton (minimal 2), atau catat dalam pcs.');
     }
     return { qtyPcs: qty * isi, hargaPcs: hargaBeli / isi, isi, label: 'karton' };
   }
@@ -67,13 +73,17 @@ export async function catatBarangMasuk(tx: Tx, input: BarangMasukInput) {
     .limit(1);
 
   // Stok & HPP selalu disimpan per pcs; catatan menyimpan qty/harga per pcs
-  const k = konversiKePcs(input.satuan, input.qty, input.hargaBeli, existingInv);
+  const k = konversiKePcs(input.satuan, input.qty, input.hargaBeli, existingInv, input.isiKarton);
+  // Master belum punya isi karton: simpan isi dari form agar transaksi berikutnya konsisten
+  const simpanIsiKeMaster = k.isi > 1 && !(existingInv?.pakaiKarton && Number(existingInv.settingPcs) > 1);
   const catatanSatuan =
     k.isi > 1
       ? `Input: ${input.qty} karton (isi ${k.isi} pcs) @ Rp ${input.hargaBeli.toLocaleString('id-ID')}/karton`
       : null;
+  const { isiKarton: _isi, ...sisaInput } = input;
+  void _isi;
   const it = {
-    ...input,
+    ...sisaInput,
     qty: k.qtyPcs,
     satuan: 'pcs',
     hargaBeli: Math.round(k.hargaPcs * 100) / 100,
@@ -116,7 +126,12 @@ export async function catatBarangMasuk(tx: Tx, input: BarangMasukInput) {
 
     await tx
       .update(inventory)
-      .set({ hargaBeli: String(finalHargaBeli), supplier: it.supplier, updatedAt: new Date() })
+      .set({
+        hargaBeli: String(finalHargaBeli),
+        supplier: it.supplier,
+        ...(simpanIsiKeMaster ? { pakaiKarton: true, settingPcs: k.isi } : {}),
+        updatedAt: new Date(),
+      })
       .where(eq(inventory.sku, it.sku));
   } else {
     await tx.insert(inventory).values({
@@ -129,6 +144,8 @@ export async function catatBarangMasuk(tx: Tx, input: BarangMasukInput) {
       divisi: it.divisi,
       cabang: it.cabang,
       tipeItem: it.divisi === 'FNB' ? 'bahan_baku' : 'barang_jadi',
+      pakaiKarton: k.isi > 1,
+      settingPcs: k.isi > 1 ? k.isi : 1,
     });
   }
 

@@ -89,6 +89,7 @@ export default function BarangMasuk() {
     namaBarang: '',
     qty: '',
     satuan: 'pcs',
+    isiKarton: '',
     hargaBeli: '',
     supplier: '',
     skemaBayar: 'lunas' as 'lunas' | 'hutang',
@@ -200,21 +201,21 @@ export default function BarangMasuk() {
       namaBarang: selected ? selected.namaBarang : '',
       // Satuan kembali ke pcs: harga master (HPP) selalu per pcs
       satuan: 'pcs',
+      isiKarton: '',
       hargaBeli: selected?.hargaBeli ? String(selected.hargaBeli) : prev.hargaBeli,
       supplier: selected?.supplier || prev.supplier || (suppliers[0]?.nama || ''),
     }));
   };
 
-  // Ganti satuan pcs <-> karton: harga ikut dikali / dibagi isi karton
-  const handleSatuanChange = (satuan: string) => {
-    setForm((prev) => {
-      const h = Number(prev.hargaBeli);
-      let hargaBeli = prev.hargaBeli;
-      if (isiKarton > 1 && Number.isFinite(h) && h > 0 && satuan !== prev.satuan) {
-        hargaBeli = String(Math.round((satuan === 'karton' ? h * isiKarton : h / isiKarton) * 100) / 100);
-      }
-      return { ...prev, satuan, hargaBeli };
-    });
+  // Centang karton: harga karton dari suplier berbeda dengan harga pcs, jadi tidak dikali otomatis.
+  // Karton -> kosongkan harga (diketik per karton); pcs -> kembali ke HPP master per pcs.
+  const handleKartonToggle = (pakai: boolean) => {
+    const sel = inventoryList.find((i) => i.sku === form.sku);
+    setForm((prev) => ({
+      ...prev,
+      satuan: pakai ? 'karton' : 'pcs',
+      hargaBeli: pakai ? '' : sel?.hargaBeli ? String(sel.hargaBeli) : '',
+    }));
   };
 
   const openModal = () => {
@@ -241,9 +242,12 @@ export default function BarangMasuk() {
   // Perhitungan Moving Average HPP Real-time
   const selectedInv = inventoryList.find((i) => i.sku === form.sku);
   // Isi per karton dari master Inventory; 0 = barang tidak dijual per karton
-  const isiKarton =
+  const isiMaster =
     selectedInv?.pakaiKarton && Number(selectedInv.settingPcs) > 1 ? Number(selectedInv.settingPcs) : 0;
-  const pengali = form.satuan === 'karton' && isiKarton ? isiKarton : 1;
+  const pakaiKarton = form.satuan === 'karton';
+  // Isi karton: dari master bila ada, selain itu dari isian form (disimpan ke master saat simpan)
+  const isiKarton = isiMaster || Math.floor(Number(form.isiKarton) || 0);
+  const pengali = pakaiKarton && isiKarton > 1 ? isiKarton : 1;
   const berat = bacaGramasi(selectedInv?.gramasi);
   const curStock = Number(selectedInv?.stok) || 0;
   const curPrice = Number(selectedInv?.hargaBeli) || 0;
@@ -276,6 +280,11 @@ export default function BarangMasuk() {
       return;
     }
 
+    if (pakaiKarton && isiKarton <= 1) {
+      showToast('warning', 'Isi per karton belum diisi', 'Isi jumlah pcs dalam 1 karton (minimal 2).', 'Validasi Form');
+      return;
+    }
+
     setSubmitting(true);
     try {
       const payload = {
@@ -284,6 +293,7 @@ export default function BarangMasuk() {
         namaBarang: form.namaBarang.trim(),
         qty: Number(form.qty),
         satuan: form.satuan,
+        isiKarton: pakaiKarton && !isiMaster ? isiKarton : null,
         hargaBeli: Number(form.hargaBeli) || 0,
         totalBeli: calculatedTotalBeli,
         supplier: form.supplier.trim(),
@@ -316,7 +326,7 @@ export default function BarangMasuk() {
       } else {
         showToast(
           'error',
-          json.error || 'Gagal menyimpan barang masuk',
+          json.error || json.message || 'Gagal menyimpan barang masuk',
           json.penyebab || 'Server menolak transaksi. Periksa kembali kelengkapan data.',
           'Pencatatan Gagal'
         );
@@ -843,7 +853,7 @@ export default function BarangMasuk() {
                         <label className="block text-xs font-bold text-gray-700 mb-1 uppercase tracking-wider">
                           Jumlah (Qty) <span className="text-red-500">*</span>
                         </label>
-                        <div className="flex gap-2">
+                        <div className="relative">
                           <input
                             type="number"
                             required
@@ -851,48 +861,72 @@ export default function BarangMasuk() {
                             placeholder="0"
                             value={form.qty}
                             onChange={(e) => setForm({ ...form, qty: e.target.value })}
-                            className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 text-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 outline-none transition font-bold text-gray-800"
+                            className="w-full pl-3.5 pr-16 py-2.5 rounded-xl border border-gray-200 text-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 outline-none transition font-bold text-gray-800"
                           />
-                          <select
-                            value={form.satuan}
-                            onChange={(e) => handleSatuanChange(e.target.value)}
-                            aria-label="Satuan"
-                            className="w-24 px-2 py-2 rounded-xl border border-gray-200 text-sm focus:border-emerald-500 outline-none bg-white font-medium"
-                          >
-                            <option value="pcs">pcs</option>
-                            {isiKarton > 0 && <option value="karton">karton</option>}
-                          </select>
+                          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-gray-500 pointer-events-none">
+                            {pakaiKarton ? 'karton' : 'pcs'}
+                          </span>
                         </div>
-                        {selectedInv && (
-                          <div className="mt-1.5 space-y-0.5 text-[11px] text-gray-600">
-                            <p>
-                              1 pcs
-                              {berat
-                                ? ` = ${formatBerat(berat.nilai, berat.jenis)}`
-                                : selectedInv.gramasi
-                                  ? ` = ${selectedInv.gramasi}`
-                                  : ''}
-                              {isiKarton > 0 &&
-                                ` · 1 karton = ${isiKarton} pcs${berat ? ` = ${formatBerat(berat.nilai * isiKarton, berat.jenis)}` : ''}`}
-                            </p>
-                            {qtyIn > 0 && (pengali > 1 || berat) && (
-                              <p className="font-semibold text-emerald-700">
-                                Stok masuk: {qtyIn.toLocaleString('id-ID')} pcs
-                                {berat ? ` = ${formatBerat(berat.nilai * qtyIn, berat.jenis)}` : ''}
-                              </p>
-                            )}
-                            {isiKarton === 0 && (
-                              <p className="text-gray-400">Tidak dijual per karton. Atur isi karton di master Inventory bila perlu.</p>
-                            )}
-                          </div>
-                        )}
                       </div>
+                    </div>
+
+                    {/* Satuan Karton (centang terpisah) */}
+                    <div className={`p-3.5 rounded-xl border space-y-2 ${pakaiKarton ? 'bg-emerald-50/60 border-emerald-200' : 'bg-gray-50 border-gray-200'}`}>
+                      <label className="flex items-center gap-2.5 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={pakaiKarton}
+                          onChange={(e) => handleKartonToggle(e.target.checked)}
+                          className="w-4 h-4 accent-emerald-600 rounded"
+                        />
+                        <span className="text-xs sm:text-sm font-semibold text-gray-800">Gunakan satuan Karton</span>
+                      </label>
+                      {pakaiKarton && (
+                        isiMaster > 0 ? (
+                          <p className="text-[11px] text-gray-600">
+                            Isi per karton: <strong>{isiMaster} pcs</strong> (dari master Inventory)
+                          </p>
+                        ) : (
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="number"
+                              min="2"
+                              placeholder="Isi"
+                              aria-label="Isi pcs per karton"
+                              value={form.isiKarton}
+                              onChange={(e) => setForm({ ...form, isiKarton: e.target.value })}
+                              className="w-24 px-3 py-1.5 bg-white border border-gray-300 rounded-lg text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                            />
+                            <span className="text-[11px] text-gray-600">pcs per 1 karton (disimpan ke master Inventory)</span>
+                          </div>
+                        )
+                      )}
+                      {(selectedInv || (pakaiKarton && isiKarton > 1)) && (
+                        <div className="space-y-0.5 text-[11px] text-gray-600">
+                          <p>
+                            1 pcs
+                            {berat
+                              ? ` = ${formatBerat(berat.nilai, berat.jenis)}`
+                              : selectedInv?.gramasi
+                                ? ` = ${selectedInv.gramasi}`
+                                : ''}
+                            {isiKarton > 1 &&
+                              ` · 1 karton = ${isiKarton} pcs${berat ? ` = ${formatBerat(berat.nilai * isiKarton, berat.jenis)}` : ''}`}
+                          </p>
+                          {qtyIn > 0 && (pengali > 1 || berat) && (
+                            <p className="font-semibold text-emerald-700">
+                              Stok masuk: {qtyIn.toLocaleString('id-ID')} pcs
+                              {berat ? ` = ${formatBerat(berat.nilai * qtyIn, berat.jenis)}` : ''}
+                            </p>
+                          )}
+                        </div>
+                      )}
                     </div>
 
                     {/* Harga Beli Satuan (Modal ke Suplier) */}
                     <div>
                       <label className="block text-xs font-bold text-gray-700 mb-1 uppercase tracking-wider">
-                        Harga Beli Satuan (Rp) <span className="text-red-500">*</span>
+                        {pakaiKarton ? 'Harga Beli per Karton (Rp)' : 'Harga Beli per Pcs (Rp)'} <span className="text-red-500">*</span>
                       </label>
                       <input
                         type="number"
@@ -903,7 +937,10 @@ export default function BarangMasuk() {
                         className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 text-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 outline-none transition font-semibold"
                       />
                       <p className="text-[10px] text-gray-500 mt-1">
-                        Harga yang <strong>dibayar kepada Suplier</strong> untuk 1 {form.satuan}.
+                        Harga yang <strong>dibayar kepada Suplier</strong> untuk 1 {pakaiKarton ? 'karton' : 'pcs'}.
+                        {pakaiKarton && isiKarton > 1 && Number(form.hargaBeli) > 0 && (
+                          <> Setara <strong>{formatRupiah(Number(form.hargaBeli) / isiKarton)}</strong> per pcs (HPP stok).</>
+                        )}
                       </p>
                     </div>
 
