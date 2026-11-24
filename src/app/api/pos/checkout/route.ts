@@ -7,6 +7,7 @@ import { decrementStock, errorResponse, normalizeSku, parsePositiveInt } from '@
 import { assertSupervisorPin, getPengaturan } from '@/shared/lib/pengaturan';
 import { roleUtamaDi } from '@/shared/lib/auth/roles';
 import { nomorUrut } from '@/shared/lib/nomor-urut';
+import { AKUN, akunKas, posting } from '@/shared/lib/jurnal';
 
 // ============================================================
 // API: /api/pos/checkout
@@ -68,7 +69,7 @@ export async function POST(req: Request) {
 
     // 1. Validasi item & ambil harga resmi dari master inventory.
     //    Harga & nama dari klien diabaikan agar tidak bisa dimanipulasi.
-    const lines: { sku: string; namaBarang: string; qty: number; hargaJual: number; satuan: string }[] = [];
+    const lines: { sku: string; namaBarang: string; qty: number; hargaJual: number; hargaBeli: number; satuan: string }[] = [];
     for (const item of items) {
       const sku = normalizeSku(item?.sku);
       const qty = parsePositiveInt(item?.qty);
@@ -80,7 +81,7 @@ export async function POST(req: Request) {
       }
 
       const [inv] = await db
-        .select({ namaBarang: inventory.namaBarang, hargaJual: inventory.hargaJual, stok: inventory.stok })
+        .select({ namaBarang: inventory.namaBarang, hargaJual: inventory.hargaJual, hargaBeli: inventory.hargaBeli, stok: inventory.stok })
         .from(inventory)
         .where(eq(inventory.sku, sku))
         .limit(1);
@@ -97,6 +98,7 @@ export async function POST(req: Request) {
         namaBarang: inv.namaBarang,
         qty,
         hargaJual: Number(inv.hargaJual ?? 0),
+        hargaBeli: Number(inv.hargaBeli ?? 0) || 0,
         satuan: item.satuan || 'pcs',
       });
     }
@@ -134,7 +136,10 @@ export async function POST(req: Request) {
     // 4. Proses Transaksi Database (Atomic Transaction)
     await db.transaction(async (tx) => {
       trxId = await nomorUrut(tx, 'POS');
+      let totalHpp = 0;
       for (const item of lines) {
+        const hpp = roundRp(item.qty * item.hargaBeli);
+        totalHpp = roundRp(totalHpp + hpp);
         const itemSubtotal = item.hargaJual * item.qty;
         const itemNetTotal = roundRp(itemSubtotal - (itemSubtotal * diskon) / 100);
 
@@ -153,6 +158,7 @@ export async function POST(req: Request) {
             satuan: item.satuan,
             hargaJual: String(item.hargaJual),
             total: String(itemNetTotal),
+            hpp: String(hpp),
             pelanggan,
             salesman: cashierName,
             diskon: String(diskon),
@@ -174,6 +180,24 @@ export async function POST(req: Request) {
         cabang: finalCabang,
         keterangan: `Penjualan POS [${divisi} - ${finalCabang}] #${trxId} (${metodePembayaran}) oleh ${cashierName} (${userRole})`,
         createdBy: user.username,
+      });
+
+      // Jurnal: kas + potongan = penjualan; HPP keluar dari persediaan
+      await posting(tx, {
+        tanggal: tanggalTrx,
+        divisi,
+        cabang: finalCabang,
+        sumber: 'POS',
+        referensi: trxId,
+        keterangan: `Penjualan kasir #${trxId} (${metodePembayaran}) ke ${pelanggan}`,
+        user: user.username,
+        baris: [
+          { akun: akunKas(metodePembayaran), debit: grandTotal },
+          { akun: AKUN.POTONGAN_PENJUALAN, debit: nominalDiskon },
+          { akun: AKUN.PENJUALAN_POS, kredit: subtotal },
+          { akun: AKUN.HPP, debit: totalHpp },
+          { akun: AKUN.PERSEDIAAN, kredit: totalHpp },
+        ],
       });
 
       // Catat riwayat log aktivitas

@@ -182,6 +182,7 @@ export async function kirimOrder(tx: Tx, id: string, u: Pelaku, tempoHari = TEMP
     cabang: DAPUR_PUSAT,
     catatan: `Order franchise ${order.noOrder}`,
     user: u.username,
+    akunPendapatan: '4-1300', // Penjualan Franchise
   });
   const [baru] = await tx
     .update(orderFranchise)

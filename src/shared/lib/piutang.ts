@@ -2,6 +2,7 @@ import { eq, sql } from 'drizzle-orm';
 import { db } from '@/shared/lib/db';
 import { fakturPenjualan, keuangan, logs, piutangMutasi } from '@/shared/lib/db/schema';
 import { BusinessError } from '@/shared/lib/stock';
+import { AKUN, akunKas, posting } from '@/shared/lib/jurnal';
 
 // ============================================================
 // Piutang pelanggan dari Faktur Penjualan.
@@ -99,6 +100,20 @@ export async function bayarPiutang(tx: Tx, noFaktur: string, p: BayarInput, user
     keterangan: `${lunas ? 'Pelunasan' : 'Cicilan'} faktur ${noFaktur} (${LABEL_METODE_TERIMA[p.metode]}) dari ${f.pelanggan}${lunas ? '' : `, sisa Rp ${sisaBaru.toLocaleString('id-ID')}`}`,
     referensi: noFaktur,
     createdBy: user,
+  });
+
+  await posting(tx, {
+    tanggal: p.tanggal,
+    divisi: f.divisi,
+    cabang: f.cabang,
+    sumber: 'BAYAR_PIUTANG',
+    referensi: noFaktur,
+    keterangan: `${lunas ? 'Pelunasan' : 'Cicilan'} piutang faktur ${noFaktur} dari ${f.pelanggan} (${LABEL_METODE_TERIMA[p.metode]})`,
+    user,
+    baris: [
+      { akun: akunKas(p.metode), debit: jumlah },
+      { akun: AKUN.PIUTANG, kredit: jumlah },
+    ],
   });
 
   await tx.insert(logs).values({

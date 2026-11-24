@@ -29,6 +29,10 @@ export const ROLES_FINANCE: UserRole[] = [
   'Finance & Accounting',
 ];
 
+// Pembukuan (jurnal, buku besar, kas & bank, biaya, hutang, laporan keuangan):
+// hanya dikerjakan Direktur Utama & Manager (perintah pemilik 24/11/2026)
+export const ROLES_PEMBUKUAN: UserRole[] = ['Direktur Utama', 'Manager', 'Manager Umum'];
+
 // Laporan Laba Bersih, Margin Profit & HPP: Khusus pimpinan
 export const ROLES_PROFIT_MARGIN: UserRole[] = [
   'Administrator',

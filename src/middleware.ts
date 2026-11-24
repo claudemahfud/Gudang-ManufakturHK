@@ -12,13 +12,20 @@ const { auth } = NextAuth(authConfig);
 
 const PUBLIC_ROUTES = [ROUTES.LOGIN, ROUTES.FORGOT_PASSWORD, '/api/public'];
 
+// Pembukuan: hanya Direktur Utama & Manager (sama dengan ROLES_PEMBUKUAN di rbac.ts)
+const PEMBUKUAN = ['Direktur Utama', 'Manager', 'Manager Umum'];
+
 const ROUTE_ROLES: Record<string, string[]> = {
   // Page routes
   [ROUTES.USERS]: ['Administrator', 'Direktur Utama'], // Direktur: atur multi-role (API dijaga terpisah)
   [ROUTES.PENGATURAN_PERUSAHAAN]: ['Direktur Utama', 'Administrator'], // Administrator: hanya Zona Bahaya (Reset Total)
   [ROUTES.LOGS]: ['Administrator', 'Manager', 'Manager Umum', 'Direktur Utama'],
-  [ROUTES.KEUANGAN]: ['Administrator', 'Manager', 'Manager Umum', 'Direktur Utama', 'Kepala Gudang', 'Finance & Accounting'],
-  [ROUTES.BIAYA_OPERASIONAL]: ['Administrator', 'Manager', 'Manager Umum', 'Direktur Utama', 'Finance & Accounting'],
+  [ROUTES.KEUANGAN]: PEMBUKUAN,
+  [ROUTES.BIAYA_OPERASIONAL]: PEMBUKUAN,
+  [ROUTES.NERACA]: PEMBUKUAN,
+  '/laporan-keuangan': PEMBUKUAN,
+  '/jurnal': PEMBUKUAN,
+  '/hutang': PEMBUKUAN,
   [ROUTES.PIUTANG]: ['Administrator', 'Manager', 'Manager Umum', 'Direktur Utama', 'Finance & Accounting'],
   [ROUTES.MONITOR_FRANCHISE]: ['Administrator', 'Manager', 'Manager Umum', 'Direktur Utama', 'Finance & Accounting'],
   [ROUTES.PRODUKSI_DAPUR]: ['Administrator', 'Manager', 'Manager Umum', 'Direktur Utama', 'Kepala Gudang'],
@@ -31,8 +38,10 @@ const ROUTE_ROLES: Record<string, string[]> = {
   // Direktur: GET daftar & PUT roles. Tiap handler menjaga role-nya sendiri (POST/PUT/DELETE/password = Administrator)
   '/api/users': ['Administrator', 'Direktur Utama'],
   '/api/logs': ['Administrator', 'Manager', 'Manager Umum', 'Direktur Utama'],
-  '/api/keuangan': ['Administrator', 'Manager', 'Manager Umum', 'Direktur Utama', 'Kepala Gudang', 'Finance & Accounting'],
-  '/api/biaya-operasional': ['Administrator', 'Manager', 'Manager Umum', 'Direktur Utama', 'Finance & Accounting'],
+  '/api/keuangan': PEMBUKUAN,
+  '/api/biaya-operasional': PEMBUKUAN,
+  '/api/akuntansi': PEMBUKUAN,
+  '/api/hutang': PEMBUKUAN,
   '/api/piutang': ['Administrator', 'Manager', 'Manager Umum', 'Direktur Utama', 'Finance & Accounting'],
   '/api/franchise/monitor': ['Administrator', 'Manager', 'Manager Umum', 'Direktur Utama', 'Finance & Accounting'],
   '/api/target-komisi': ['Administrator', 'Manager', 'Manager Umum', 'Direktur Utama', 'Admin Salesman'],
