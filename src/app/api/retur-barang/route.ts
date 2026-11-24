@@ -5,6 +5,7 @@ import { ROLES_WAREHOUSE, requireAuthRole } from '@/shared/lib/auth/rbac';
 import type { UserRole } from '@/shared/types';
 import { desc, eq } from 'drizzle-orm';
 import { BusinessError, errorResponse, incrementStock, normalizeSku, parsePositiveInt, resolveRequestCabang } from '@/shared/lib/stock';
+import { jurnalReturMasukStok } from '@/shared/lib/retur-pelanggan';
 import { punyaRole } from '@/shared/lib/auth/roles';
 import { nomorUrut } from '@/shared/lib/nomor-urut';
 
@@ -96,6 +97,7 @@ export async function POST(req: Request) {
       // Jika langsung dikembalikan ke stok gudang:
       if (kembaliKeStok) {
         await incrementStock(tx, normalizedSku, parsedQty, cabang);
+        await jurnalReturMasukStok(tx, { ...inserted, pelanggan: pelanggan || null }, user);
       }
 
       await tx.insert(logs).values({

@@ -80,7 +80,7 @@ export async function terimaFakturPo(tx: Tx, poId: string, f: FakturInput) {
       satuan: it.satuan,
       hargaBeli: harga,
       supplier: po.supplier,
-      noFaktur: f.noFaktur,
+      noFaktur: f.noFaktur ?? po.noPo, // sama dengan nomor hutang/jurnal pembeliannya
       skemaBayar: f.skemaBayar,
       jatuhTempo: f.jatuhTempo,
       divisi: f.divisi,

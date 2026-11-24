@@ -4,6 +4,9 @@ import { barangKeluar, fakturPenjualan, inventory, keuangan, logs } from '@/shar
 import { BusinessError, decrementStock, incrementStock } from '@/shared/lib/stock';
 import { hitungFaktur, LABEL_METODE, type MetodeBayar } from '@/shared/lib/faktur-hitung';
 import { fakturPunyaRetur } from '@/shared/lib/retur-pelanggan';
+import { AKUN, akunKas, balikJurnal, posting } from '@/shared/lib/jurnal';
+
+const rp = (n: number) => Math.round(n * 100) / 100;
 
 // ============================================================
 // Faktur Penjualan (grosir). Wajib dipanggil di dalam db.transaction.
@@ -40,6 +43,8 @@ export interface FakturPenjualanInput {
   cabang: string;
   catatan: string | null;
   user: string;
+  /** Akun pendapatan; bawaan Penjualan Faktur (Grosir). Order franchise memakai Penjualan Franchise. */
+  akunPendapatan?: string;
 }
 
 export async function buatFakturPenjualan(tx: Tx, f: FakturPenjualanInput) {
@@ -49,20 +54,24 @@ export async function buatFakturPenjualan(tx: Tx, f: FakturPenjualanInput) {
     h.sisaPiutang > 0 ? f.jatuhTempo ?? new Date(f.tanggal.getTime() + 30 * 24 * 60 * 60 * 1000) : null;
 
   const rows: (typeof barangKeluar.$inferSelect)[] = [];
+  let totalHpp = 0;
   for (let i = 0; i < f.baris.length; i++) {
     const b = f.baris[i];
     // Beli kartonan: isi per karton diambil dari master barang, bukan dari klien.
     let isi = 1;
+    const [p] = await tx
+      .select({ settingPcs: inventory.settingPcs, pakaiKarton: inventory.pakaiKarton, hargaBeli: inventory.hargaBeli })
+      .from(inventory)
+      .where(eq(inventory.sku, b.sku));
     if (b.satuan === 'karton') {
-      const [p] = await tx
-        .select({ settingPcs: inventory.settingPcs, pakaiKarton: inventory.pakaiKarton })
-        .from(inventory)
-        .where(eq(inventory.sku, b.sku));
       if (!p?.pakaiKarton || p.settingPcs <= 1) throw new BusinessError(`Barang ${b.sku} tidak dijual per karton`);
       isi = p.settingPcs;
     }
     // Stok & baris barang_keluar selalu dalam pcs (laporan dan pembatalan bergantung pada ini).
     const qtyPcs = b.qty * isi;
+    // HPP aktual = harga beli rata-rata saat ini x qty pcs
+    const hpp = rp(qtyPcs * (Number(p?.hargaBeli ?? 0) || 0));
+    totalHpp = rp(totalHpp + hpp);
     // Kurangi stok hanya bila masih cukup (aman dari transaksi bersamaan)
     const inv = await decrementStock(tx, b.sku, qtyPcs, f.cabang);
     const [row] = await tx
@@ -76,6 +85,7 @@ export async function buatFakturPenjualan(tx: Tx, f: FakturPenjualanInput) {
         satuan: 'pcs',
         hargaJual: String(Math.round((b.hargaJual / isi) * 100) / 100),
         total: String(h.totalBaris[i]),
+        hpp: String(hpp),
         pelanggan: f.pelanggan,
         salesman: f.salesman,
         diskon: String(b.diskon),
@@ -131,6 +141,27 @@ export async function buatFakturPenjualan(tx: Tx, f: FakturPenjualanInput) {
     });
   }
 
+  // Jurnal: kas (uang muka/lunas) + piutang + potongan = penjualan + PPN + ongkir; HPP keluar dari persediaan
+  await posting(tx, {
+    tanggal: f.tanggal,
+    divisi: f.divisi,
+    cabang: f.cabang,
+    sumber: 'FAKTUR',
+    referensi: f.noFaktur,
+    keterangan: `Faktur ${f.noFaktur} ke ${f.pelanggan} (${LABEL_METODE[f.metodeBayar]})`,
+    user: f.user,
+    baris: [
+      { akun: akunKas(f.metodeBayar), debit: h.dibayar },
+      { akun: AKUN.PIUTANG, debit: h.sisaPiutang },
+      { akun: AKUN.POTONGAN_PENJUALAN, debit: h.diskonFaktur },
+      { akun: f.akunPendapatan ?? AKUN.PENJUALAN_FAKTUR, kredit: h.subtotal },
+      { akun: AKUN.PPN_KELUARAN, kredit: h.ppn },
+      { akun: AKUN.PENDAPATAN_ONGKIR, kredit: h.ongkir },
+      { akun: AKUN.HPP, debit: totalHpp },
+      { akun: AKUN.PERSEDIAAN, kredit: totalHpp },
+    ],
+  });
+
   await tx.insert(logs).values({
     user: f.user,
     aksi: 'FAKTUR_PENJUALAN',
@@ -171,6 +202,14 @@ export async function batalkanFakturPenjualan(tx: Tx, noFaktur: string, user: st
       createdBy: username,
     });
   }
+
+  // Balik jurnal faktur & semua pembayaran piutangnya (kas yang dibalik = dibayar di header)
+  await balikJurnal(tx, {
+    referensi: noFaktur,
+    sumber: ['FAKTUR', 'BAYAR_PIUTANG'],
+    keterangan: `Pembatalan faktur ${noFaktur} (${faktur.pelanggan})`,
+    user: username ?? user,
+  });
 
   await tx.insert(logs).values({
     user,

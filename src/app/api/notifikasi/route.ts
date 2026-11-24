@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { sql } from 'drizzle-orm';
 import { db } from '@/shared/lib/db';
-import { requireAuthRole, ROLES_FINANCE, ROLES_WAREHOUSE } from '@/shared/lib/auth/rbac';
+import { requireAuthRole, ROLES_FINANCE, ROLES_PEMBUKUAN, ROLES_WAREHOUSE } from '@/shared/lib/auth/rbac';
 import { punyaRole } from '@/shared/lib/auth/roles';
 import { PO_STATUS } from '@/shared/lib/po-status';
 import { ROUTES } from '@/router/routes';
@@ -90,7 +90,10 @@ export async function GET(req: NextRequest) {
           waktu: null,
         });
       }
+    }
 
+    // Hutang suplier dikelola pembukuan (Direktur Utama & Manager)
+    if (punyaRole(user, ROLES_PEMBUKUAN)) {
       const [ht] = (await db.execute(sql`
         SELECT COUNT(*)::int AS n,
                COUNT(*) FILTER (WHERE jatuh_tempo < now())::int AS lewat,
@@ -105,7 +108,7 @@ export async function GET(req: NextRequest) {
           tipe: Number(ht.lewat) > 0 ? 'error' : 'warning',
           judul: `${ht.n} hutang suplier jatuh tempo`,
           pesan: `${Number(ht.lewat) > 0 ? `${ht.lewat} sudah lewat tempo. ` : ''}Total ${rp(ht.total)}`,
-          href: ROUTES.KEUANGAN,
+          href: '/hutang',
           waktu: null,
         });
       }

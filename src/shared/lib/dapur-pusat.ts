@@ -13,6 +13,7 @@ import {
 import { BusinessError, decrementStock, incrementStock, normalizeSku } from '@/shared/lib/stock';
 import { evaluasiHarga, hitungHpp, pemakaianBahan } from '@/shared/lib/resep-hitung';
 import { nomorUrut } from '@/shared/lib/nomor-urut';
+import { AKUN, posting } from '@/shared/lib/jurnal';
 
 // ============================================================
 // Dapur Pusat: Master Resep (HPP per batch) & Produksi.
@@ -244,6 +245,23 @@ export async function buatProduksi(
       subtotal: String(b.subtotalAktual),
     }))
   );
+  // Jurnal: bahan berpindah jadi produk (akun persediaan sama, saling hapus);
+  // biaya lain (overhead resep) menambah nilai produk, lawannya Overhead Produksi Dibebankan.
+  await posting(tx, {
+    tanggal: row.tanggal,
+    divisi: 'FNB',
+    cabang: DAPUR_PUSAT,
+    sumber: 'PRODUKSI',
+    referensi: noProduksi,
+    keterangan: `Produksi ${noProduksi}: ${hasilQty} ${produk.namaBarang}`,
+    user,
+    baris: [
+      { akun: AKUN.PERSEDIAAN, debit: hppTotal },
+      { akun: AKUN.PERSEDIAAN, kredit: biayaBahan },
+      { akun: AKUN.OVERHEAD_DIBEBANKAN, kredit: biayaLain },
+    ],
+  });
+
   await tx.insert(logs).values({
     user,
     aksi: 'PRODUKSI_DAPUR',

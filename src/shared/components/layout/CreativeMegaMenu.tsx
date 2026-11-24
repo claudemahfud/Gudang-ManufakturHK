@@ -19,6 +19,7 @@ import {
   HandCoins,
   Receipt,
   Scale,
+  BookOpen,
   Coins,
   TrendingUp,
   BarChart3,
@@ -234,13 +235,36 @@ export default function CreativeMegaMenu({ userRoles = [], isOpen, onClose }: Me
     },
   ];
 
+  // Pembukuan hanya Direktur Utama & Manager; Piutang tetap untuk role lamanya
+  const bukanPembukuan = !ada(['Direktur Utama', 'Manager', 'Manager Umum']);
   const categoryKeuanganAdmin = [
     {
-      title: 'Arus Kas Keuangan',
+      title: 'Laporan Keuangan',
+      desc: 'Neraca, laba rugi & arus kas',
+      href: ROUTES.LAPORAN_KEUANGAN,
+      icon: Scale,
+      restricted: bukanPembukuan,
+    },
+    {
+      title: 'Jurnal & Buku Besar',
+      desc: 'Jurnal umum, buku besar & bagan akun',
+      href: ROUTES.JURNAL,
+      icon: BookOpen,
+      restricted: bukanPembukuan,
+    },
+    {
+      title: 'Kas & Bank',
       desc: 'Pencatatan kas masuk dan kas keluar',
       href: ROUTES.KEUANGAN,
       icon: Wallet,
-      restricted: !ada(['Administrator', 'Manager', 'Manager Umum', 'Direktur Utama', 'Finance & Accounting']),
+      restricted: bukanPembukuan,
+    },
+    {
+      title: 'Hutang Suplier',
+      desc: 'Tagihan pembelian & pembayaran suplier',
+      href: ROUTES.HUTANG,
+      icon: Truck,
+      restricted: bukanPembukuan,
     },
     {
       title: 'Piutang Pelanggan',
@@ -250,38 +274,11 @@ export default function CreativeMegaMenu({ userRoles = [], isOpen, onClose }: Me
       restricted: !ada(['Administrator', 'Manager', 'Manager Umum', 'Direktur Utama', 'Finance & Accounting']),
     },
     {
-      title: 'Neraca Keuangan',
-      desc: 'Laporan aset, kewajiban & ekuitas',
-      href: ROUTES.NERACA,
-      icon: Scale,
-      restricted: !ada(['Administrator', 'Manager', 'Manager Umum', 'Direktur Utama', 'Finance & Accounting']),
-    },
-    {
       title: 'Biaya Operasional',
       desc: 'Beban operasional harian & bulanan',
       href: ROUTES.BIAYA_OPERASIONAL,
       icon: Receipt,
-      restricted: !ada(['Administrator', 'Manager', 'Manager Umum', 'Direktur Utama', 'Finance & Accounting']),
-    },
-    {
-      title: 'Setting Profil Akun',
-      desc: 'Edit identitas, ganti password & ganti mode',
-      href: ROUTES.PROFILE,
-      icon: Users,
-    },
-    {
-      title: 'Manajemen Cabang',
-      desc: 'Isolasi data & penempatan lokasi cabang',
-      href: ROUTES.CABANG,
-      icon: Building2,
-      restricted: !ada(['Administrator', 'Manager', 'Manager Umum', 'Direktur Utama']),
-    },
-    {
-      title: 'Manajemen Pengguna',
-      desc: 'Hak akses RBAC & proteksi akun bawahan',
-      href: ROUTES.USERS,
-      icon: Users,
-      restricted: !ada(['Administrator', 'Direktur Utama']),
+      restricted: bukanPembukuan,
     },
   ];
 
@@ -462,7 +459,7 @@ export default function CreativeMegaMenu({ userRoles = [], isOpen, onClose }: Me
                 </li>
               ))}
               {/* Tambahan keuangan ringkas jika logistik sedikit */}
-              {categoryKeuanganAdmin.slice(0, 2).map((item) => {
+              {categoryKeuanganAdmin.map((item) => {
                 if (item.restricted) return null;
                 return (
                   <li key={item.title}>

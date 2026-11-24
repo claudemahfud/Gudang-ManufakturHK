@@ -14,6 +14,7 @@ import {
 } from '@/shared/lib/db/schema';
 import { BusinessError, decrementStock, incrementStock } from '@/shared/lib/stock';
 import { nomorUrut } from '@/shared/lib/nomor-urut';
+import { AKUN, akunKas, balikJurnal, posting } from '@/shared/lib/jurnal';
 
 // ============================================================
 // Retur dari pelanggan (dicatat lewat Barang Masuk, jenis RETUR_PELANGGAN).
@@ -151,6 +152,7 @@ export async function catatReturPelanggan(tx: Tx, p: ReturInput, user: string) {
   let potong = 0;
   let refund = 0;
   let sisaSetelah = 0;
+  let ppnBagian = 0; // porsi PPN keluaran di nilai retur (faktur ber-PPN)
 
   if (p.noFaktur) {
     // Kunci faktur: retur & pembayaran bersamaan pada faktur yang sama antre
@@ -180,6 +182,8 @@ export async function catatReturPelanggan(tx: Tx, p: ReturInput, user: string) {
     nilai = rp(potong + refund);
     sisaSetelah = rp(sisa - potong);
     const dibayarBaru = rp(dibayar - refund);
+    const dasar = Number(f.grandTotal) - Number(f.ongkir);
+    ppnBagian = Number(f.ppn) > 0 && dasar > 0 ? rp((nilai * Number(f.ppn)) / dasar) : 0;
 
     await tx
       .update(fakturPenjualan)
@@ -247,10 +251,32 @@ export async function catatReturPelanggan(tx: Tx, p: ReturInput, user: string) {
     barangRusakId = br.id;
   }
 
+  const noRetur = await nomorUrut(tx, 'RTRN');
+  // Jurnal: retur penjualan (+ PPN keluaran berkurang) = potong piutang + uang dikembalikan;
+  // barang layak kembali ke persediaan senilai HPP. Barang rusak: HPP-nya tetap jadi biaya.
+  const hppKembali = p.kondisi === 'layak' ? rp((Number(inv.hargaBeli) || 0) * p.qty) : 0;
+  await posting(tx, {
+    tanggal: p.tanggal,
+    divisi,
+    cabang,
+    sumber: 'RETUR',
+    referensi: noRetur,
+    keterangan: `Retur ${p.sku} x${p.qty} dari ${pelanggan}${p.noFaktur ? ` faktur ${p.noFaktur}` : ''} (${p.kondisi})`,
+    user,
+    baris: [
+      { akun: AKUN.RETUR_PENJUALAN, debit: rp(nilai - ppnBagian) },
+      { akun: AKUN.PPN_KELUARAN, debit: ppnBagian },
+      { akun: AKUN.PIUTANG, kredit: potong },
+      { akun: akunKas(p.metodeRefund), kredit: refund },
+      { akun: AKUN.PERSEDIAAN, debit: hppKembali },
+      { akun: AKUN.HPP, kredit: hppKembali },
+    ],
+  });
+
   const [retur] = await tx
     .insert(returBarang)
     .values({
-      noRetur: await nomorUrut(tx, 'RTRN'),
+      noRetur,
       tanggal: p.tanggal, sku: p.sku, namaBarang: inv.namaBarang, qty: p.qty, alasan: p.alasan, pelanggan,
       divisi, status: 'disetujui', cabang, createdBy: user, noFaktur: p.noFaktur, kondisi: p.kondisi,
       nilai: String(nilai), potongPiutang: String(potong), refund: String(refund),
@@ -330,6 +356,10 @@ export async function batalkanReturPelanggan(tx: Tx, returId: string, user: stri
     });
   }
 
+  if (r.noRetur) {
+    await balikJurnal(tx, { referensi: r.noRetur, sumber: ['RETUR'], keterangan: `Batal retur ${r.sku} x${r.qty}`, user });
+  }
+
   await tx.insert(logs).values({
     user,
     aksi: 'BATAL_RETUR_PELANGGAN',
@@ -346,4 +376,31 @@ export async function batalkanReturPelanggan(tx: Tx, returId: string, user: stri
 export async function fakturPunyaRetur(ex: Executor, noFaktur: string) {
   const [r] = await ex.select({ id: returBarang.id }).from(returBarang).where(eq(returBarang.noFaktur, noFaktur)).limit(1);
   return Boolean(r);
+}
+
+/**
+ * Retur tanpa uang (menu Retur Barang lama) yang masuk stok: barang kembali ke persediaan
+ * senilai HPP saat ini, mengurangi HPP. Dibalik lewat balikJurnal(noRetur, ['RETUR']).
+ */
+export async function jurnalReturMasukStok(
+  tx: Tx,
+  r: { noRetur: string | null; sku: string; qty: number; divisi: string; cabang: string; pelanggan: string | null },
+  user: string
+) {
+  if (!r.noRetur) return null;
+  const [inv] = await tx.select({ hargaBeli: inventory.hargaBeli, divisi: inventory.divisi }).from(inventory).where(eq(inventory.sku, r.sku)).limit(1);
+  const nilai = rp((Number(inv?.hargaBeli) || 0) * r.qty);
+  return posting(tx, {
+    tanggal: new Date(),
+    divisi: inv?.divisi ?? r.divisi,
+    cabang: r.cabang,
+    sumber: 'RETUR',
+    referensi: r.noRetur,
+    keterangan: `Retur ${r.sku} x${r.qty} masuk stok${r.pelanggan ? ` dari ${r.pelanggan}` : ''}`,
+    user,
+    baris: [
+      { akun: AKUN.PERSEDIAAN, debit: nilai },
+      { akun: AKUN.HPP, kredit: nilai },
+    ],
+  });
 }

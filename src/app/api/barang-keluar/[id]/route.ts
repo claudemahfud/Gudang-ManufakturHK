@@ -6,6 +6,9 @@ import { eq } from 'drizzle-orm';
 import { BusinessError, errorResponse, incrementStock } from '@/shared/lib/stock';
 import { assertSupervisorPin, getPengaturan } from '@/shared/lib/pengaturan';
 import { batalkanFakturPenjualan } from '@/shared/lib/faktur-penjualan';
+import { AKUN, AKUN_KAS, barisJurnalAktif, posting } from '@/shared/lib/jurnal';
+
+const rp = (n: number) => Math.round(n * 100) / 100;
 
 // ============================================================
 // API: /api/barang-keluar/[id]
@@ -61,6 +64,29 @@ export async function DELETE(
           cabang: item.cabang,
           keterangan: `Pembatalan item ${item.sku} x${item.qty} dari transaksi POS #${item.trxId}`,
           createdBy: authResult.user?.username ?? null,
+        });
+      }
+      if (item.channel === 'POS') {
+        // Jurnal pembalik sebagian: kas keluar ke akun kas yang dipakai saat penjualan, persediaan kembali
+        const kas = (await barisJurnalAktif(tx, item.trxId, ['POS'])).find((b) => AKUN_KAS.includes(b.akunKode))?.akunKode ?? AKUN.KAS_TUNAI;
+        const bruto = rp(Number(item.hargaJual ?? 0) * item.qty);
+        const neto = rp(total);
+        const hpp = rp(Number(item.hpp ?? 0));
+        await posting(tx, {
+          tanggal: new Date(),
+          divisi: item.divisi,
+          cabang: item.cabang,
+          sumber: 'BATAL_POS',
+          referensi: item.trxId,
+          keterangan: `Batal item ${item.sku} x${item.qty} dari #${item.trxId}`,
+          user,
+          baris: [
+            { akun: AKUN.PENJUALAN_POS, debit: bruto },
+            { akun: AKUN.POTONGAN_PENJUALAN, kredit: rp(bruto - neto) },
+            { akun: kas, kredit: neto },
+            { akun: AKUN.PERSEDIAAN, debit: hpp },
+            { akun: AKUN.HPP, kredit: hpp },
+          ],
         });
       }
 
