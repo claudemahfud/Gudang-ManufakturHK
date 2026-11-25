@@ -23,6 +23,7 @@ import type { InventoryItem } from '@/shared/types';
 import { useDivision } from '@/shared/context/DivisionContext';
 import RekapGlobal from './RekapGlobal';
 import KesehatanBisnis from './KesehatanBisnis';
+import PanelPenjualan from './PanelPenjualan';
 import {
   ArrowDownToLine,
   Truck,
@@ -236,6 +237,9 @@ export default function Dashboard() {
           </div>
         </div>
       </header>
+
+      {/* Panel penjualan (pimpinan, finance, sales) */}
+      <PanelPenjualan />
 
       {/* Keuangan & kesehatan bisnis (khusus Direktur Utama & Manager) */}
       <KesehatanBisnis />

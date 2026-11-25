@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { sql } from 'drizzle-orm';
 import { db } from '@/shared/lib/db';
-import { requireAuthRole, ROLES_FINANCE, ROLES_PEMBUKUAN, ROLES_WAREHOUSE } from '@/shared/lib/auth/rbac';
+import { requireAuthRole, ROLES_FINANCE, ROLES_FINANCE_SETORAN, ROLES_PEMBUKUAN, ROLES_SALES_SETORAN, ROLES_WAREHOUSE } from '@/shared/lib/auth/rbac';
+import { saldoSales } from '@/shared/lib/setoran';
 import { punyaRole } from '@/shared/lib/auth/roles';
 import { PO_STATUS } from '@/shared/lib/po-status';
 import { ROUTES } from '@/router/routes';
@@ -109,6 +110,37 @@ export async function GET(req: NextRequest) {
           judul: `${ht.n} hutang suplier jatuh tempo`,
           pesan: `${Number(ht.lewat) > 0 ? `${ht.lewat} sudah lewat tempo. ` : ''}Total ${rp(ht.total)}`,
           href: '/hutang',
+          waktu: null,
+        });
+      }
+    }
+
+    // Setoran sales: Finance melihat yang menunggu konfirmasi; sales melihat kas yang belum disetor
+    if (punyaRole(user, ROLES_FINANCE_SETORAN)) {
+      const [st] = (await db.execute(sql`
+        SELECT COUNT(*)::int AS n, COALESCE(SUM(jumlah), 0) AS total, MAX(created_at) AS terbaru
+        FROM setoran_sales WHERE status = 'menunggu' AND divisi = ${divisi}
+      `)) as unknown as Baris[];
+      if (Number(st?.n) > 0) {
+        daftar.push({
+          id: `setoran:${st.n}:${st.total}`,
+          tipe: 'warning',
+          judul: `${st.n} setoran sales menunggu konfirmasi`,
+          pesan: `Total ${rp(st.total)}. Cek uangnya lalu konfirmasi.`,
+          href: '/setoran',
+          waktu: st.terbaru ? new Date(String(st.terbaru)).toISOString() : null,
+        });
+      }
+    }
+    if (punyaRole(user, ROLES_SALES_SETORAN) && user?.username) {
+      const [s] = await saldoSales(db, divisi, String(user.username));
+      if (s && s.tersedia > 0) {
+        daftar.push({
+          id: `kassales:${Math.round(s.tersedia)}`,
+          tipe: 'info',
+          judul: 'Kas belum disetor ke Finance',
+          pesan: `Rp ${Math.round(s.tersedia).toLocaleString('id-ID')} masih di tangan Anda. Setor lewat menu Setoran ke Finance.`,
+          href: '/setoran',
           waktu: null,
         });
       }
