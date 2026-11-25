@@ -195,31 +195,28 @@ export default function Dashboard() {
   return (
     <div className="space-y-6 max-w-7xl mx-auto pb-10">
       {/* 1. Header Hero Banner (Z-Pattern CTA) */}
-      <header className="bg-gradient-to-r from-emerald-600 via-emerald-700 to-teal-800 rounded-3xl p-6 sm:p-8 text-white shadow-xl relative overflow-hidden">
-        <div className="absolute right-0 top-0 translate-x-12 -translate-y-8 w-64 h-64 bg-white/10 rounded-full blur-2xl pointer-events-none" />
-        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <div className="inline-flex items-center gap-2 px-3 py-1 bg-white/20 backdrop-blur-md rounded-full text-xs font-medium mb-3">
-              <span className="w-2 h-2 rounded-full bg-emerald-300 animate-pulse" />
-              <span>Gudang Manufaktur HK &bull; Live Monitor</span>
-            </div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
-              Ringkasan Operasional Gudang
+      <header className="bg-gradient-to-r from-emerald-600 via-emerald-700 to-teal-800 rounded-2xl px-4 py-3 sm:px-5 sm:py-3.5 text-white shadow-md relative overflow-hidden">
+        <div className="absolute right-0 top-0 translate-x-12 -translate-y-8 w-40 h-40 bg-white/10 rounded-full blur-2xl pointer-events-none" />
+        <div className="relative z-10 flex flex-row items-center justify-between gap-3">
+          <div className="min-w-0">
+            <h1 className="flex items-center gap-2 text-base sm:text-lg font-extrabold tracking-tight leading-tight">
+              <span className="w-2 h-2 shrink-0 rounded-full bg-emerald-300 animate-pulse" title="Live Monitor" aria-hidden="true" />
+              <span className="truncate">Ringkasan Operasional Gudang</span>
             </h1>
-            <p className="text-emerald-100 text-sm mt-1">
+            <p className="text-emerald-100 text-[11px] sm:text-xs mt-0.5 truncate">
               {formatTanggal(new Date(), { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
             </p>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex shrink-0 items-center gap-2">
             <button
               onClick={handleRefresh}
               disabled={loading}
-              className="inline-flex items-center gap-2 px-4 py-2.5 bg-white/15 hover:bg-white/25 active:scale-95 text-white rounded-xl text-sm font-medium transition backdrop-blur-md border border-white/20"
+              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-white/15 hover:bg-white/25 active:scale-95 text-white rounded-lg text-xs font-medium transition backdrop-blur-md border border-white/20"
               title="Perbarui Data"
             >
               <svg
-                className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`}
+                className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`}
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -231,12 +228,12 @@ export default function Dashboard() {
                   d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
                 />
               </svg>
-              <span>{loading ? 'Menyinkronkan...' : 'Segarkan'}</span>
+              <span className="hidden sm:inline">{loading ? 'Menyinkronkan...' : 'Segarkan'}</span>
             </button>
 
             <Link
               href={ROUTES.INVENTORY}
-              className="inline-flex items-center gap-2 px-5 py-2.5 bg-white text-emerald-800 hover:bg-emerald-50 active:scale-95 rounded-xl text-sm font-semibold transition shadow-md"
+              className="inline-flex items-center gap-2 px-3 py-1.5 bg-white text-emerald-800 hover:bg-emerald-50 active:scale-95 rounded-lg text-xs font-semibold transition shadow-sm"
             >
               <span>Buka Inventory</span>
             </Link>
