@@ -31,6 +31,7 @@ interface Penjualan {
   akumulasi: number;
   proyeksi: number | null;
   tampilLaba: boolean;
+  lingkup?: 'sendiri' | 'semua';
   labaKotor?: number;
   marginKotor?: number | null;
 }
@@ -149,7 +150,9 @@ export default function PanelPenjualan() {
 
       <div className="mt-4 grid grid-cols-1 gap-5 border-t border-gray-100 pt-4 lg:grid-cols-3">
         <div>
-          <p className="text-sm text-gray-500">Total Penjualan</p>
+          <p className="text-sm text-gray-500">
+            Total Penjualan{d?.lingkup === 'sendiri' && <span className="ml-1.5 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">Milik Anda</span>}
+          </p>
           <p className="mt-1 text-3xl font-extrabold tabular-nums text-gray-900 sm:text-4xl">{cell(d ? formatRupiah(d.total) : undefined)}</p>
           <p className="mt-3 text-xs text-gray-500">
             Akumulasi dari Awal Bulan <span className="font-semibold tabular-nums text-gray-700">{d ? formatRupiah(d.akumulasi) : '-'}</span>
