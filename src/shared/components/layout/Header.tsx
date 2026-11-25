@@ -22,6 +22,7 @@ import { useDivision } from '@/shared/context/DivisionContext';
 import { ROUTES } from '@/router/routes';
 import CreativeMegaMenu from './CreativeMegaMenu';
 import LoncengNotifikasi from './LoncengNotifikasi';
+import AksesCepat from './AksesCepat';
 import { labelRole, rolesOf } from '@/shared/lib/auth/roles';
 import { useFotoProfil } from '@/shared/lib/foto-profil';
 
@@ -173,6 +174,7 @@ export default function Header({ onMenuClick, title }: HeaderProps) {
       <div className="flex-1" />
 
       {/* Notifications */}
+      <AksesCepat />
       <LoncengNotifikasi />
 
       {/* User avatar + dropdown */}
