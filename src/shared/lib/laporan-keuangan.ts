@@ -18,9 +18,10 @@ export function awalHariWib(tgl: string) {
   return d;
 }
 const HARI = 86_400_000;
-const akhirHariWib = (tgl: string) => new Date(awalHariWib(tgl).getTime() + HARI); // eksklusif
+export const akhirHariWib = (tgl: string) => new Date(awalHariWib(tgl).getTime() + HARI); // eksklusif
 /** Parameter waktu untuk SQL mentah (driver tidak menerima objek Date); kolom timestamp menyimpan UTC. */
 const ts = (d: Date) => sql`${d.toISOString()}::timestamp`;
+export const tsWib = ts;
 
 /** Tanggal hari ini (WIB) 'YYYY-MM-DD'. */
 export function hariIniWib(d = new Date()) {

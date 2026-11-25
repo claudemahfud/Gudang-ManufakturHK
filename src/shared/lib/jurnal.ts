@@ -1,6 +1,6 @@
 import { and, eq, inArray, isNull, sql } from 'drizzle-orm';
 import { db } from '@/shared/lib/db';
-import { akun, jurnal, jurnalBaris, masterCabang } from '@/shared/lib/db/schema';
+import { akun, jurnal, jurnalBaris, masterCabang, users } from '@/shared/lib/db/schema';
 import { BusinessError } from '@/shared/lib/stock';
 import { nomorUrut } from '@/shared/lib/nomor-urut';
 
@@ -22,6 +22,7 @@ export const AKUN = {
   KAS_TUNAI: '1-1100',
   BANK: '1-1200',
   KAS_QRIS: '1-1300',
+  KAS_SALES: '1-1350',
   PIUTANG: '1-1400',
   PERSEDIAAN: '1-1500',
   HUTANG_USAHA: '2-1100',
@@ -53,6 +54,7 @@ export const LABEL_SUMBER: Record<string, string> = {
   BAYAR_HUTANG: 'Pembayaran Hutang',
   BIAYA: 'Biaya Operasional',
   KAS_MANUAL: 'Kas Manual',
+  SETORAN: 'Setoran Sales',
   RUSAK: 'Barang Rusak',
   PRODUKSI: 'Produksi Dapur',
   REVALUASI: 'Revaluasi HPP',
@@ -75,11 +77,32 @@ export function akunKas(metode: string | null | undefined): string {
 
 const rp = (n: number) => Math.round(n * 100) / 100;
 
+/** Role sales: uang TUNAI yang mereka terima dicatat di Kas di Tangan Sales sampai disetor ke Finance. */
+export const ROLE_SALES: readonly string[] = [
+  'Salesman', 'Sales Canvas', 'Sales Motoris', 'Admin Salesman', 'Staff Admin Salesman',
+  'Agen', 'Sales Agent', 'Admin Agen', 'Staff Admin Agen',
+];
+
+/**
+ * Akun penerima uang untuk sebuah transaksi. Tunai yang diterima akun ber-role utama sales masuk
+ * 1-1350 (dengan username sales); transfer/QRIS selalu langsung ke Bank/QRIS perusahaan.
+ */
+export async function penerimaKas(ex: Executor, username: string | null | undefined, metode: string | null | undefined) {
+  const akunDasar = akunKas(metode);
+  if (!username || akunDasar !== AKUN.KAS_TUNAI) return { akun: akunDasar, sales: undefined as string | undefined };
+  const [u] = await ex.select({ role: users.role }).from(users).where(eq(users.username, username)).limit(1);
+  return u && ROLE_SALES.includes(u.role)
+    ? { akun: AKUN.KAS_SALES as string, sales: username as string | undefined }
+    : { akun: akunDasar, sales: undefined as string | undefined };
+}
+
 export interface BarisJurnal {
   akun: string;
   debit?: number;
   kredit?: number;
   keterangan?: string | null;
+  /** Hanya untuk akun 1-1350: username sales pemegang kas. */
+  sales?: string | null;
 }
 
 export interface JurnalInput {
@@ -113,7 +136,7 @@ export async function cabangFranchise(ex: Executor, cabang: string) {
  */
 function rapikan(baris: BarisJurnal[], gabung: boolean) {
   const bersih = baris
-    .map((b) => ({ akun: b.akun, debit: rp(Math.max(0, b.debit || 0)), kredit: rp(Math.max(0, b.kredit || 0)), keterangan: b.keterangan ?? null }))
+    .map((b) => ({ akun: b.akun, debit: rp(Math.max(0, b.debit || 0)), kredit: rp(Math.max(0, b.kredit || 0)), keterangan: b.keterangan ?? null, sales: b.sales ?? null }))
     .filter((b) => b.debit > 0 || b.kredit > 0);
   if (!gabung) {
     return bersih.map((b) => {
@@ -121,11 +144,17 @@ function rapikan(baris: BarisJurnal[], gabung: boolean) {
       return { ...b, debit: net > 0 ? net : 0, kredit: net < 0 ? -net : 0 };
     }).filter((b) => b.debit > 0 || b.kredit > 0);
   }
-  const per = new Map<string, number>();
-  for (const b of bersih) per.set(b.akun, rp((per.get(b.akun) ?? 0) + b.debit - b.kredit));
-  return [...per.entries()]
-    .filter(([, net]) => Math.abs(net) >= 0.01)
-    .map(([akunKode, net]) => ({ akun: akunKode, debit: net > 0 ? net : 0, kredit: net < 0 ? rp(-net) : 0, keterangan: null }));
+  // Digabung per akun (+ sales, agar saldo tiap sales terpisah)
+  const per = new Map<string, { akun: string; sales: string | null; net: number }>();
+  for (const b of bersih) {
+    const kunci = `${b.akun}|${b.sales ?? ''}`;
+    const cur = per.get(kunci) ?? { akun: b.akun, sales: b.sales, net: 0 };
+    cur.net = rp(cur.net + b.debit - b.kredit);
+    per.set(kunci, cur);
+  }
+  return [...per.values()]
+    .filter((x) => Math.abs(x.net) >= 0.01)
+    .map((x) => ({ akun: x.akun, debit: x.net > 0 ? x.net : 0, kredit: x.net < 0 ? rp(-x.net) : 0, keterangan: null, sales: x.sales }));
 }
 
 /**
@@ -166,6 +195,7 @@ export async function posting(tx: Tx, j: JurnalInput): Promise<string | null> {
       debit: String(b.debit),
       kredit: String(b.kredit),
       keterangan: b.keterangan,
+      sales: b.sales,
     }))
   );
   return h.id;
@@ -206,7 +236,7 @@ export async function balikSatuJurnal(tx: Tx, id: string, keterangan: string, us
     user,
     manual: true, // salin apa adanya, termasuk cabang franchise (tidak pernah terjadi) & keterangan baris
     pembalikDari: id,
-    baris: baris.map((b) => ({ akun: b.akunKode, debit: Number(b.kredit), kredit: Number(b.debit), keterangan: b.keterangan })),
+    baris: baris.map((b) => ({ akun: b.akunKode, debit: Number(b.kredit), kredit: Number(b.debit), keterangan: b.keterangan, sales: b.sales })),
   });
 }
 

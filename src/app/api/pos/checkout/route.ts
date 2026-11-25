@@ -7,7 +7,7 @@ import { decrementStock, errorResponse, normalizeSku, parsePositiveInt } from '@
 import { assertSupervisorPin, getPengaturan } from '@/shared/lib/pengaturan';
 import { roleUtamaDi } from '@/shared/lib/auth/roles';
 import { nomorUrut } from '@/shared/lib/nomor-urut';
-import { AKUN, akunKas, posting } from '@/shared/lib/jurnal';
+import { AKUN, penerimaKas, posting } from '@/shared/lib/jurnal';
 
 // ============================================================
 // API: /api/pos/checkout
@@ -182,7 +182,9 @@ export async function POST(req: Request) {
         createdBy: user.username,
       });
 
-      // Jurnal: kas + potongan = penjualan; HPP keluar dari persediaan
+      // Jurnal: kas + potongan = penjualan; HPP keluar dari persediaan.
+      // Tunai yang diterima akun sales masuk Kas di Tangan Sales sampai disetor ke Finance.
+      const terima = await penerimaKas(tx, user.username, metodePembayaran);
       await posting(tx, {
         tanggal: tanggalTrx,
         divisi,
@@ -192,7 +194,7 @@ export async function POST(req: Request) {
         keterangan: `Penjualan kasir #${trxId} (${metodePembayaran}) ke ${pelanggan}`,
         user: user.username,
         baris: [
-          { akun: akunKas(metodePembayaran), debit: grandTotal },
+          { akun: terima.akun, debit: grandTotal, sales: terima.sales },
           { akun: AKUN.POTONGAN_PENJUALAN, debit: nominalDiskon },
           { akun: AKUN.PENJUALAN_POS, kredit: subtotal },
           { akun: AKUN.HPP, debit: totalHpp },
