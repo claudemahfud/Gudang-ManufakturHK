@@ -187,6 +187,7 @@ export async function POST(req: Request) {
         cabang: cabangToSave,
         catatan: str(body.keterangan),
         user,
+        username: sessionUser?.username ?? null,
       });
     });
 

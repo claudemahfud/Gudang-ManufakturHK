@@ -53,6 +53,7 @@ export const ROUTES = {
   PENGAJUAN_DISKON: '/pengajuan-diskon',
   MONITOR_SALESMAN: '/monitor-salesman',
   TARGET_KOMISI: '/target-komisi',
+  SETORAN: '/setoran',
 
   // Operasional
   EXPEDISI: '/expedisi',

@@ -33,6 +33,17 @@ export const ROLES_FINANCE: UserRole[] = [
 // hanya dikerjakan Direktur Utama & Manager (perintah pemilik 24/11/2026)
 export const ROLES_PEMBUKUAN: UserRole[] = ['Direktur Utama', 'Manager', 'Manager Umum'];
 
+// Setoran sales ke Finance: sales menyetor kas yang dipegang; Finance mengonfirmasi
+export const ROLES_SALES_SETORAN: UserRole[] = [
+  'Salesman', 'Sales Canvas', 'Sales Motoris', 'Admin Salesman', 'Staff Admin Salesman',
+  'Agen', 'Sales Agent', 'Admin Agen', 'Staff Admin Agen',
+];
+export const ROLES_FINANCE_SETORAN: UserRole[] = ['Direktur Utama', 'Manager', 'Manager Umum', 'Finance & Accounting'];
+// Panel penjualan Dashboard: pimpinan, finance, dan sales (laba/margin hanya untuk canViewCostPrice)
+export const ROLES_PANEL_PENJUALAN: UserRole[] = [
+  'Administrator', 'Direktur Utama', 'Manager', 'Manager Umum', 'Finance & Accounting', ...ROLES_SALES_SETORAN,
+];
+
 // Laporan Laba Bersih, Margin Profit & HPP: Khusus pimpinan
 export const ROLES_PROFIT_MARGIN: UserRole[] = [
   'Administrator',

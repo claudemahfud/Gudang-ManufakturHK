@@ -4,7 +4,7 @@ import { barangKeluar, fakturPenjualan, inventory, keuangan, logs } from '@/shar
 import { BusinessError, decrementStock, incrementStock } from '@/shared/lib/stock';
 import { hitungFaktur, LABEL_METODE, type MetodeBayar } from '@/shared/lib/faktur-hitung';
 import { fakturPunyaRetur } from '@/shared/lib/retur-pelanggan';
-import { AKUN, akunKas, balikJurnal, posting } from '@/shared/lib/jurnal';
+import { AKUN, balikJurnal, penerimaKas, posting } from '@/shared/lib/jurnal';
 
 const rp = (n: number) => Math.round(n * 100) / 100;
 
@@ -45,6 +45,8 @@ export interface FakturPenjualanInput {
   user: string;
   /** Akun pendapatan; bawaan Penjualan Faktur (Grosir). Order franchise memakai Penjualan Franchise. */
   akunPendapatan?: string;
+  /** Username pembuat faktur: tunai yang diterima akun sales dicatat di Kas di Tangan Sales. */
+  username?: string | null;
 }
 
 export async function buatFakturPenjualan(tx: Tx, f: FakturPenjualanInput) {
@@ -142,6 +144,7 @@ export async function buatFakturPenjualan(tx: Tx, f: FakturPenjualanInput) {
   }
 
   // Jurnal: kas (uang muka/lunas) + piutang + potongan = penjualan + PPN + ongkir; HPP keluar dari persediaan
+  const terima = await penerimaKas(tx, f.username, f.metodeBayar);
   await posting(tx, {
     tanggal: f.tanggal,
     divisi: f.divisi,
@@ -151,7 +154,7 @@ export async function buatFakturPenjualan(tx: Tx, f: FakturPenjualanInput) {
     keterangan: `Faktur ${f.noFaktur} ke ${f.pelanggan} (${LABEL_METODE[f.metodeBayar]})`,
     user: f.user,
     baris: [
-      { akun: akunKas(f.metodeBayar), debit: h.dibayar },
+      { akun: terima.akun, debit: h.dibayar, sales: terima.sales },
       { akun: AKUN.PIUTANG, debit: h.sisaPiutang },
       { akun: AKUN.POTONGAN_PENJUALAN, debit: h.diskonFaktur },
       { akun: f.akunPendapatan ?? AKUN.PENJUALAN_FAKTUR, kredit: h.subtotal },

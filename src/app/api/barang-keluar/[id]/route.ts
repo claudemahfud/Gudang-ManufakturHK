@@ -68,7 +68,8 @@ export async function DELETE(
       }
       if (item.channel === 'POS') {
         // Jurnal pembalik sebagian: kas keluar ke akun kas yang dipakai saat penjualan, persediaan kembali
-        const kas = (await barisJurnalAktif(tx, item.trxId, ['POS'])).find((b) => AKUN_KAS.includes(b.akunKode))?.akunKode ?? AKUN.KAS_TUNAI;
+        const barisKas = (await barisJurnalAktif(tx, item.trxId, ['POS'])).find((b) => AKUN_KAS.includes(b.akunKode) || b.akunKode === AKUN.KAS_SALES);
+        const kas = barisKas?.akunKode ?? AKUN.KAS_TUNAI;
         const bruto = rp(Number(item.hargaJual ?? 0) * item.qty);
         const neto = rp(total);
         const hpp = rp(Number(item.hpp ?? 0));
@@ -83,7 +84,7 @@ export async function DELETE(
           baris: [
             { akun: AKUN.PENJUALAN_POS, debit: bruto },
             { akun: AKUN.POTONGAN_PENJUALAN, kredit: rp(bruto - neto) },
-            { akun: kas, kredit: neto },
+            { akun: kas, kredit: neto, sales: barisKas?.sales ?? null },
             { akun: AKUN.PERSEDIAAN, debit: hpp },
             { akun: AKUN.HPP, kredit: hpp },
           ],
