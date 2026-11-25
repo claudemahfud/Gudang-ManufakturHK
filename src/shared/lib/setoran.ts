@@ -109,9 +109,17 @@ async function kunci(tx: Tx, id: string) {
   return r;
 }
 
+/** Pemisahan tugas: yang menyetor tidak boleh mengonfirmasi/menolak setorannya sendiri. */
+function bukanSendiri(r: { sales: string; noSetoran: string }, username: string) {
+  if (r.sales === username) {
+    throw new BusinessError(`Setoran ${r.noSetoran} adalah setoran Anda sendiri. Minta Finance/pimpinan lain yang memprosesnya.`, 403);
+  }
+}
+
 /** Finance menerima uangnya: Dr Kas/Bank (+ Selisih Kas bila kurang), Cr Kas di Tangan Sales. */
 export async function konfirmasiSetoran(tx: Tx, id: string, jumlahDiterima: number | undefined, user: { username: string; nama: string }) {
   const r = await kunci(tx, id);
+  bukanSendiri(r, user.username);
   const jumlah = rp(Number(r.jumlah));
   const diterima = rp(jumlahDiterima === undefined ? jumlah : jumlahDiterima);
   if (!Number.isFinite(diterima) || diterima <= 0) throw new BusinessError('Jumlah diterima harus lebih dari 0');
@@ -159,6 +167,7 @@ export async function tolakSetoran(tx: Tx, id: string, alasan: string, user: { u
   const a = alasan.trim();
   if (!a) throw new BusinessError('Alasan penolakan wajib diisi');
   const r = await kunci(tx, id);
+  bukanSendiri(r, user.username);
   const [baru] = await tx
     .update(setoranSales)
     .set({ status: 'ditolak', alasanTolak: a.slice(0, 500), diprosesOleh: user.username, diprosesAt: new Date() })
