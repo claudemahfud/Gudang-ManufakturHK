@@ -26,10 +26,6 @@ import KesehatanBisnis from './KesehatanBisnis';
 import {
   ArrowDownToLine,
   Truck,
-  ShoppingBag,
-  ShieldAlert,
-  Zap,
-  ExternalLink,
   Wallet,
   Boxes,
   AlertTriangle,
@@ -246,102 +242,6 @@ export default function Dashboard() {
 
       {/* Grafik analitik penjualan (hanya role yang boleh melihat laba) */}
       <RekapGlobal />
-
-      {/* ============================================================ */}
-      {/* 2. SECTION: Quick Action Hub (Grid Layout Archetype) */}
-      {/* ============================================================ */}
-      <section aria-label="Pusat Aksi Cepat" className="bg-white rounded-3xl p-5 sm:p-6 border border-gray-200/80 shadow-xs space-y-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Zap className="w-4 h-4 text-amber-500 fill-amber-500" />
-            <h2 className="text-xs sm:text-sm font-bold text-gray-900 uppercase tracking-wider">
-              Pusat Aksi Cepat (2-3 Klik Selesai)
-            </h2>
-          </div>
-          <span className="text-[11px] font-medium text-gray-400 hidden sm:inline">
-            Akses langsung tanpa perlu mencari di menu sidebar
-          </span>
-        </div>
-
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-          {/* Aksi 1: Terima Barang Masuk */}
-          <article>
-            <Link
-              href={ROUTES.BARANG_MASUK}
-              className="group flex flex-col p-4 rounded-2xl bg-emerald-50/70 hover:bg-emerald-100/80 border border-emerald-200/80 hover-lift h-full"
-            >
-              <div className="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center mb-3 shadow-xs group-hover:scale-105 transition-transform">
-                <ArrowDownToLine className="w-5 h-5" />
-              </div>
-              <span className="text-xs sm:text-sm font-bold text-emerald-950 leading-tight">
-                Terima Barang Masuk
-              </span>
-              <span className="text-[10px] sm:text-[11px] text-emerald-700 mt-1">
-                Catat kiriman supplier & stok masuk
-              </span>
-            </Link>
-          </article>
-
-          {/* Aksi 2: Kirim Muatan Keluar */}
-          <article>
-            <Link
-              href={ROUTES.BARANG_KELUAR}
-              className="group flex flex-col p-4 rounded-2xl bg-blue-50/70 hover:bg-blue-100/80 border border-blue-200/80 hover-lift h-full"
-            >
-              <div className="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center mb-3 shadow-xs group-hover:scale-105 transition-transform">
-                <Truck className="w-5 h-5" />
-              </div>
-              <span className="text-xs sm:text-sm font-bold text-blue-950 leading-tight">
-                Kirim Muatan Keluar
-              </span>
-              <span className="text-[10px] sm:text-[11px] text-blue-700 mt-1">
-                Surat loading & pengiriman grosir
-              </span>
-            </Link>
-          </article>
-
-          {/* Aksi 3: Kasir POS Fullscreen */}
-          <article>
-            <Link
-              href={ROUTES.POS}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="group flex flex-col p-4 rounded-2xl bg-purple-50/70 hover:bg-purple-100/80 border border-purple-200/80 hover-lift h-full"
-            >
-              <div className="flex items-center justify-between mb-3">
-                <div className="w-10 h-10 rounded-xl bg-purple-600 text-white flex items-center justify-center shadow-xs group-hover:scale-105 transition-transform">
-                  <ShoppingBag className="w-5 h-5" />
-                </div>
-                <ExternalLink className="w-3.5 h-3.5 text-purple-400 group-hover:text-purple-600" />
-              </div>
-              <span className="text-xs sm:text-sm font-bold text-purple-950 leading-tight">
-                Buka Kasir POS
-              </span>
-              <span className="text-[10px] sm:text-[11px] text-purple-700 mt-1">
-                Layar penuh kasir & nota thermal 58mm
-              </span>
-            </Link>
-          </article>
-
-          {/* Aksi 4: Lapor Rusak & Retur */}
-          <article>
-            <Link
-              href={ROUTES.LAPORAN_RUSAK_RETUR}
-              className="group flex flex-col p-4 rounded-2xl bg-rose-50/70 hover:bg-rose-100/80 border border-rose-200/80 hover-lift h-full"
-            >
-              <div className="w-10 h-10 rounded-xl bg-rose-600 text-white flex items-center justify-center mb-3 shadow-xs group-hover:scale-105 transition-transform">
-                <ShieldAlert className="w-5 h-5" />
-              </div>
-              <span className="text-xs sm:text-sm font-bold text-rose-950 leading-tight">
-                Lapor Rusak & Retur
-              </span>
-              <span className="text-[10px] sm:text-[11px] text-rose-700 mt-1">
-                Audit barang afkir & retur pelanggan
-              </span>
-            </Link>
-          </article>
-        </div>
-      </section>
 
       {/* Alert Error If Any */}
       {error && (
