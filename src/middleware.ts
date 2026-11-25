@@ -15,6 +15,13 @@ const PUBLIC_ROUTES = [ROUTES.LOGIN, ROUTES.FORGOT_PASSWORD, '/api/public'];
 // Pembukuan: hanya Direktur Utama & Manager (sama dengan ROLES_PEMBUKUAN di rbac.ts)
 const PEMBUKUAN = ['Direktur Utama', 'Manager', 'Manager Umum'];
 
+// Setoran sales ke Finance: sales menyetor, Finance/pimpinan mengonfirmasi
+const SETORAN = [
+  'Salesman', 'Sales Canvas', 'Sales Motoris', 'Admin Salesman', 'Staff Admin Salesman',
+  'Agen', 'Sales Agent', 'Admin Agen', 'Staff Admin Agen',
+  'Direktur Utama', 'Manager', 'Manager Umum', 'Finance & Accounting',
+];
+
 const ROUTE_ROLES: Record<string, string[]> = {
   // Page routes
   [ROUTES.USERS]: ['Administrator', 'Direktur Utama'], // Direktur: atur multi-role (API dijaga terpisah)
@@ -24,6 +31,7 @@ const ROUTE_ROLES: Record<string, string[]> = {
   [ROUTES.BIAYA_OPERASIONAL]: PEMBUKUAN,
   [ROUTES.NERACA]: PEMBUKUAN,
   '/laporan-keuangan': PEMBUKUAN,
+  '/setoran': SETORAN,
   '/jurnal': PEMBUKUAN,
   '/hutang': PEMBUKUAN,
   [ROUTES.PIUTANG]: ['Administrator', 'Manager', 'Manager Umum', 'Direktur Utama', 'Finance & Accounting'],
@@ -41,6 +49,7 @@ const ROUTE_ROLES: Record<string, string[]> = {
   '/api/keuangan': PEMBUKUAN,
   '/api/biaya-operasional': PEMBUKUAN,
   '/api/akuntansi': PEMBUKUAN,
+  '/api/setoran': SETORAN,
   '/api/hutang': PEMBUKUAN,
   '/api/piutang': ['Administrator', 'Manager', 'Manager Umum', 'Direktur Utama', 'Finance & Accounting'],
   '/api/franchise/monitor': ['Administrator', 'Manager', 'Manager Umum', 'Direktur Utama', 'Finance & Accounting'],

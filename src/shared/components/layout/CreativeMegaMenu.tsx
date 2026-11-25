@@ -280,6 +280,20 @@ export default function CreativeMegaMenu({ userRoles = [], isOpen, onClose }: Me
       icon: Receipt,
       restricted: bukanPembukuan,
     },
+    {
+      title: 'Setoran Sales',
+      desc: 'Konfirmasi setoran tunai dari sales',
+      href: ROUTES.SETORAN,
+      icon: HandCoins,
+      restricted: !ada(['Direktur Utama', 'Manager', 'Manager Umum', 'Finance & Accounting']),
+    },
+    {
+      title: 'Setoran ke Finance',
+      desc: 'Setor uang tunai penjualan ke Finance',
+      href: ROUTES.SETORAN,
+      icon: HandCoins,
+      restricted: !ada(['Salesman', 'Sales Canvas', 'Sales Motoris', 'Admin Salesman', 'Staff Admin Salesman', 'Agen', 'Sales Agent', 'Admin Agen', 'Staff Admin Agen']),
+    },
   ];
 
   return (

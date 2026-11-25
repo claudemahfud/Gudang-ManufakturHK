@@ -631,6 +631,7 @@ export const jurnalBaris = pgTable('jurnal_baris', {
   debit: decimal('debit', { precision: 15, scale: 2 }).notNull().default('0'),
   kredit: decimal('kredit', { precision: 15, scale: 2 }).notNull().default('0'),
   keterangan: text('keterangan'),
+  sales: varchar('sales', { length: 50 }), // username sales pada baris Kas di Tangan Sales 1-1350 (migrasi 016)
 });
 
 // Pembayaran hutang suplier (cicilan / pelunasan)
@@ -642,5 +643,25 @@ export const hutangBayar = pgTable('hutang_bayar', {
   metode: varchar('metode', { length: 20 }).notNull().default('tunai'),
   catatan: text('catatan'),
   createdBy: varchar('created_by', { length: 50 }),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+});
+
+// Setoran sales ke Finance (migrasi 016): sales menyetor kas yang dipegang; Finance konfirmasi -> jurnal
+export const setoranSales = pgTable('setoran_sales', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  noSetoran: varchar('no_setoran', { length: 30 }).notNull().unique(),
+  tanggal: timestamp('tanggal').notNull(),
+  sales: varchar('sales', { length: 50 }).notNull(),
+  namaSales: varchar('nama_sales', { length: 100 }).notNull(),
+  divisi: varchar('divisi', { length: 30 }).notNull(),
+  jumlah: decimal('jumlah', { precision: 15, scale: 2 }).notNull(),
+  metode: varchar('metode', { length: 20 }).notNull().default('tunai'), // tunai | transfer
+  catatan: text('catatan'),
+  status: varchar('status', { length: 20 }).notNull().default('menunggu'), // menunggu | dikonfirmasi | ditolak | dibatalkan
+  jumlahDiterima: decimal('jumlah_diterima', { precision: 15, scale: 2 }),
+  diprosesOleh: varchar('diproses_oleh', { length: 50 }),
+  diprosesAt: timestamp('diproses_at'),
+  alasanTolak: text('alasan_tolak'),
+  jurnalId: uuid('jurnal_id'),
   createdAt: timestamp('created_at').notNull().defaultNow(),
 });
