@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { sql } from 'drizzle-orm';
 import { db } from '@/shared/lib/db';
-import { requireAuthRole, ROLES_FINANCE, ROLES_FINANCE_SETORAN, ROLES_PEMBUKUAN, ROLES_SALES_SETORAN, ROLES_WAREHOUSE } from '@/shared/lib/auth/rbac';
+import { requireAuthRole, ROLES_FINANCE, ROLES_PEMBUKUAN, ROLES_PENYETOR, ROLES_WAREHOUSE } from '@/shared/lib/auth/rbac';
 import { saldoSales } from '@/shared/lib/setoran';
+import { cekFinancePusat } from '@/shared/lib/jurnal';
 import { daftarTransferSales } from '@/shared/lib/verifikasi-transfer';
 import { punyaRole } from '@/shared/lib/auth/roles';
 import { PO_STATUS } from '@/shared/lib/po-status';
@@ -116,8 +117,9 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    // Setoran sales: Finance melihat yang menunggu konfirmasi; sales melihat kas yang belum disetor
-    if (punyaRole(user, ROLES_FINANCE_SETORAN)) {
+    // Setoran: Finance Pusat melihat yang menunggu konfirmasi; penyetor melihat kas yang belum disetor
+    const financePusat = await cekFinancePusat(db, user?.username);
+    if (financePusat) {
       const [st] = (await db.execute(sql`
         SELECT COUNT(*)::int AS n, COALESCE(SUM(jumlah), 0) AS total, MAX(created_at) AS terbaru
         FROM setoran_sales WHERE status = 'menunggu' AND divisi = ${divisi}
@@ -126,34 +128,34 @@ export async function GET(req: NextRequest) {
         daftar.push({
           id: `setoran:${st.n}:${st.total}`,
           tipe: 'warning',
-          judul: `${st.n} setoran sales menunggu konfirmasi`,
+          judul: `${st.n} setoran menunggu konfirmasi`,
           pesan: `Total ${rp(st.total)}. Cek uangnya lalu konfirmasi.`,
           href: '/setoran',
           waktu: st.terbaru ? new Date(String(st.terbaru)).toISOString() : null,
         });
       }
     }
-    if (punyaRole(user, ROLES_FINANCE_SETORAN)) {
+    if (financePusat) {
       const lama = (await daftarTransferSales(db, divisi)).filter((t) => t.umurHari >= 1);
       if (lama.length > 0) {
         const total = lama.reduce((s, t) => s + t.jumlah, 0);
         daftar.push({
           id: `verif:${lama.length}:${total}`,
           tipe: 'warning',
-          judul: `${lama.length} transfer sales belum dicek > 1 hari`,
+          judul: `${lama.length} transfer penjualan belum dicek > 1 hari`,
           pesan: `Total ${rp(total)}. Cocokkan dengan mutasi rekening.`,
           href: '/setoran',
           waktu: null,
         });
       }
     }
-    if (punyaRole(user, ROLES_SALES_SETORAN) && user?.username) {
+    if (!financePusat && punyaRole(user, ROLES_PENYETOR) && user?.username) {
       const [s] = await saldoSales(db, divisi, String(user.username));
       if (s && s.tersedia > 0) {
         daftar.push({
           id: `kassales:${Math.round(s.tersedia)}`,
           tipe: 'info',
-          judul: 'Kas belum disetor ke Finance',
+          judul: 'Kas belum disetor ke Finance Pusat',
           pesan: `Rp ${Math.round(s.tersedia).toLocaleString('id-ID')} masih di tangan Anda. Setor lewat menu Setoran ke Finance.`,
           href: '/setoran',
           waktu: null,

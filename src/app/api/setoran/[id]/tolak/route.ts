@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { db } from '@/shared/lib/db';
 import { requireAuthRole, ROLES_FINANCE_SETORAN } from '@/shared/lib/auth/rbac';
 import { errorResponse } from '@/shared/lib/stock';
+import { cekFinancePusat } from '@/shared/lib/jurnal';
 import { tolakSetoran } from '@/shared/lib/setoran';
 
 // POST /api/setoran/[id]/tolak {alasan}
@@ -9,6 +10,9 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   try {
     const auth = await requireAuthRole(ROLES_FINANCE_SETORAN);
     if (!auth.authorized) return auth.response;
+    if (!(await cekFinancePusat(db, auth.user?.username))) {
+      return NextResponse.json({ success: false, message: 'Hanya Finance Pusat yang bisa memproses setoran' }, { status: 403 });
+    }
     const { id } = await params;
     const body = await req.json().catch(() => ({}));
     const username = String(auth.user?.username ?? '');

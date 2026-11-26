@@ -28,10 +28,12 @@ export default function VerifikasiTransfer({
   divisi,
   notify,
   onBerubah,
+  bisaProses,
 }: {
   divisi: string;
   notify: (message: string, type: 'success' | 'error') => void;
   onBerubah: () => void;
+  bisaProses: boolean;
 }) {
   const [data, setData] = useState<Item[] | null>(null);
   const [semua, setSemua] = useState(false);
@@ -75,7 +77,7 @@ export default function VerifikasiTransfer({
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-gray-100 p-4">
         <div>
           <h2 className="text-sm font-bold text-gray-900">Verifikasi Transfer</h2>
-          <p className="text-xs text-gray-500">Transfer / QRIS yang dicatat sales. Cocokkan dengan mutasi rekening.</p>
+          <p className="text-xs text-gray-500">Transfer / QRIS dari penjualan. Finance Pusat mencocokkannya dengan mutasi rekening.</p>
         </div>
         <button
           type="button"
@@ -92,7 +94,7 @@ export default function VerifikasiTransfer({
           <thead className="bg-slate-900 text-[11px] uppercase tracking-wider text-white">
             <tr>
               <th className="p-3 text-left">Dokumen</th>
-              <th className="p-3 text-left">Sales</th>
+              <th className="p-3 text-left">Penjual</th>
               <th className="p-3 text-left">Masuk ke</th>
               <th className="p-3 text-right">Jumlah</th>
               <th className="p-3 text-left">Status</th>
@@ -118,7 +120,7 @@ export default function VerifikasiTransfer({
                       {it.status === 'belum' && it.umurHari >= 1 && <span className="ml-1 font-semibold text-red-600">· {it.umurHari} hari</span>}
                     </span>
                   </td>
-                  <td data-label="Sales" className="p-3 text-gray-700">{it.namaSales}</td>
+                  <td data-label="Penjual" className="p-3 text-gray-700">{it.namaSales}</td>
                   <td data-label="Masuk ke" className="p-3 text-gray-700">{it.akunNama}</td>
                   <td data-label="Jumlah" className="whitespace-nowrap p-3 text-right font-bold tabular-nums text-gray-900">{formatRupiah(it.jumlah)}</td>
                   <td data-label="Status" className="p-3">
@@ -127,7 +129,7 @@ export default function VerifikasiTransfer({
                     {it.diverifikasiOleh && <span className="block text-[11px] text-gray-400">oleh {it.diverifikasiOleh}</span>}
                   </td>
                   <td data-aksi className="p-3">
-                    {it.status === 'belum' && (
+                    {bisaProses && it.status === 'belum' && (
                       <div className="flex flex-wrap justify-center gap-1.5">
                         <button type="button" disabled={proses} onClick={() => kirim(it, 'cocok')} className="inline-flex h-8 items-center gap-1 rounded-lg bg-emerald-600 px-3 text-xs font-semibold text-white hover:bg-emerald-700 disabled:opacity-50">
                           <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" /> Cocok

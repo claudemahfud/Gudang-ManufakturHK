@@ -10,7 +10,7 @@ import { AksiHeader, GrupIkon, TombolIkon } from '@/shared/components/ui/AksiHea
 import Bingkai from '@/shared/components/ui/Bingkai';
 import MemuatProgres from '@/shared/components/ui/MemuatProgres';
 import { ambil, kirimJson, kontrol, KotakTerlarang, tglWib, Toast } from '@/views/laporan-keuangan/util';
-import { FINANCE, SALES } from './peran';
+import { AKSES_SETORAN } from './peran';
 import VerifikasiTransfer from './VerifikasiTransfer';
 import CaraKerja from './CaraKerja';
 import RincianKas from './RincianKas';
@@ -47,7 +47,7 @@ interface ItemSetoran {
   alasanTolak: string | null;
 }
 interface Data {
-  sebagai: { sales: boolean; finance: boolean };
+  sebagai: { sales: boolean; finance: boolean; proses: boolean };
   saldo: SaldoSales[];
   riwayat: ItemSetoran[];
   ringkasan: { totalBelumDisetor: number; totalMenunggu: number; jumlahMenunggu: number };
@@ -70,8 +70,6 @@ export default function Setoran() {
   const { division } = useDivision();
   const { data: session } = useSession();
   const user = session?.user as { role?: string; roles?: string[]; username?: string } | undefined;
-  const jadiSales = punyaRole(user, SALES);
-  const jadiFinance = punyaRole(user, FINANCE);
   const username = (user?.username ?? '').toLowerCase();
 
   const [data, setData] = useState<Data | null>(null);
@@ -93,7 +91,7 @@ export default function Setoran() {
   const url = `/api/setoran?divisi=${division}&status=semua`;
   const kunci = `${url}#${versi}`;
   const memuat = dimuat !== kunci;
-  const adaAkses = jadiSales || jadiFinance;
+  const adaAkses = punyaRole(user, AKSES_SETORAN);
 
   useEffect(() => {
     if (!adaAkses) return;
@@ -125,6 +123,11 @@ export default function Setoran() {
   if (session && !adaAkses) return <KotakTerlarang />;
   if (terlarang) return <KotakTerlarang />;
 
+  // Peran dari server: melihat semua, memproses (hanya Finance Pusat), atau menyetor
+  const jadiFinance = data?.sebagai.finance ?? false;
+  const bisaProses = data?.sebagai.proses ?? false;
+  const jadiSales = (data?.sebagai.sales ?? false) && !bisaProses;
+
   const riwayat = data?.riwayat ?? [];
   const saldoSaya: SaldoSales =
     (jadiFinance ? data?.saldo.find((s) => s.sales.toLowerCase() === username) : data?.saldo[0]) ?? { sales: username, nama: '', saldo: 0, menunggu: 0, tersedia: 0 };
@@ -140,8 +143,8 @@ export default function Setoran() {
             <HandCoins className="h-5 w-5" />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-gray-900">Setoran ke Finance</h1>
-            <p className="text-sm text-gray-500">Uang tunai hasil penjualan yang dipegang sales, disetor ke Finance lalu dikonfirmasi.</p>
+            <h1 className="text-xl font-bold text-gray-900">Setoran ke Finance Pusat</h1>
+            <p className="text-sm text-gray-500">Semua uang tunai hasil penjualan (Direktur, Manager, gudang, sales) disetor ke Finance Pusat lalu dikonfirmasi.</p>
           </div>
         </div>
         <AksiHeader>
@@ -154,11 +157,17 @@ export default function Setoran() {
       {/* Penjelasan alur: terbuka selama belum ada kas sales maupun riwayat setoran */}
       {data && <CaraKerja terbuka={riwayat.length === 0 && data.ringkasan.totalBelumDisetor === 0} />}
 
+      {jadiFinance && !bisaProses && (
+        <p className="rounded-xl border border-blue-100 bg-blue-50 px-4 py-2.5 text-xs text-blue-800">
+          Anda melihat saldo & setoran semua penyetor. Konfirmasi, tolak, dan verifikasi transfer hanya oleh akun Finance Pusat (role Finance & Accounting, cabang Pusat).
+        </p>
+      )}
+
       {jadiFinance && (
         <>
           <section className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             {[
-              { judul: 'Total Belum Disetor (Semua Sales)', nilai: formatRupiah(data?.ringkasan.totalBelumDisetor ?? 0) },
+              { judul: 'Total Belum Disetor (Semua Penyetor)', nilai: formatRupiah(data?.ringkasan.totalBelumDisetor ?? 0) },
               { judul: 'Total Menunggu Konfirmasi', nilai: formatRupiah(data?.ringkasan.totalMenunggu ?? 0) },
               { judul: 'Setoran Menunggu', nilai: String(data?.ringkasan.jumlahMenunggu ?? 0) },
             ].map((k) => (
@@ -170,12 +179,12 @@ export default function Setoran() {
           </section>
 
           <section className="overflow-hidden rounded-2xl border border-gray-200 bg-white">
-            <h2 className="border-b border-gray-100 p-4 text-sm font-bold text-gray-900">Saldo per Sales</h2>
+            <h2 className="border-b border-gray-100 p-4 text-sm font-bold text-gray-900">Saldo per Penyetor</h2>
             <div className="overflow-x-auto">
               <table className="tabel-kartu w-full min-w-[480px] text-sm">
                 <thead className="bg-slate-900 text-[11px] uppercase tracking-wider text-white">
                   <tr>
-                    <th className="p-3 text-left">Sales</th>
+                    <th className="p-3 text-left">Penyetor</th>
                     <th className="p-3 text-right">Belum Disetor</th>
                     <th className="p-3 text-right">Menunggu Konfirmasi</th>
                     <th className="p-3 text-center">Asal Kas</th>
@@ -191,13 +200,13 @@ export default function Setoran() {
                   ) : !data || data.saldo.length === 0 ? (
                     <tr>
                       <td colSpan={4} className="p-10 text-center text-gray-500">
-                        Tidak ada kas di tangan sales.
+                        Tidak ada kas yang belum disetor.
                       </td>
                     </tr>
                   ) : (
                     data.saldo.map((s) => (
                       <tr key={s.sales} className="hover:bg-gray-50/70">
-                        <td data-label="Sales" className="p-3 font-semibold text-gray-900">
+                        <td data-label="Penyetor" className="p-3 font-semibold text-gray-900">
                           {s.nama || s.sales}
                           <span className="block text-[11px] font-normal text-gray-400">{s.sales}</span>
                         </td>
@@ -250,7 +259,7 @@ export default function Setoran() {
               kosong="Tidak ada setoran."
               tampilSales
               aksi={(s) =>
-                s.status === 'menunggu' && (
+                bisaProses && s.status === 'menunggu' && (
                   <>
                     <button type="button" onClick={() => setKonfirmasi(s)} className="h-8 rounded-lg bg-emerald-600 px-3 text-xs font-semibold text-white hover:bg-emerald-700">
                       Konfirmasi
@@ -264,7 +273,7 @@ export default function Setoran() {
             />
           </section>
 
-          <VerifikasiTransfer key={division} divisi={division} notify={notify} onBerubah={muatUlang} />
+          <VerifikasiTransfer key={division} divisi={division} notify={notify} onBerubah={muatUlang} bisaProses={bisaProses} />
         </>
       )}
 
@@ -482,7 +491,7 @@ function ModalSetor({ divisi, tersedia, onClose, onSaved, notify }: { divisi: st
   };
 
   return (
-    <Bingkai judul="Setor ke Finance" sub={`Bisa disetor sekarang ${formatRupiah(tersedia)}`} onClose={onClose}>
+    <Bingkai judul="Setor ke Finance Pusat" sub={`Bisa disetor sekarang ${formatRupiah(tersedia)}`} onClose={onClose}>
       <form onSubmit={simpan} className="flex min-h-0 flex-1 flex-col">
         <div className="flex-1 space-y-4 overflow-y-auto p-5 sm:px-8">
           <label className={lbl}>
