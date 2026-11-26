@@ -2,10 +2,10 @@ import { ArrowRight, Banknote, CheckCircle2, HandCoins, ShoppingBag } from 'luci
 
 // Penjelasan singkat alur setoran, agar jelas ini setoran uang penjualan (bukan setoran modal).
 const LANGKAH = [
-  { ikon: ShoppingBag, judul: '1. Sales menjual tunai', isi: 'Lewat Kasir POS atau faktur memakai akun sales.' },
-  { ikon: HandCoins, judul: '2. Uang dipegang sales', isi: 'Otomatis tercatat sebagai Kas di Tangan Sales.' },
-  { ikon: Banknote, judul: '3. Setor ke Finance', isi: 'Sales mengajukan setoran: tunai diserahkan atau transfer.' },
-  { ikon: CheckCircle2, judul: '4. Finance konfirmasi', isi: 'Setelah uang diterima, baru masuk Kas / Bank perusahaan.' },
+  { ikon: ShoppingBag, judul: '1. Menjual tunai', isi: 'Siapa pun (Direktur, Manager, gudang, sales) lewat Kasir POS, faktur, atau tagih piutang.' },
+  { ikon: HandCoins, judul: '2. Uang dipegang penjual', isi: 'Otomatis tercatat sebagai Kas Belum Disetor atas nama penjual.' },
+  { ikon: Banknote, judul: '3. Setor ke Finance Pusat', isi: 'Penjual mengajukan setoran: tunai diserahkan atau transfer.' },
+  { ikon: CheckCircle2, judul: '4. Finance Pusat konfirmasi', isi: 'Setelah uang diterima, baru masuk Kas / Bank perusahaan.' },
 ];
 
 export default function CaraKerja({ terbuka }: { terbuka: boolean }) {

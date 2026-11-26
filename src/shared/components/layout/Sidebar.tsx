@@ -91,6 +91,12 @@ export const MENU_HIERARCHY: ParentMenuItem[] = [
         newTab: true,
       },
       {
+        label: 'Setoran ke Finance Pusat',
+        icon: HandCoins,
+        href: ROUTES.SETORAN,
+        roles: ['Administrator', 'Direktur Utama', 'Manager', 'Manager Umum', 'Finance & Accounting', 'Kepala Gudang', 'Wakil Gudang', 'Staff Gudang', 'Salesman', 'Sales Canvas', 'Sales Motoris', 'Admin Salesman', 'Staff Admin Salesman', 'Agen', 'Sales Agent', 'Admin Agen', 'Staff Admin Agen'],
+      },
+      {
         label: 'Cash Opname Laci',
         icon: Coins,
         href: ROUTES.CASH_OPNAME,
@@ -248,12 +254,6 @@ export const MENU_HIERARCHY: ParentMenuItem[] = [
         href: ROUTES.BIAYA_OPERASIONAL,
         roles: ['Direktur Utama', 'Manager', 'Manager Umum'],
       },
-      {
-        label: 'Setoran Sales',
-        icon: HandCoins,
-        href: ROUTES.SETORAN,
-        roles: ['Direktur Utama', 'Manager', 'Manager Umum', 'Finance & Accounting'],
-      },
     ],
   },
   {
@@ -278,12 +278,6 @@ export const MENU_HIERARCHY: ParentMenuItem[] = [
         icon: Target,
         href: ROUTES.TARGET_KOMISI,
         roles: ['Administrator', 'Manager', 'Manager Umum', 'Direktur Utama', 'Admin Salesman', 'Salesman', 'Sales Canvas', 'Sales Motoris'],
-      },
-      {
-        label: 'Setoran ke Finance',
-        icon: HandCoins,
-        href: ROUTES.SETORAN,
-        roles: ['Salesman', 'Sales Canvas', 'Sales Motoris', 'Admin Salesman', 'Staff Admin Salesman', 'Agen', 'Sales Agent', 'Admin Agen', 'Staff Admin Agen'],
       },
     ],
   },

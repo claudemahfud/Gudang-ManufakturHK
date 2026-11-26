@@ -166,6 +166,12 @@ export default function CreativeMegaMenu({ userRoles = [], isOpen, onClose }: Me
       newTab: true,
       badge: 'Kasir',
     },
+    {
+      title: 'Setoran ke Finance Pusat',
+      desc: 'Setor uang tunai hasil penjualan',
+      href: ROUTES.SETORAN,
+      icon: HandCoins,
+    },
     ...(isFnb
       ? [
           {
@@ -279,20 +285,6 @@ export default function CreativeMegaMenu({ userRoles = [], isOpen, onClose }: Me
       href: ROUTES.BIAYA_OPERASIONAL,
       icon: Receipt,
       restricted: bukanPembukuan,
-    },
-    {
-      title: 'Setoran Sales',
-      desc: 'Konfirmasi setoran tunai dari sales',
-      href: ROUTES.SETORAN,
-      icon: HandCoins,
-      restricted: !ada(['Direktur Utama', 'Manager', 'Manager Umum', 'Finance & Accounting']),
-    },
-    {
-      title: 'Setoran ke Finance',
-      desc: 'Setor uang tunai penjualan ke Finance',
-      href: ROUTES.SETORAN,
-      icon: HandCoins,
-      restricted: !ada(['Salesman', 'Sales Canvas', 'Sales Motoris', 'Admin Salesman', 'Staff Admin Salesman', 'Agen', 'Sales Agent', 'Admin Agen', 'Staff Admin Agen']),
     },
   ];
 
