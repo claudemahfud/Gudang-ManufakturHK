@@ -12,6 +12,8 @@ import MemuatProgres from '@/shared/components/ui/MemuatProgres';
 import { ambil, kirimJson, kontrol, KotakTerlarang, tglWib, Toast } from '@/views/laporan-keuangan/util';
 import { FINANCE, SALES } from './peran';
 import VerifikasiTransfer from './VerifikasiTransfer';
+import CaraKerja from './CaraKerja';
+import RincianKas from './RincianKas';
 
 // ============================================================
 // PAGE: Setoran ke Finance
@@ -78,6 +80,7 @@ export default function Setoran() {
   const [versi, setVersi] = useState(0);
   const [filter, setFilter] = useState<FilterStatus>('menunggu');
   const [setor, setSetor] = useState(false);
+  const [rincian, setRincian] = useState<{ sales: string; nama: string } | null>(null);
   const [konfirmasi, setKonfirmasi] = useState<ItemSetoran | null>(null);
   const [tolak, setTolak] = useState<ItemSetoran | null>(null);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
@@ -148,6 +151,9 @@ export default function Setoran() {
         </AksiHeader>
       </div>
 
+      {/* Penjelasan alur: terbuka selama belum ada kas sales maupun riwayat setoran */}
+      {data && <CaraKerja terbuka={riwayat.length === 0 && data.ringkasan.totalBelumDisetor === 0} />}
+
       {jadiFinance && (
         <>
           <section className="grid grid-cols-1 gap-3 sm:grid-cols-3">
@@ -172,18 +178,19 @@ export default function Setoran() {
                     <th className="p-3 text-left">Sales</th>
                     <th className="p-3 text-right">Belum Disetor</th>
                     <th className="p-3 text-right">Menunggu Konfirmasi</th>
+                    <th className="p-3 text-center">Asal Kas</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
                   {memuat && !data ? (
                     <tr>
-                      <td colSpan={3} className="p-10 text-center text-gray-400">
+                      <td colSpan={4} className="p-10 text-center text-gray-400">
                         <MemuatProgres teks="Memuat saldo…" />
                       </td>
                     </tr>
                   ) : !data || data.saldo.length === 0 ? (
                     <tr>
-                      <td colSpan={3} className="p-10 text-center text-gray-500">
+                      <td colSpan={4} className="p-10 text-center text-gray-500">
                         Tidak ada kas di tangan sales.
                       </td>
                     </tr>
@@ -199,6 +206,11 @@ export default function Setoran() {
                         </td>
                         <td data-label="Menunggu Konfirmasi" className="whitespace-nowrap p-3 text-right tabular-nums text-amber-700">
                           {formatRupiah(s.menunggu)}
+                        </td>
+                        <td data-aksi className="p-3 text-center">
+                          <button type="button" onClick={() => setRincian({ sales: s.sales, nama: s.nama || s.sales })} className="h-8 rounded-lg border border-gray-200 px-3 text-xs font-semibold text-gray-700 hover:bg-gray-50">
+                            Rincian
+                          </button>
                         </td>
                       </tr>
                     ))
@@ -273,6 +285,13 @@ export default function Setoran() {
             </dl>
             <button
               type="button"
+              onClick={() => setRincian({ sales: saldoSaya.sales || username, nama: 'Kas saya' })}
+              className="mt-4 mr-2 h-10 rounded-xl border border-emerald-200 bg-white px-4 text-sm font-semibold text-emerald-800 hover:bg-emerald-50"
+            >
+              Lihat rincian
+            </button>
+            <button
+              type="button"
               disabled={saldoSaya.tersedia <= 0 || memuat}
               onClick={() => setSetor(true)}
               className="mt-4 h-11 w-full rounded-xl bg-emerald-600 px-5 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-50 sm:w-auto"
@@ -299,6 +318,7 @@ export default function Setoran() {
         </>
       )}
 
+      {rincian && <RincianKas divisi={division} sales={rincian.sales} nama={rincian.nama} onClose={() => setRincian(null)} />}
       {setor && (
         <ModalSetor
           divisi={division}
