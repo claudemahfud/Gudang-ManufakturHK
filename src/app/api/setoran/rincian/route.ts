@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/shared/lib/db';
-import { requireAuthRole, ROLES_FINANCE_SETORAN, ROLES_SALES_SETORAN } from '@/shared/lib/auth/rbac';
+import { requireAuthRole, ROLES_FINANCE_SETORAN, ROLES_PENYETOR } from '@/shared/lib/auth/rbac';
 import { punyaRole } from '@/shared/lib/auth/roles';
 import { errorResponse } from '@/shared/lib/stock';
 import { rincianKasSales } from '@/shared/lib/setoran';
@@ -8,7 +8,7 @@ import { rincianKasSales } from '@/shared/lib/setoran';
 // GET /api/setoran/rincian?divisi=&sales= : mutasi kas di tangan sales. Sales hanya miliknya sendiri.
 export async function GET(req: Request) {
   try {
-    const auth = await requireAuthRole([...ROLES_SALES_SETORAN, ...ROLES_FINANCE_SETORAN]);
+    const auth = await requireAuthRole([...ROLES_PENYETOR, ...ROLES_FINANCE_SETORAN]);
     if (!auth.authorized) return auth.response;
     const q = new URL(req.url).searchParams;
     const username = String(auth.user?.username ?? '');

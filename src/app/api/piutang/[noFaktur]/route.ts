@@ -59,6 +59,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ noFaktu
           {
             jumlah,
             metode,
+            username: authResult.user?.username ?? null,
             tanggal: tanggalOpsional(body.tanggal, 'Tanggal bayar') ?? new Date(),
             jatuhTempoBaru: tanggalOpsional(body.jatuhTempoBaru, 'Jatuh tempo baru'),
             catatan: typeof body.catatan === 'string' && body.catatan.trim() ? body.catatan.trim() : null,

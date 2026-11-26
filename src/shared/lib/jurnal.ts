@@ -54,7 +54,7 @@ export const LABEL_SUMBER: Record<string, string> = {
   BAYAR_HUTANG: 'Pembayaran Hutang',
   BIAYA: 'Biaya Operasional',
   KAS_MANUAL: 'Kas Manual',
-  SETORAN: 'Setoran Sales',
+  SETORAN: 'Setoran ke Finance Pusat',
   VERIFIKASI: 'Transfer Tidak Ditemukan',
   RUSAK: 'Barang Rusak',
   PRODUKSI: 'Produksi Dapur',
@@ -78,23 +78,32 @@ export function akunKas(metode: string | null | undefined): string {
 
 const rp = (n: number) => Math.round(n * 100) / 100;
 
-/** Role sales: uang TUNAI yang mereka terima dicatat di Kas di Tangan Sales sampai disetor ke Finance. */
-export const ROLE_SALES: readonly string[] = [
-  'Salesman', 'Sales Canvas', 'Sales Motoris', 'Admin Salesman', 'Staff Admin Salesman',
-  'Agen', 'Sales Agent', 'Admin Agen', 'Staff Admin Agen',
-];
+/**
+ * Finance Pusat = penerima semua setoran: role UTAMA 'Finance & Accounting' di cabang Pusat.
+ * Role tambahan tidak dihitung, agar penjual tidak bisa menghindari setoran lewat role tambahan.
+ */
+export function adalahFinancePusat(u: { role?: string | null; cabang?: string | null } | null | undefined) {
+  return !!u && u.role === 'Finance & Accounting' && (u.cabang || 'Pusat') === 'Pusat';
+}
+
+export async function cekFinancePusat(ex: Executor, username: string | null | undefined) {
+  if (!username) return false;
+  const [u] = await ex.select({ role: users.role, cabang: users.cabang, aktif: users.aktif }).from(users).where(eq(users.username, username)).limit(1);
+  return !!u?.aktif && adalahFinancePusat(u);
+}
 
 /**
- * Akun penerima uang untuk sebuah transaksi. Tunai yang diterima akun ber-role utama sales masuk
- * 1-1350; transfer/QRIS langsung ke Bank/QRIS perusahaan. Semua penerimaan oleh sales ditandai
- * username-nya: tunai untuk saldo setoran, non-tunai untuk Verifikasi Transfer oleh Finance.
+ * Akun penerima uang untuk sebuah penjualan / penagihan. Siapa pun yang menerima TUNAI (Direktur,
+ * Manager, gudang, sales) mencatatnya di 1-1350 sampai disetor ke Finance Pusat; transfer/QRIS
+ * langsung ke Bank/QRIS perusahaan. Penerimaan ditandai username penerima: tunai untuk saldo
+ * setoran, non-tunai untuk Verifikasi Transfer. Hanya Finance Pusat yang langsung ke Kas.
  */
 export async function penerimaKas(ex: Executor, username: string | null | undefined, metode: string | null | undefined) {
   const akunDasar = akunKas(metode);
-  const bukanSales = { akun: akunDasar, sales: undefined as string | undefined };
-  if (!username) return bukanSales;
-  const [u] = await ex.select({ role: users.role }).from(users).where(eq(users.username, username)).limit(1);
-  if (!u || !ROLE_SALES.includes(u.role)) return bukanSales;
+  const langsung = { akun: akunDasar, sales: undefined as string | undefined };
+  if (!username) return langsung;
+  const [u] = await ex.select({ role: users.role, cabang: users.cabang }).from(users).where(eq(users.username, username)).limit(1);
+  if (!u || adalahFinancePusat(u)) return langsung;
   const akunTujuan: string = akunDasar === AKUN.KAS_TUNAI ? AKUN.KAS_SALES : akunDasar;
   return { akun: akunTujuan, sales: username as string | undefined };
 }

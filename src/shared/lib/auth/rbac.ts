@@ -38,6 +38,8 @@ export const ROLES_SALES_SETORAN: UserRole[] = [
   'Salesman', 'Sales Canvas', 'Sales Motoris', 'Admin Salesman', 'Staff Admin Salesman',
   'Agen', 'Sales Agent', 'Admin Agen', 'Staff Admin Agen',
 ];
+// Melihat saldo & setoran semua penyetor. Memproses (konfirmasi/tolak/verifikasi) HANYA Finance Pusat
+// (dicek ke DB: cekFinancePusat di jurnal.ts).
 export const ROLES_FINANCE_SETORAN: UserRole[] = ['Direktur Utama', 'Manager', 'Manager Umum', 'Finance & Accounting'];
 // Panel penjualan Dashboard: pimpinan, finance, dan sales (laba/margin hanya untuk canViewCostPrice)
 export const ROLES_PANEL_PENJUALAN: UserRole[] = [
@@ -125,6 +127,9 @@ export const ROLES_POS: UserRole[] = [
   'Admin Agen',
   'Staff Admin Agen',
 ];
+
+// Penyetor: siapa pun yang bisa menjual (POS/faktur) atau menagih tunai wajib setor ke Finance Pusat
+export const ROLES_PENYETOR: UserRole[] = ROLES_POS;
 
 // Order Franchise ke Dapur Pusat: tim gudang/kasir outlet + tim pusat + finance.
 // Lingkup franchise (hanya outletnya sendiri) dijaga di src/shared/lib/order-franchise.ts.
