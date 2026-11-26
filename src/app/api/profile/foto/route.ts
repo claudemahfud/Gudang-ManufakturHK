@@ -3,11 +3,13 @@ import { eq } from 'drizzle-orm';
 import { db } from '@/shared/lib/db';
 import { users } from '@/shared/lib/db/schema';
 import { requireAuthRole } from '@/shared/lib/auth/rbac';
+import { errorResponse } from '@/shared/lib/stock';
+import { keWebp } from '@/shared/lib/webp';
 
 // ============================================================
 // API: /api/profile/foto — foto profil akun yang sedang login
 // GET: ambil foto, PUT { foto: dataURL }: simpan, DELETE: hapus
-// Foto sudah diperkecil di browser (256px); disimpan sebagai data URL di users.foto.
+// Foto diperkecil di browser, lalu dikonversi ke WebP 256px di server; disimpan sebagai data URL di users.foto.
 // ============================================================
 
 const POLA = /^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/;
@@ -42,8 +44,13 @@ export async function PUT(req: Request) {
   if (foto.length > MAKS) {
     return NextResponse.json({ success: false, message: 'Ukuran foto terlalu besar' }, { status: 413 });
   }
-  await db.update(users).set({ foto, updatedAt: new Date() }).where(eq(users.username, username));
-  return NextResponse.json({ success: true, message: 'Foto profil disimpan' });
+  try {
+    const webp = await keWebp(foto, { lebar: 256, tinggi: 256, fit: 'cover', mutu: 85 });
+    await db.update(users).set({ foto: webp, updatedAt: new Date() }).where(eq(users.username, username));
+    return NextResponse.json({ success: true, message: 'Foto profil disimpan', foto: webp });
+  } catch (err) {
+    return errorResponse(err, 'FOTO_PROFIL_PUT');
+  }
 }
 
 export async function DELETE() {
