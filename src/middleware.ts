@@ -50,6 +50,7 @@ const ROUTE_ROLES: Record<string, string[]> = {
   '/api/biaya-operasional': PEMBUKUAN,
   '/api/akuntansi': PEMBUKUAN,
   '/api/setoran': SETORAN,
+  '/api/verifikasi-transfer': ['Direktur Utama', 'Manager', 'Manager Umum', 'Finance & Accounting'],
   '/api/hutang': PEMBUKUAN,
   '/api/piutang': ['Administrator', 'Manager', 'Manager Umum', 'Direktur Utama', 'Finance & Accounting'],
   '/api/franchise/monitor': ['Administrator', 'Manager', 'Manager Umum', 'Direktur Utama', 'Finance & Accounting'],

@@ -11,6 +11,7 @@ import Bingkai from '@/shared/components/ui/Bingkai';
 import MemuatProgres from '@/shared/components/ui/MemuatProgres';
 import { ambil, kirimJson, kontrol, KotakTerlarang, tglWib, Toast } from '@/views/laporan-keuangan/util';
 import { FINANCE, SALES } from './peran';
+import VerifikasiTransfer from './VerifikasiTransfer';
 
 // ============================================================
 // PAGE: Setoran ke Finance
@@ -250,6 +251,8 @@ export default function Setoran() {
               }
             />
           </section>
+
+          <VerifikasiTransfer key={division} divisi={division} notify={notify} onBerubah={muatUlang} />
         </>
       )}
 
