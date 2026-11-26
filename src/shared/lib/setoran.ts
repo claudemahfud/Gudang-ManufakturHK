@@ -3,7 +3,7 @@ import { db } from '@/shared/lib/db';
 import { logs, setoranSales, users } from '@/shared/lib/db/schema';
 import { BusinessError } from '@/shared/lib/stock';
 import { nomorUrut } from '@/shared/lib/nomor-urut';
-import { AKUN, entitasDari, posting } from '@/shared/lib/jurnal';
+import { AKUN, entitasDari, LABEL_SUMBER, posting } from '@/shared/lib/jurnal';
 
 // ============================================================
 // Setoran sales ke Finance.
@@ -209,5 +209,25 @@ export async function daftarSetoran(ex: Executor, divisi: string, opsi: { sales?
     diprosesOleh: r.diprosesOleh,
     diprosesAt: r.diprosesAt,
     alasanTolak: r.alasanTolak,
+  }));
+}
+
+/** Asal-usul kas di tangan seorang sales: setiap mutasi akun 1-1350 (penjualan, batal, setoran, dll). */
+export async function rincianKasSales(ex: Executor, divisi: string, sales: string) {
+  const rows = (await ex.execute(sql`
+    SELECT j.tanggal, j.no_jurnal, j.sumber, j.referensi, j.keterangan, (b.debit - b.kredit)::float8 AS jumlah
+    FROM jurnal_baris b JOIN jurnal j ON j.id = b.jurnal_id
+    WHERE b.akun_kode = ${AKUN.KAS_SALES} AND b.sales = ${sales} AND j.entitas = ${entitasDari(divisi)}
+    ORDER BY j.tanggal DESC, j.created_at DESC
+    LIMIT 200
+  `)) as unknown as { tanggal: string | Date; no_jurnal: string; sumber: string; referensi: string | null; keterangan: string; jumlah: number }[];
+  return rows.map((r) => ({
+    // kolom timestamp tanpa zona menyimpan UTC
+    tanggal: r.tanggal instanceof Date ? r.tanggal.toISOString() : new Date(String(r.tanggal).replace(' ', 'T') + 'Z').toISOString(),
+    noJurnal: r.no_jurnal,
+    sumber: LABEL_SUMBER[r.sumber] ?? r.sumber,
+    referensi: r.referensi,
+    keterangan: r.keterangan,
+    jumlah: rp(Number(r.jumlah)),
   }));
 }
