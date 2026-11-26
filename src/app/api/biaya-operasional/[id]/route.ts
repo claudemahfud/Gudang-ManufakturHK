@@ -21,6 +21,8 @@ export async function DELETE(
     await db.transaction(async (tx) => {
       const [row] = await tx.delete(biayaOperasional).where(eq(biayaOperasional.id, id)).returning();
       if (!row) throw new BusinessError('Biaya operasional tidak ditemukan', 404);
+      // melempar di dalam transaksi = penghapusan di atas dibatalkan
+      if (row.setoranId) throw new BusinessError('Biaya ini bagian dari setoran penjual yang sudah dikonfirmasi, tidak bisa dihapus terpisah');
       if (row.keuanganId) await tx.delete(keuangan).where(eq(keuangan.id, row.keuanganId));
       await balikJurnal(tx, { referensi: row.id, sumber: ['BIAYA'], keterangan: `Hapus biaya ${row.kategori}`, user });
       await tx.insert(logs).values({
