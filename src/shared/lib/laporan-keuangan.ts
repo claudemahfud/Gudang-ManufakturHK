@@ -233,6 +233,7 @@ function uraianSumber(sumber: string, kas: number): { seksi: Seksi; uraian: stri
     case 'BAYAR_HUTANG':
       return { seksi: 'OPERASI', uraian: 'Pembayaran kas kepada pemasok' };
     case 'BIAYA':
+    case 'REIMBURSE':
       return { seksi: 'OPERASI', uraian: 'Pembayaran beban operasional' };
     case 'KAS_OPNAME':
       return { seksi: 'OPERASI', uraian: kas >= 0 ? 'Kelebihan kas laci' : 'Kekurangan kas laci' };
