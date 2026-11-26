@@ -15,11 +15,12 @@ const PUBLIC_ROUTES = [ROUTES.LOGIN, ROUTES.FORGOT_PASSWORD, '/api/public'];
 // Pembukuan: hanya Direktur Utama & Manager (sama dengan ROLES_PEMBUKUAN di rbac.ts)
 const PEMBUKUAN = ['Direktur Utama', 'Manager', 'Manager Umum'];
 
-// Setoran sales ke Finance: sales menyetor, Finance/pimpinan mengonfirmasi
+// Setoran ke Finance Pusat: semua penjual menyetor; hanya Finance Pusat yang memproses (dicek di API)
 const SETORAN = [
+  'Administrator', 'Direktur Utama', 'Manager', 'Manager Umum', 'Finance & Accounting',
+  'Kepala Gudang', 'Wakil Gudang', 'Staff Gudang',
   'Salesman', 'Sales Canvas', 'Sales Motoris', 'Admin Salesman', 'Staff Admin Salesman',
   'Agen', 'Sales Agent', 'Admin Agen', 'Staff Admin Agen',
-  'Direktur Utama', 'Manager', 'Manager Umum', 'Finance & Accounting',
 ];
 
 const ROUTE_ROLES: Record<string, string[]> = {

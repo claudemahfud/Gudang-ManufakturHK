@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
 import { sql } from 'drizzle-orm';
 import { db } from '@/shared/lib/db';
-import { requireAuthRole, ROLES_FINANCE_SETORAN, ROLES_SALES_SETORAN } from '@/shared/lib/auth/rbac';
+import { requireAuthRole, ROLES_FINANCE_SETORAN, ROLES_PENYETOR } from '@/shared/lib/auth/rbac';
+import { cekFinancePusat } from '@/shared/lib/jurnal';
 import { punyaRole } from '@/shared/lib/auth/roles';
 import { BusinessError, errorResponse } from '@/shared/lib/stock';
 import { ajukanSetoran, daftarSetoran, saldoSales } from '@/shared/lib/setoran';
@@ -9,17 +10,19 @@ import { ajukanSetoran, daftarSetoran, saldoSales } from '@/shared/lib/setoran';
 const STATUS = ['semua', 'menunggu', 'dikonfirmasi', 'ditolak', 'dibatalkan'];
 
 // GET /api/setoran?divisi=&status=
-// Sales: kas di tangan & riwayat milik sendiri. Finance (Direktur/Manager/Finance): semua sales.
+// Penyetor: kas yang dipegang & riwayat sendiri. Finance & pimpinan melihat semua penyetor;
+// hanya Finance Pusat yang boleh memproses (sebagai.proses).
 export async function GET(req: Request) {
   try {
-    const auth = await requireAuthRole([...ROLES_SALES_SETORAN, ...ROLES_FINANCE_SETORAN]);
+    const auth = await requireAuthRole([...ROLES_PENYETOR, ...ROLES_FINANCE_SETORAN]);
     if (!auth.authorized) return auth.response;
     const q = new URL(req.url).searchParams;
     const divisi = q.get('divisi') === 'FNB' ? 'FNB' : 'MANUFAKTUR';
     const status = STATUS.includes(q.get('status') ?? '') ? String(q.get('status')) : 'semua';
     const finance = punyaRole(auth.user, ROLES_FINANCE_SETORAN);
-    const sales = punyaRole(auth.user, ROLES_SALES_SETORAN);
+    const sales = punyaRole(auth.user, ROLES_PENYETOR);
     const username = String(auth.user?.username ?? '');
+    const proses = await cekFinancePusat(db, username);
 
     // Finance melihat semua; sales murni hanya miliknya
     const saldo = await saldoSales(db, divisi, finance ? undefined : username);
@@ -33,7 +36,7 @@ export async function GET(req: Request) {
     return NextResponse.json({
       success: true,
       data: {
-        sebagai: { sales, finance },
+        sebagai: { sales, finance, proses },
         saldo,
         riwayat,
         ringkasan: {
@@ -48,10 +51,10 @@ export async function GET(req: Request) {
   }
 }
 
-// POST /api/setoran {divisi, jumlah, metode, tanggal, catatan}: sales mengajukan setoran kas yang dipegangnya
+// POST /api/setoran {divisi, jumlah, metode, tanggal, catatan}: penyetor mengajukan setoran kas yang dipegangnya
 export async function POST(req: Request) {
   try {
-    const auth = await requireAuthRole(ROLES_SALES_SETORAN);
+    const auth = await requireAuthRole(ROLES_PENYETOR);
     if (!auth.authorized) return auth.response;
     const body = await req.json();
     const divisi = body.divisi === 'FNB' ? 'FNB' : 'MANUFAKTUR';

@@ -4,7 +4,7 @@ import { cashOpname, logs } from '@/shared/lib/db/schema';
 import { requireAuthRole, ROLES_POS } from '@/shared/lib/auth/rbac';
 import { desc } from 'drizzle-orm';
 import { roleUtamaDi } from '@/shared/lib/auth/roles';
-import { AKUN, posting } from '@/shared/lib/jurnal';
+import { AKUN, penerimaKas, posting } from '@/shared/lib/jurnal';
 
 // ============================================================
 // API: /api/fnb/cash-opname
@@ -105,7 +105,8 @@ export async function POST(req: Request) {
       })
       .returning();
 
-    // Selisih laci (lebih/kurang) dibukukan ke Selisih Kas, agar Kas Tunai di buku = uang fisik
+    // Selisih laci (lebih/kurang) dibukukan ke Selisih Kas, pada akun kas yang dipegang kasir
+    const laci = await penerimaKas(tx, authResult.user?.username, 'tunai');
     await posting(tx, {
       tanggal: row.tanggal,
       divisi: 'FNB',
@@ -116,8 +117,8 @@ export async function POST(req: Request) {
       user,
       baris:
         selisihRp > 0
-          ? [{ akun: AKUN.KAS_TUNAI, debit: selisihRp }, { akun: AKUN.SELISIH_KAS, kredit: selisihRp }]
-          : [{ akun: AKUN.SELISIH_KAS, debit: -selisihRp }, { akun: AKUN.KAS_TUNAI, kredit: -selisihRp }],
+          ? [{ akun: laci.akun, debit: selisihRp, sales: laci.sales }, { akun: AKUN.SELISIH_KAS, kredit: selisihRp }]
+          : [{ akun: AKUN.SELISIH_KAS, debit: -selisihRp }, { akun: laci.akun, kredit: -selisihRp, sales: laci.sales }],
     });
 
     await tx.insert(logs).values({
