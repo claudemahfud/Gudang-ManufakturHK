@@ -5,7 +5,7 @@ import { requireAuthRole, ROLES_FINANCE_SETORAN, ROLES_PENYETOR } from '@/shared
 import { cekFinancePusat } from '@/shared/lib/jurnal';
 import { punyaRole } from '@/shared/lib/auth/roles';
 import { BusinessError, errorResponse } from '@/shared/lib/stock';
-import { ajukanSetoran, daftarSetoran, saldoSales } from '@/shared/lib/setoran';
+import { ajukanSetoran, daftarSetoran, omsetHariIni, saldoSales } from '@/shared/lib/setoran';
 
 const STATUS = ['semua', 'menunggu', 'dikonfirmasi', 'ditolak', 'dibatalkan'];
 
@@ -39,6 +39,7 @@ export async function GET(req: Request) {
         sebagai: { sales, finance, proses },
         saldo,
         riwayat,
+        omset: sales ? await omsetHariIni(db, divisi, username) : null,
         ringkasan: {
           totalBelumDisetor: saldo.reduce((s, x) => s + x.saldo, 0),
           totalMenunggu: Number(r?.jumlah) || 0,
@@ -51,7 +52,7 @@ export async function GET(req: Request) {
   }
 }
 
-// POST /api/setoran {divisi, jumlah, metode, tanggal, catatan}: penyetor mengajukan setoran kas yang dipegangnya
+// POST /api/setoran {divisi, jumlah, biaya[], metode, tanggal, catatan}: penyetor mengajukan setoran kas yang dipegangnya
 export async function POST(req: Request) {
   try {
     const auth = await requireAuthRole(ROLES_PENYETOR);
@@ -69,6 +70,7 @@ export async function POST(req: Request) {
         nama,
         divisi,
         jumlah: Number(body.jumlah),
+        biaya: body.biaya,
         metode: body.metode === 'transfer' ? 'transfer' : 'tunai',
         tanggal,
         catatan: body.catatan ? String(body.catatan).slice(0, 500) : null,
