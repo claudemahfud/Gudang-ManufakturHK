@@ -1,4 +1,4 @@
-import { pgTable, text, integer, boolean, timestamp, decimal, uuid, varchar, serial, primaryKey } from 'drizzle-orm/pg-core';
+import { pgTable, text, integer, boolean, timestamp, decimal, uuid, varchar, serial, primaryKey, jsonb } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 
 // ============================================================
@@ -323,6 +323,7 @@ export const biayaOperasional = pgTable('biaya_operasional', {
   akunKode: varchar('akun_kode', { length: 10 }), // akun beban (migrasi 012)
   metode: varchar('metode', { length: 20 }).notNull().default('tunai'), // tunai | transfer
   keuanganId: uuid('keuangan_id'), // baris kas keluar terkait
+  setoranId: uuid('setoran_id'), // terisi bila biaya dipotong dari setoran penjual (migrasi 019)
   createdBy: varchar('created_by', { length: 50 }),
   createdAt: timestamp('created_at').defaultNow(),
 });
@@ -654,7 +655,9 @@ export const setoranSales = pgTable('setoran_sales', {
   sales: varchar('sales', { length: 50 }).notNull(),
   namaSales: varchar('nama_sales', { length: 100 }).notNull(),
   divisi: varchar('divisi', { length: 30 }).notNull(),
-  jumlah: decimal('jumlah', { precision: 15, scale: 2 }).notNull(),
+  jumlah: decimal('jumlah', { precision: 15, scale: 2 }).notNull(), // uang yang diserahkan (sesudah biaya)
+  biaya: jsonb('biaya').$type<{ akun: string; jumlah: number; keterangan: string }[]>().notNull().default([]), // migrasi 019
+  totalBiaya: decimal('total_biaya', { precision: 15, scale: 2 }).notNull().default('0'),
   metode: varchar('metode', { length: 20 }).notNull().default('tunai'), // tunai | transfer
   catatan: text('catatan'),
   status: varchar('status', { length: 20 }).notNull().default('menunggu'), // menunggu | dikonfirmasi | ditolak | dibatalkan
