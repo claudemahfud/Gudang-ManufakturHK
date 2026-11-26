@@ -86,7 +86,7 @@ export default function CatatTransaksi({
     let hasil;
     if (template.rute === 'biaya') {
       hasil = await kirimJson('/api/biaya-operasional', {
-        tanggal, akunKode: akunSah, jumlah: nominal, metode: kasSah === '1-1200' ? 'transfer' : 'tunai', keterangan: catatan || uraian || null, divisi: division, cabang,
+        tanggal, akunKode: akunSah, jumlah: nominal, metode: kasSah === '1-1200' ? 'transfer' : 'tunai', keterangan: catatan || uraian || template.label, sumber: 'kantor', divisi: division, cabang,
       });
     } else if (template.rute === 'keuangan') {
       hasil = await kirimJson('/api/keuangan', {
@@ -99,7 +99,7 @@ export default function CatatTransaksi({
       });
     }
     setProses(false);
-    if (hasil.ok) onSelesai(`${template.label} berhasil dicatat`);
+    if (hasil.ok) onSelesai(template.rute === 'biaya' ? `${template.label} diajukan. Unggah nota di Biaya Operasional, lalu disetujui di Laporan Operasional.` : `${template.label} berhasil dicatat`);
     else setGalat(hasil.pesan);
   };
 

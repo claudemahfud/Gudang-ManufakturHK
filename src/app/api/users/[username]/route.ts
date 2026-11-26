@@ -14,7 +14,7 @@ const DIVISI = ['ALL', 'MANUFAKTUR', 'FNB'];
 // logs.user sengaja tidak diubah: jejak audit tetap seperti saat kejadian.
 const KOLOM_USERNAME: Array<[string, string]> = [
   ['barang_keluar', 'created_by'], ['barang_keluar', 'salesman'], ['barang_masuk', 'created_by'],
-  ['barang_rusak', 'created_by'], ['biaya_operasional', 'created_by'], ['cash_opname', 'kasir'],
+  ['barang_rusak', 'created_by'], ['biaya_operasional', 'created_by'], ['biaya_operasional', 'username'], ['cash_opname', 'kasir'],
   ['cash_opname', 'created_by'], ['diskon_request', 'salesman'], ['diskon_request', 'approved_by'],
   ['faktur_penjualan', 'salesman'], ['faktur_penjualan', 'created_by'], ['keuangan', 'created_by'],
   ['mutasi_barang', 'created_by'], ['order_franchise', 'diterima_by'], ['order_franchise', 'dikirim_by'],

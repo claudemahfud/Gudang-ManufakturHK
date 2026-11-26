@@ -29,7 +29,8 @@ const ROUTE_ROLES: Record<string, string[]> = {
   [ROUTES.PENGATURAN_PERUSAHAAN]: ['Direktur Utama', 'Administrator'], // Administrator: hanya Zona Bahaya (Reset Total)
   [ROUTES.LOGS]: ['Administrator', 'Manager', 'Manager Umum', 'Direktur Utama'],
   [ROUTES.KEUANGAN]: PEMBUKUAN,
-  [ROUTES.BIAYA_OPERASIONAL]: PEMBUKUAN,
+  // Biaya Operasional: semua karyawan menginput (hak per aksi dijaga di API)
+  '/laporan-operasional': [...PEMBUKUAN, 'Finance & Accounting'],
   [ROUTES.NERACA]: PEMBUKUAN,
   '/laporan-keuangan': PEMBUKUAN,
   '/setoran': SETORAN,
@@ -48,7 +49,7 @@ const ROUTE_ROLES: Record<string, string[]> = {
   '/api/users': ['Administrator', 'Direktur Utama'],
   '/api/logs': ['Administrator', 'Manager', 'Manager Umum', 'Direktur Utama'],
   '/api/keuangan': PEMBUKUAN,
-  '/api/biaya-operasional': PEMBUKUAN,
+  '/api/laporan-operasional': [...PEMBUKUAN, 'Finance & Accounting'],
   '/api/akuntansi': PEMBUKUAN,
   '/api/setoran': SETORAN,
   '/api/verifikasi-transfer': ['Direktur Utama', 'Manager', 'Manager Umum', 'Finance & Accounting'],

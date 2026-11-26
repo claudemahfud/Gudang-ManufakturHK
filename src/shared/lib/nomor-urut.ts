@@ -16,9 +16,10 @@ function tanggalWib(waktu: Date) {
 /**
  * Kode awalan per jenis dokumen; tiap kode punya seri sendiri.
  * POS = penjualan kasir, FKTR = faktur penjualan, SJ = surat jalan, PO = purchase order,
- * PRD = produksi dapur, ORF = order franchise, MTS = mutasi barang, RTRN = retur, JRN = jurnal akuntansi, STR = setoran sales.
+ * PRD = produksi dapur, ORF = order franchise, MTS = mutasi barang, RTRN = retur, JRN = jurnal akuntansi, STR = setoran sales,
+ * BOP = biaya operasional.
  */
-export type SeriNomor = 'POS' | 'FKTR' | 'SJ' | 'PO' | 'PRD' | 'ORF' | 'MTS' | 'RTRN' | 'JRN' | 'STR';
+export type SeriNomor = 'POS' | 'FKTR' | 'SJ' | 'PO' | 'PRD' | 'ORF' | 'MTS' | 'RTRN' | 'JRN' | 'STR' | 'BOP';
 
 /**
  * Nomor dokumen berurutan KODE + YYBBTTNNN (tahun 2 digit, bulan, tanggal, seri 3 digit),
