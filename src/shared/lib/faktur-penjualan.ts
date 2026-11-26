@@ -209,7 +209,7 @@ export async function batalkanFakturPenjualan(tx: Tx, noFaktur: string, user: st
   // Balik jurnal faktur & semua pembayaran piutangnya (kas yang dibalik = dibayar di header)
   await balikJurnal(tx, {
     referensi: noFaktur,
-    sumber: ['FAKTUR', 'BAYAR_PIUTANG'],
+    sumber: ['FAKTUR', 'BAYAR_PIUTANG', 'VERIFIKASI'],
     keterangan: `Pembatalan faktur ${noFaktur} (${faktur.pelanggan})`,
     user: username ?? user,
   });

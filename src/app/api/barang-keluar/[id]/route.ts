@@ -68,7 +68,10 @@ export async function DELETE(
       }
       if (item.channel === 'POS') {
         // Jurnal pembalik sebagian: kas keluar ke akun kas yang dipakai saat penjualan, persediaan kembali
-        const barisKas = (await barisJurnalAktif(tx, item.trxId, ['POS'])).find((b) => AKUN_KAS.includes(b.akunKode) || b.akunKode === AKUN.KAS_SALES);
+        const asal = await barisJurnalAktif(tx, item.trxId, ['VERIFIKASI', 'POS']);
+        const barisKas =
+          asal.find((b) => b.akunKode === AKUN.KAS_SALES && Number(b.debit) > 0) ??
+          asal.find((b) => AKUN_KAS.includes(b.akunKode) && Number(b.debit) > 0);
         const kas = barisKas?.akunKode ?? AKUN.KAS_TUNAI;
         const bruto = rp(Number(item.hargaJual ?? 0) * item.qty);
         const neto = rp(total);

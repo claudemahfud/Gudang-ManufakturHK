@@ -3,6 +3,7 @@ import { sql } from 'drizzle-orm';
 import { db } from '@/shared/lib/db';
 import { requireAuthRole, ROLES_FINANCE, ROLES_FINANCE_SETORAN, ROLES_PEMBUKUAN, ROLES_SALES_SETORAN, ROLES_WAREHOUSE } from '@/shared/lib/auth/rbac';
 import { saldoSales } from '@/shared/lib/setoran';
+import { daftarTransferSales } from '@/shared/lib/verifikasi-transfer';
 import { punyaRole } from '@/shared/lib/auth/roles';
 import { PO_STATUS } from '@/shared/lib/po-status';
 import { ROUTES } from '@/router/routes';
@@ -129,6 +130,20 @@ export async function GET(req: NextRequest) {
           pesan: `Total ${rp(st.total)}. Cek uangnya lalu konfirmasi.`,
           href: '/setoran',
           waktu: st.terbaru ? new Date(String(st.terbaru)).toISOString() : null,
+        });
+      }
+    }
+    if (punyaRole(user, ROLES_FINANCE_SETORAN)) {
+      const lama = (await daftarTransferSales(db, divisi)).filter((t) => t.umurHari >= 1);
+      if (lama.length > 0) {
+        const total = lama.reduce((s, t) => s + t.jumlah, 0);
+        daftar.push({
+          id: `verif:${lama.length}:${total}`,
+          tipe: 'warning',
+          judul: `${lama.length} transfer sales belum dicek > 1 hari`,
+          pesan: `Total ${rp(total)}. Cocokkan dengan mutasi rekening.`,
+          href: '/setoran',
+          waktu: null,
         });
       }
     }
