@@ -4,8 +4,8 @@ import { ArrowRight, Banknote, CheckCircle2, HandCoins, ShoppingBag } from 'luci
 const LANGKAH = [
   { ikon: ShoppingBag, judul: '1. Menjual tunai', isi: 'Siapa pun (Direktur, Manager, gudang, sales) lewat Kasir POS, faktur, atau tagih piutang.' },
   { ikon: HandCoins, judul: '2. Uang dipegang penjual', isi: 'Otomatis tercatat sebagai Kas Belum Disetor atas nama penjual.' },
-  { ikon: Banknote, judul: '3. Setor ke Finance Pusat', isi: 'Uang dipegang dikurangi biaya operasional sales = jumlah disetor.' },
-  { ikon: CheckCircle2, judul: '4. Finance Pusat konfirmasi', isi: 'Biaya diperiksa. Setelah uang diterima, masuk Kas / Bank dan biaya dibukukan.' },
+  { ikon: Banknote, judul: '3. Setor ke Finance Pusat', isi: 'Uang dipegang dikurangi biaya yang dicatat di Biaya Operasional = jumlah disetor.' },
+  { ikon: CheckCircle2, judul: '4. Finance Pusat konfirmasi', isi: 'Setelah uang diterima, baru masuk Kas / Bank perusahaan.' },
 ];
 
 export default function CaraKerja({ terbuka }: { terbuka: boolean }) {

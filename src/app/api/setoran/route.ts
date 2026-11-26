@@ -52,7 +52,7 @@ export async function GET(req: Request) {
   }
 }
 
-// POST /api/setoran {divisi, jumlah, biaya[], metode, tanggal, catatan}: penyetor mengajukan setoran kas yang dipegangnya
+// POST /api/setoran {divisi, jumlah, metode, tanggal, catatan}: penyetor mengajukan setoran kas yang dipegangnya
 export async function POST(req: Request) {
   try {
     const auth = await requireAuthRole(ROLES_PENYETOR);
@@ -70,7 +70,6 @@ export async function POST(req: Request) {
         nama,
         divisi,
         jumlah: Number(body.jumlah),
-        biaya: body.biaya,
         metode: body.metode === 'transfer' ? 'transfer' : 'tunai',
         tanggal,
         catatan: body.catatan ? String(body.catatan).slice(0, 500) : null,

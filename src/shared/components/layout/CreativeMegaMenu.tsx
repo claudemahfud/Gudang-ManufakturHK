@@ -157,15 +157,8 @@ export default function CreativeMegaMenu({ userRoles = [], isOpen, onClose }: Me
       : []),
   ];
 
+  const bukanPembukuan = !ada(['Direktur Utama', 'Manager', 'Manager Umum']);
   const categoryKasir = [
-    {
-      title: 'Kasir POS Fullscreen',
-      desc: 'Point of sale cepat tanpa reload',
-      href: ROUTES.POS,
-      icon: ShoppingBag,
-      newTab: true,
-      badge: 'Kasir',
-    },
     {
       title: 'Setoran ke Finance Pusat',
       desc: 'Setor uang tunai hasil penjualan',
@@ -189,6 +182,12 @@ export default function CreativeMegaMenu({ userRoles = [], isOpen, onClose }: Me
       href: ROUTES.LAPORAN_PENJUALAN,
       icon: TrendingUp,
       restricted: !ada(['Administrator', 'Manager', 'Manager Umum', 'Direktur Utama', 'Finance & Accounting']),
+    },
+    {
+      title: 'Biaya Operasional',
+      desc: 'Input biaya lapangan & foto nota',
+      href: ROUTES.BIAYA_OPERASIONAL,
+      icon: Receipt,
     },
     {
       title: 'Produk Detil Terjual',
@@ -242,7 +241,6 @@ export default function CreativeMegaMenu({ userRoles = [], isOpen, onClose }: Me
   ];
 
   // Pembukuan hanya Direktur Utama & Manager; Piutang tetap untuk role lamanya
-  const bukanPembukuan = !ada(['Direktur Utama', 'Manager', 'Manager Umum']);
   const categoryKeuanganAdmin = [
     {
       title: 'Laporan Keuangan',
@@ -273,18 +271,18 @@ export default function CreativeMegaMenu({ userRoles = [], isOpen, onClose }: Me
       restricted: bukanPembukuan,
     },
     {
+      title: 'Laporan Operasional',
+      desc: 'Persetujuan biaya & reimburse',
+      href: ROUTES.LAPORAN_OPERASIONAL,
+      icon: Receipt,
+      restricted: !ada(['Direktur Utama', 'Manager', 'Manager Umum', 'Finance & Accounting']),
+    },
+    {
       title: 'Piutang Pelanggan',
       desc: 'Tagihan faktur, cicilan & jatuh tempo',
       href: ROUTES.PIUTANG,
       icon: HandCoins,
       restricted: !ada(['Administrator', 'Manager', 'Manager Umum', 'Direktur Utama', 'Finance & Accounting']),
-    },
-    {
-      title: 'Biaya Operasional',
-      desc: 'Beban operasional harian & bulanan',
-      href: ROUTES.BIAYA_OPERASIONAL,
-      icon: Receipt,
-      restricted: bukanPembukuan,
     },
   ];
 
@@ -387,15 +385,14 @@ export default function CreativeMegaMenu({ userRoles = [], isOpen, onClose }: Me
             <div className="flex items-center gap-2 pb-1.5 border-b border-slate-200">
               <ShoppingBag className="w-4 h-4 text-emerald-600" />
               <h3 className="text-xs font-extrabold text-slate-950 uppercase tracking-wider">
-                Penjualan & Kasir
+                Laporan
               </h3>
             </div>
             <ul className="space-y-1">
-              {categoryKasir.map((item) => (
+              {categoryKasir.filter((item) => !('restricted' in item && item.restricted)).map((item) => (
                 <li key={item.title}>
                   <Link
                     href={item.href}
-                    target={item.newTab ? '_blank' : undefined}
                     onClick={onClose}
                     className="group block p-2 rounded-2xl hover:bg-slate-50 border border-transparent hover:border-slate-200 hover-lift"
                   >
@@ -409,14 +406,6 @@ export default function CreativeMegaMenu({ userRoles = [], isOpen, onClose }: Me
                           <span className="text-xs font-bold text-slate-900 group-hover:text-emerald-700 transition truncate leading-tight">
                             {item.title}
                           </span>
-                          {item.badge && (
-                            <span className="text-[9px] font-bold px-1.5 py-0.2 bg-emerald-100 text-emerald-800 rounded-md">
-                              {item.badge}
-                            </span>
-                          )}
-                          {item.newTab && (
-                            <ExternalLink className="w-3 h-3 text-slate-400 group-hover:text-emerald-600" />
-                          )}
                         </div>
                         {/* List Dual-Line: Line 2 Subtitle */}
                         <p className="text-[11px] text-slate-600 truncate leading-normal mt-0.5">

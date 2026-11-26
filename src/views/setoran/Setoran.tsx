@@ -13,8 +13,7 @@ import { ambil, kirimJson, kontrol, KotakTerlarang, tglWib, Toast } from '@/view
 import { AKSES_SETORAN } from './peran';
 import VerifikasiTransfer from './VerifikasiTransfer';
 import CaraKerja from './CaraKerja';
-import { DaftarBiaya, InputBiaya, type BarisBiaya } from './BiayaSetor';
-import type { BiayaSetoran } from '@/shared/lib/biaya-sales';
+import Link from 'next/link';
 import RincianKas from './RincianKas';
 
 // ============================================================
@@ -31,6 +30,7 @@ interface SaldoSales {
   nama: string;
   saldo: number;
   menunggu: number;
+  biayaMenunggu: number;
   tersedia: number;
 }
 interface ItemSetoran {
@@ -40,8 +40,6 @@ interface ItemSetoran {
   sales: string;
   namaSales: string;
   jumlah: number;
-  biaya: BiayaSetoran[];
-  totalBiaya: number;
   metode: Metode;
   catatan: string | null;
   status: StatusSetoran;
@@ -135,7 +133,7 @@ export default function Setoran() {
 
   const riwayat = data?.riwayat ?? [];
   const saldoSaya: SaldoSales =
-    (jadiFinance ? data?.saldo.find((s) => s.sales.toLowerCase() === username) : data?.saldo[0]) ?? { sales: username, nama: '', saldo: 0, menunggu: 0, tersedia: 0 };
+    (jadiFinance ? data?.saldo.find((s) => s.sales.toLowerCase() === username) : data?.saldo[0]) ?? { sales: username, nama: '', saldo: 0, menunggu: 0, biayaMenunggu: 0, tersedia: 0 };
   const riwayatSaya = jadiFinance && username ? riwayat.filter((r) => r.sales.toLowerCase() === username) : riwayat;
   const riwayatMasuk = riwayat.filter((r) => filter === 'semua' || r.status === filter);
 
@@ -301,7 +299,12 @@ export default function Setoran() {
                 ))}
               </dl>
             )}
-            <dl className="mt-4 grid grid-cols-2 gap-3 text-sm">
+            <dl className="mt-4 grid grid-cols-2 gap-3 text-sm sm:grid-cols-3">
+              <div>
+                <dt className="text-xs text-gray-500">Biaya operasional (menunggu)</dt>
+                <dd className="font-bold tabular-nums text-amber-700">- {formatRupiah(saldoSaya.biayaMenunggu)}</dd>
+                <Link href="/biaya-operasional" className="text-[11px] font-semibold text-emerald-800 underline">Catat biaya</Link>
+              </div>
               <div>
                 <dt className="text-xs text-gray-500">Menunggu konfirmasi</dt>
                 <dd className="font-bold tabular-nums text-amber-700">{formatRupiah(saldoSaya.menunggu)}</dd>
@@ -351,6 +354,9 @@ export default function Setoran() {
         <ModalSetor
           divisi={division}
           tersedia={saldoSaya.tersedia}
+          saldo={saldoSaya.saldo}
+          menunggu={saldoSaya.menunggu}
+          biayaMenunggu={saldoSaya.biayaMenunggu}
           notify={notify}
           onClose={() => setSetor(false)}
           onSaved={() => {
@@ -446,7 +452,6 @@ function TabelRiwayat({
                   )}
                   <td data-label="Jumlah" className="whitespace-nowrap p-3 text-right font-bold tabular-nums text-gray-900">
                     {formatRupiah(s.jumlah)}
-                    {s.totalBiaya > 0 && <span className="block text-[11px] font-semibold text-amber-700">+ biaya {formatRupiah(s.totalBiaya)}</span>}
                     {selisih && <span className="block text-[11px] font-semibold text-red-700">Diterima {formatRupiah(s.jumlahDiterima ?? 0)}</span>}
                   </td>
                   <td data-label="Metode" className="p-3 text-gray-700">
@@ -458,9 +463,8 @@ function TabelRiwayat({
                   <td data-label="Keterangan" className="p-3 text-xs text-gray-600">
                     {s.status === 'ditolak' && s.alasanTolak && <span className="block font-semibold text-red-700">Alasan: {s.alasanTolak}</span>}
                     {s.catatan && <span className="block">{s.catatan}</span>}
-                    {s.biaya.length > 0 && <DaftarBiaya biaya={s.biaya} />}
                     {s.diprosesOleh && <span className="block text-gray-400">oleh {s.diprosesOleh}</span>}
-                    {!s.catatan && !s.alasanTolak && !s.diprosesOleh && s.biaya.length === 0 && '-'}
+                    {!s.catatan && !s.alasanTolak && !s.diprosesOleh && '-'}
                   </td>
                   <td data-aksi className="p-3">
                     <div className="flex justify-end gap-1.5">{aksi(s)}</div>
@@ -488,37 +492,23 @@ function Tombol({ onClose, kirim, nonaktif, teks }: { onClose: () => void; kirim
   );
 }
 
-function ModalSetor({ divisi, tersedia, onClose, onSaved, notify }: { divisi: string; tersedia: number; onClose: () => void; onSaved: () => void; notify: Notify }) {
-  const [biaya, setBiaya] = useState<BarisBiaya[]>([]);
-  // null = ikuti rumus (kas dipegang - biaya); terisi bila penjual menyetor sebagian
-  const [jumlahManual, setJumlah] = useState<string | null>(null);
+function ModalSetor({ divisi, tersedia, saldo, menunggu, biayaMenunggu, onClose, onSaved, notify }: { divisi: string; tersedia: number; saldo: number; menunggu: number; biayaMenunggu: number; onClose: () => void; onSaved: () => void; notify: Notify }) {
+  const [jumlah, setJumlah] = useState(String(tersedia));
   const [metode, setMetode] = useState<Metode>('tunai');
   const [tanggal, setTanggal] = useState(tglWib());
   const [catatan, setCatatan] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [galat, setGalat] = useState('');
 
-  const totalBiaya = biaya.reduce((s, b) => s + (Number(b.jumlah) || 0), 0);
-  const sisa = Math.max(0, Math.round((tersedia - totalBiaya) * 100) / 100);
-  const jumlah = jumlahManual ?? String(sisa);
   const n = Number(jumlah) || 0;
-  const biayaKurang = biaya.some((b) => !(Number(b.jumlah) > 0) || !b.keterangan.trim());
-  const salah = biayaKurang
-    ? 'Lengkapi nominal dan keterangan tiap biaya, atau hapus barisnya'
-    : totalBiaya > tersedia
-      ? `Biaya melebihi kas yang dipegang ${formatRupiah(tersedia)}`
-      : n < 0 || n + totalBiaya <= 0
-        ? 'Isi nominal setoran'
-        : n > sisa + 0.009
-          ? `Maksimal ${formatRupiah(sisa)}`
-          : '';
+  const salah = !(n > 0) ? 'Isi nominal setoran' : n > tersedia ? `Maksimal ${formatRupiah(tersedia)}` : '';
 
   const simpan = async (e: React.FormEvent) => {
     e.preventDefault();
     if (salah || submitting) return;
     setSubmitting(true);
     setGalat('');
-    const h = await kirimJson('/api/setoran', { divisi, jumlah: n, biaya: biaya.map((b) => ({ ...b, jumlah: Number(b.jumlah) })), metode, tanggal, catatan });
+    const h = await kirimJson('/api/setoran', { divisi, jumlah: n, metode, tanggal, catatan });
     setSubmitting(false);
     if (!h.ok) return setGalat(h.pesan);
     notify(`Setoran ${formatRupiah(n)} diajukan, menunggu konfirmasi Finance`, 'success');
@@ -529,15 +519,15 @@ function ModalSetor({ divisi, tersedia, onClose, onSaved, notify }: { divisi: st
     <Bingkai judul="Setor ke Finance Pusat" sub={`Bisa disetor sekarang ${formatRupiah(tersedia)}`} onClose={onClose}>
       <form onSubmit={simpan} className="flex min-h-0 flex-1 flex-col">
         <div className="flex-1 space-y-4 overflow-y-auto p-5 sm:px-8">
-          <InputBiaya biaya={biaya} onChange={setBiaya} />
           <dl className="space-y-1 rounded-xl border border-emerald-100 bg-emerald-50/60 p-3 text-sm">
-            <div className="flex justify-between gap-2"><dt className="text-gray-600">Tunai penjualan belum disetor</dt><dd className="font-semibold tabular-nums">{formatRupiah(tersedia)}</dd></div>
-            <div className="flex justify-between gap-2"><dt className="text-gray-600">Biaya operasional sales</dt><dd className="font-semibold tabular-nums text-amber-700">- {formatRupiah(totalBiaya)}</dd></div>
-            <div className="flex justify-between gap-2 border-t border-emerald-200 pt-1 font-bold text-gray-900"><dt>Harus disetor</dt><dd className="tabular-nums">{formatRupiah(sisa)}</dd></div>
+            <div className="flex justify-between gap-2"><dt className="text-gray-600">Tunai penjualan belum disetor</dt><dd className="font-semibold tabular-nums">{formatRupiah(saldo)}</dd></div>
+            <div className="flex justify-between gap-2"><dt className="text-gray-600">Biaya operasional menunggu</dt><dd className="font-semibold tabular-nums text-amber-700">- {formatRupiah(biayaMenunggu)}</dd></div>
+            {menunggu > 0 && <div className="flex justify-between gap-2"><dt className="text-gray-600">Setoran menunggu konfirmasi</dt><dd className="font-semibold tabular-nums">- {formatRupiah(menunggu)}</dd></div>}
+            <div className="flex justify-between gap-2 border-t border-emerald-200 pt-1 font-bold text-gray-900"><dt>Harus disetor</dt><dd className="tabular-nums">{formatRupiah(tersedia)}</dd></div>
           </dl>
           <label className={lbl}>
             Nominal setoran *
-            <input type="number" min="0" max={sisa} step="any" inputMode="decimal" required value={jumlah} onChange={(e) => setJumlah(e.target.value)} className={`${kontrol} mt-1 w-full font-semibold`} />
+            <input type="number" min="1" max={tersedia} step="any" inputMode="decimal" required value={jumlah} onChange={(e) => setJumlah(e.target.value)} className={`${kontrol} mt-1 w-full font-semibold`} />
             {salah && <span className="mt-1 block text-[11px] normal-case tracking-normal text-red-600">{salah}</span>}
           </label>
           <fieldset>
@@ -607,13 +597,6 @@ function ModalKonfirmasi({ setoran, onClose, onSaved, notify }: { setoran: ItemS
               <dd className="font-semibold text-gray-900">{LABEL_METODE[setoran.metode]}</dd>
             </div>
           </dl>
-          {setoran.biaya.length > 0 && (
-            <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
-              <p className="font-bold">Biaya yang memotong setoran: {formatRupiah(setoran.totalBiaya)}</p>
-              <DaftarBiaya biaya={setoran.biaya} />
-              <p className="mt-1">Periksa buktinya. Konfirmasi membukukan biaya ini; bila ada yang keliru, tolak setoran.</p>
-            </div>
-          )}
           <label className={lbl}>
             Diterima Finance *
             <input type="number" min="0" max={setoran.jumlah} step="any" inputMode="decimal" required value={diterima} onChange={(e) => setDiterima(e.target.value)} className={`${kontrol} mt-1 w-full font-semibold`} />
