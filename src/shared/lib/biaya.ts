@@ -5,6 +5,7 @@ import { BusinessError } from '@/shared/lib/stock';
 import { nomorUrut } from '@/shared/lib/nomor-urut';
 import { AKUN, adalahFinancePusat, akunKas, balikJurnal, entitasDari, posting, wajibAkunPosting } from '@/shared/lib/jurnal';
 import { saldoSales } from '@/shared/lib/setoran';
+import { keWebp } from '@/shared/lib/webp';
 import { punyaRole } from '@/shared/lib/auth/roles';
 import { bolehAkunBiaya, MAKS_FOTO, MAKS_PANJANG_FOTO, POLA_FOTO, SUMBER_BIAYA, type ItemBiaya, type SumberBiaya } from '@/shared/lib/biaya-aturan';
 
@@ -26,15 +27,16 @@ const rp = (n: number) => Math.round(n * 100) / 100;
 const rupiah = (n: number) => `Rp ${n.toLocaleString('id-ID')}`;
 const metodeDari = (m: unknown) => (m === 'transfer' ? ('transfer' as const) : ('tunai' as const));
 
-export function bacaFoto(mentah: unknown): string[] {
+/** Validasi foto kiriman browser lalu simpan sebagai WebP. */
+export async function bacaFoto(mentah: unknown): Promise<string[]> {
   if (mentah === undefined || mentah === null) return [];
   if (!Array.isArray(mentah) || mentah.length > MAKS_FOTO) throw new BusinessError(`Maksimal ${MAKS_FOTO} foto`);
-  return mentah.map((f) => {
+  return Promise.all(mentah.map((f) => {
     if (typeof f !== 'string' || f.length > MAKS_PANJANG_FOTO || !POLA_FOTO.test(f)) {
       throw new BusinessError('Foto tidak valid atau terlalu besar (gunakan JPG/PNG)');
     }
-    return f;
-  });
+    return keWebp(f, { lebar: 1400, tinggi: 1400, fit: 'inside', mutu: 78 });
+  }));
 }
 
 export interface InputBiayaBaru {
@@ -60,7 +62,7 @@ export async function ajukanBiaya(tx: Tx, p: InputBiayaBaru, user: Pelaku) {
   if (!bolehAkunBiaya(p.akunKode)) throw new BusinessError('Jenis biaya ini tidak bisa diinput');
   const a = await wajibAkunPosting(tx, p.akunKode);
   if (a.tipe !== 'BEBAN') throw new BusinessError('Pilih akun beban operasional (6-xxxx)');
-  const foto = bacaFoto(p.foto);
+  const foto = await bacaFoto(p.foto);
   const divisi = entitasDari(p.divisi);
 
   if (sumber === 'penjualan') {
@@ -202,7 +204,7 @@ export async function reimburseBiaya(tx: Tx, id: string, metode: unknown, foto: 
     ],
   });
   const keuanganId = await kasKeluar(tx, r, jumlah, tanggal, `Reimburse ${r.noBiaya} ke ${r.createdBy}`, user.username);
-  const bukti = bacaFoto(foto);
+  const bukti = await bacaFoto(foto);
   if (bukti.length) await tx.insert(biayaLampiran).values(bukti.map((data) => ({ biayaId: id, jenis: 'bayar', data, oleh: user.username })));
   await tx
     .update(biayaOperasional)
@@ -224,7 +226,7 @@ export async function tambahNota(tx: Tx, id: string, foto: unknown, user: Pelaku
   const r = await kunci(tx, id);
   if (r.username !== user.username) throw new BusinessError('Hanya pengaju yang bisa menambah foto nota', 403);
   if (r.status !== 'menunggu') throw new BusinessError('Foto nota hanya bisa ditambah selama menunggu persetujuan');
-  const baru = bacaFoto(foto);
+  const baru = await bacaFoto(foto);
   if (!baru.length) throw new BusinessError('Pilih foto terlebih dahulu');
   if ((await jumlahNota(tx, id)) + baru.length > MAKS_FOTO) throw new BusinessError(`Maksimal ${MAKS_FOTO} foto per biaya`);
   await tx.insert(biayaLampiran).values(baru.map((data) => ({ biayaId: id, data, oleh: user.username })));
