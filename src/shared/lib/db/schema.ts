@@ -1,4 +1,4 @@
-import { pgTable, text, integer, boolean, timestamp, decimal, uuid, varchar, serial, primaryKey, jsonb } from 'drizzle-orm/pg-core';
+import { pgTable, text, integer, boolean, timestamp, decimal, uuid, varchar, serial, primaryKey } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 
 // ============================================================
@@ -323,9 +323,29 @@ export const biayaOperasional = pgTable('biaya_operasional', {
   akunKode: varchar('akun_kode', { length: 10 }), // akun beban (migrasi 012)
   metode: varchar('metode', { length: 20 }).notNull().default('tunai'), // tunai | transfer
   keuanganId: uuid('keuangan_id'), // baris kas keluar terkait
-  setoranId: uuid('setoran_id'), // terisi bila biaya dipotong dari setoran penjual (migrasi 019)
+  noBiaya: varchar('no_biaya', { length: 30 }), // migrasi 020
+  username: varchar('username', { length: 50 }), // pengaju
+  sumber: varchar('sumber', { length: 20 }).notNull().default('kantor'), // penjualan | kantor | pribadi
+  status: varchar('status', { length: 20 }).notNull().default('disetujui'), // menunggu | disetujui | ditolak | dibatalkan | dibayar
+  notaFisik: boolean('nota_fisik').notNull().default(false),
+  diprosesOleh: varchar('diproses_oleh', { length: 50 }),
+  diprosesAt: timestamp('diproses_at'),
+  alasanTolak: text('alasan_tolak'),
+  reimburseOleh: varchar('reimburse_oleh', { length: 50 }),
+  reimburseAt: timestamp('reimburse_at'),
+  reimburseMetode: varchar('reimburse_metode', { length: 20 }),
   createdBy: varchar('created_by', { length: 50 }),
   createdAt: timestamp('created_at').defaultNow(),
+});
+
+// Foto nota / invoice biaya (migrasi 020)
+export const biayaLampiran = pgTable('biaya_lampiran', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  biayaId: uuid('biaya_id').notNull().references(() => biayaOperasional.id, { onDelete: 'cascade' }),
+  jenis: varchar('jenis', { length: 10 }).notNull().default('nota'), // nota | bayar
+  data: text('data').notNull(), // data URL. shortcut: disimpan di DB, pindahkan ke object storage bila foto sudah ribuan
+  oleh: varchar('oleh', { length: 50 }).notNull(),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
 });
 
 // ============================================================
@@ -655,9 +675,7 @@ export const setoranSales = pgTable('setoran_sales', {
   sales: varchar('sales', { length: 50 }).notNull(),
   namaSales: varchar('nama_sales', { length: 100 }).notNull(),
   divisi: varchar('divisi', { length: 30 }).notNull(),
-  jumlah: decimal('jumlah', { precision: 15, scale: 2 }).notNull(), // uang yang diserahkan (sesudah biaya)
-  biaya: jsonb('biaya').$type<{ akun: string; jumlah: number; keterangan: string }[]>().notNull().default([]), // migrasi 019
-  totalBiaya: decimal('total_biaya', { precision: 15, scale: 2 }).notNull().default('0'),
+  jumlah: decimal('jumlah', { precision: 15, scale: 2 }).notNull(),
   metode: varchar('metode', { length: 20 }).notNull().default('tunai'), // tunai | transfer
   catatan: text('catatan'),
   status: varchar('status', { length: 20 }).notNull().default('menunggu'), // menunggu | dikonfirmasi | ditolak | dibatalkan

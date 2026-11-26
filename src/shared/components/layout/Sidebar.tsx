@@ -81,15 +81,9 @@ export const MENU_HIERARCHY: ParentMenuItem[] = [
   },
   {
     id: 'penjualan',
-    title: 'Penjualan & Kasir',
+    title: 'Laporan',
     icon: ShoppingBag,
     items: [
-      {
-        label: 'Kasir POS (Fullscreen)',
-        icon: ShoppingBag,
-        href: ROUTES.POS,
-        newTab: true,
-      },
       {
         label: 'Setoran ke Finance Pusat',
         icon: HandCoins,
@@ -107,6 +101,11 @@ export const MENU_HIERARCHY: ParentMenuItem[] = [
         icon: TrendingUp,
         href: ROUTES.LAPORAN_PENJUALAN,
         roles: ['Administrator', 'Manager', 'Manager Umum', 'Direktur Utama', 'Finance & Accounting'],
+      },
+      {
+        label: 'Biaya Operasional',
+        icon: Receipt,
+        href: ROUTES.BIAYA_OPERASIONAL,
       },
       {
         label: 'Produk Detile Terjual',
@@ -243,16 +242,16 @@ export const MENU_HIERARCHY: ParentMenuItem[] = [
         roles: ['Direktur Utama', 'Manager', 'Manager Umum'],
       },
       {
+        label: 'Laporan Operasional',
+        icon: Receipt,
+        href: ROUTES.LAPORAN_OPERASIONAL,
+        roles: ['Direktur Utama', 'Manager', 'Manager Umum', 'Finance & Accounting'],
+      },
+      {
         label: 'Piutang Pelanggan',
         icon: HandCoins,
         href: ROUTES.PIUTANG,
         roles: ['Administrator', 'Manager', 'Manager Umum', 'Direktur Utama', 'Finance & Accounting'],
-      },
-      {
-        label: 'Biaya Operasional',
-        icon: Receipt,
-        href: ROUTES.BIAYA_OPERASIONAL,
-        roles: ['Direktur Utama', 'Manager', 'Manager Umum'],
       },
     ],
   },

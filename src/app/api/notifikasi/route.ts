@@ -149,6 +149,21 @@ export async function GET(req: NextRequest) {
         });
       }
     }
+    if (financePusat) {
+      const [bop] = (await db.execute(sql`
+        SELECT COUNT(*) FILTER (WHERE status = 'menunggu')::int AS tunggu,
+               COUNT(*) FILTER (WHERE status = 'disetujui' AND sumber = 'pribadi')::int AS ganti,
+               COALESCE(SUM(jumlah) FILTER (WHERE status = 'menunggu'), 0) AS total_tunggu,
+               COALESCE(SUM(jumlah) FILTER (WHERE status = 'disetujui' AND sumber = 'pribadi'), 0) AS total_ganti
+        FROM biaya_operasional WHERE divisi = ${divisi}
+      `)) as unknown as Baris[];
+      if (Number(bop?.tunggu) > 0) {
+        daftar.push({ id: `biaya:${bop.tunggu}:${bop.total_tunggu}`, tipe: 'warning', judul: `${bop.tunggu} biaya operasional menunggu persetujuan`, pesan: `Total ${rp(bop.total_tunggu)}. Cek nota fisik dan fotonya.`, href: '/laporan-operasional', waktu: null });
+      }
+      if (Number(bop?.ganti) > 0) {
+        daftar.push({ id: `reimburse:${bop.ganti}:${bop.total_ganti}`, tipe: 'warning', judul: `${bop.ganti} reimburse belum dibayar`, pesan: `Total ${rp(bop.total_ganti)}.`, href: '/laporan-operasional', waktu: null });
+      }
+    }
     if (!financePusat && punyaRole(user, ROLES_PENYETOR) && user?.username) {
       const [s] = await saldoSales(db, divisi, String(user.username));
       if (s && s.tersedia > 0) {
