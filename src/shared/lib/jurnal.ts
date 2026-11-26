@@ -55,6 +55,7 @@ export const LABEL_SUMBER: Record<string, string> = {
   BIAYA: 'Biaya Operasional',
   KAS_MANUAL: 'Kas Manual',
   SETORAN: 'Setoran Sales',
+  VERIFIKASI: 'Transfer Tidak Ditemukan',
   RUSAK: 'Barang Rusak',
   PRODUKSI: 'Produksi Dapur',
   REVALUASI: 'Revaluasi HPP',
@@ -85,15 +86,17 @@ export const ROLE_SALES: readonly string[] = [
 
 /**
  * Akun penerima uang untuk sebuah transaksi. Tunai yang diterima akun ber-role utama sales masuk
- * 1-1350 (dengan username sales); transfer/QRIS selalu langsung ke Bank/QRIS perusahaan.
+ * 1-1350; transfer/QRIS langsung ke Bank/QRIS perusahaan. Semua penerimaan oleh sales ditandai
+ * username-nya: tunai untuk saldo setoran, non-tunai untuk Verifikasi Transfer oleh Finance.
  */
 export async function penerimaKas(ex: Executor, username: string | null | undefined, metode: string | null | undefined) {
   const akunDasar = akunKas(metode);
-  if (!username || akunDasar !== AKUN.KAS_TUNAI) return { akun: akunDasar, sales: undefined as string | undefined };
+  const bukanSales = { akun: akunDasar, sales: undefined as string | undefined };
+  if (!username) return bukanSales;
   const [u] = await ex.select({ role: users.role }).from(users).where(eq(users.username, username)).limit(1);
-  return u && ROLE_SALES.includes(u.role)
-    ? { akun: AKUN.KAS_SALES as string, sales: username as string | undefined }
-    : { akun: akunDasar, sales: undefined as string | undefined };
+  if (!u || !ROLE_SALES.includes(u.role)) return bukanSales;
+  const akunTujuan: string = akunDasar === AKUN.KAS_TUNAI ? AKUN.KAS_SALES : akunDasar;
+  return { akun: akunTujuan, sales: username as string | undefined };
 }
 
 export interface BarisJurnal {
