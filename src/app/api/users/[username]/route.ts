@@ -5,6 +5,7 @@ import { and, eq, ne, sql } from 'drizzle-orm';
 import { hashPassword } from '@/shared/lib/auth/password';
 import { requireAuthRole } from '@/shared/lib/auth/rbac';
 import { SEMUA_ROLE } from '@/shared/lib/auth/roles';
+import { punyaRiwayatKas } from '@/shared/lib/setoran';
 
 const POLA_USERNAME = /^[a-z0-9._-]{3,50}$/;
 const DIVISI = ['ALL', 'MANUFAKTUR', 'FNB'];
@@ -67,6 +68,12 @@ export async function PUT(
       const [bentrok] = await db.select({ id: users.id }).from(users)
         .where(and(eq(users.username, usernameBaru), ne(users.id, lama.id))).limit(1);
       if (bentrok) return gagal(`Username @${usernameBaru} sudah dipakai akun lain`, 409);
+      if (await punyaRiwayatKas(db, lama.username)) {
+        return gagal(`Username @${lama.username} sudah punya riwayat kas penjualan, tidak bisa diganti. Nama lengkap tetap bisa diubah.`, 409);
+      }
+      if (await punyaRiwayatKas(db, usernameBaru, true)) {
+        return gagal(`Username @${usernameBaru} pernah dipakai dan masih punya riwayat kas. Pilih username lain.`, 409);
+      }
     }
 
     const updateData: any = {

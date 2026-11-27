@@ -47,4 +47,6 @@ export interface ItemBiaya {
   reimburseOleh: string | null;
   reimburseAt: string | null;
   reimburseMetode: string | null;
+  /** hanya di Laporan Operasional: pemirsa boleh memproses baris ini */
+  bisaProses?: boolean;
 }
