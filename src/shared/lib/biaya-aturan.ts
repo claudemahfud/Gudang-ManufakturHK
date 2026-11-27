@@ -17,6 +17,10 @@ export const bolehAkunBiaya = (kode: string) => kode.startsWith('6-') && !AKUN_B
 export const MAKS_FOTO = 3;
 export const MAKS_PANJANG_FOTO = 900_000; // karakter data URL (~650 KB)
 export const POLA_FOTO = /^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/]+=*$/;
+/** PDF disimpan apa adanya; 3 berkas harus muat di batas kiriman server (±4,5 MB). */
+export const MAKS_PANJANG_PDF = 1_300_000; // karakter data URL (~950 KB)
+export const POLA_PDF = /^data:application\/pdf;base64,[A-Za-z0-9+/]+=*$/;
+export const adalahPdf = (dataUrl: string) => dataUrl.startsWith('data:application/pdf;');
 
 /** Label status yang dibaca pengguna: biaya pribadi yang disetujui berarti menunggu diganti. */
 export function labelStatus(status: StatusBiaya, sumber: SumberBiaya) {

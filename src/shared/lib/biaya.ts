@@ -8,7 +8,7 @@ import { hariIniWib } from '@/shared/lib/laporan-keuangan';
 import { saldoSales } from '@/shared/lib/setoran';
 import { keWebp } from '@/shared/lib/webp';
 import { punyaRole } from '@/shared/lib/auth/roles';
-import { bolehAkunBiaya, MAKS_FOTO, MAKS_PANJANG_FOTO, POLA_FOTO, SUMBER_BIAYA, type ItemBiaya, type SumberBiaya } from '@/shared/lib/biaya-aturan';
+import { bolehAkunBiaya, adalahPdf, MAKS_FOTO, MAKS_PANJANG_FOTO, MAKS_PANJANG_PDF, POLA_FOTO, POLA_PDF, SUMBER_BIAYA, type ItemBiaya, type SumberBiaya } from '@/shared/lib/biaya-aturan';
 
 // ============================================================
 // Biaya operasional: karyawan input -> Finance Pusat memeriksa nota -> dibukukan.
@@ -28,13 +28,21 @@ const rp = (n: number) => Math.round(n * 100) / 100;
 const rupiah = (n: number) => `Rp ${n.toLocaleString('id-ID')}`;
 const metodeDari = (m: unknown) => (m === 'transfer' ? ('transfer' as const) : ('tunai' as const));
 
-/** Validasi foto kiriman browser lalu simpan sebagai WebP. */
+/** Validasi lampiran kiriman browser: gambar disimpan sebagai WebP, PDF disimpan apa adanya. */
 export async function bacaFoto(mentah: unknown): Promise<string[]> {
   if (mentah === undefined || mentah === null) return [];
   if (!Array.isArray(mentah) || mentah.length > MAKS_FOTO) throw new BusinessError(`Maksimal ${MAKS_FOTO} foto`);
   const hasil: string[] = [];
   // berurutan: tiga foto besar sekaligus memakan memori server
   for (const f of mentah) {
+    if (typeof f === 'string' && adalahPdf(f)) {
+      // isi diperiksa, bukan hanya labelnya: 8 karakter base64 pertama harus berawalan %PDF-
+      if (f.length > MAKS_PANJANG_PDF || !POLA_PDF.test(f) || !Buffer.from(f.slice(f.indexOf(',') + 1, f.indexOf(',') + 9), 'base64').toString('latin1').startsWith('%PDF-')) {
+        throw new BusinessError('PDF tidak valid atau lebih dari 950 KB');
+      }
+      hasil.push(f);
+      continue;
+    }
     if (typeof f !== 'string' || f.length > MAKS_PANJANG_FOTO || !POLA_FOTO.test(f)) {
       throw new BusinessError('Foto tidak valid atau terlalu besar (gunakan JPG/PNG)');
     }

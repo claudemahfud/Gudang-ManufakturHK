@@ -38,6 +38,7 @@ interface BarisFaktur {
 interface DetailFaktur {
   faktur: FakturRingkas & { dibayar: string; cabang: string };
   baris: BarisFaktur[];
+  pemegang: { username: string; nama: string; tersedia: number }[];
 }
 
 type Toast = (type: 'success' | 'error' | 'warning' | 'info', message: string, penyebab?: string, title?: string) => void;
@@ -74,6 +75,8 @@ export default function FormReturPelanggan({
   const [refundAktif, setRefundAktif] = useState(false);
   const [nilaiRefund, setNilaiRefund] = useState('');
   const [metodeRefund, setMetodeRefund] = useState<'tunai' | 'transfer'>('tunai');
+  // '' belum dipilih, 'kantor', atau username penjual yang masih memegang uang faktur ini
+  const [sumberRefund, setSumberRefund] = useState('');
   const [menyimpan, setMenyimpan] = useState(false);
 
   // Cari faktur (debounce ringan)
@@ -112,6 +115,7 @@ export default function FormReturPelanggan({
         return;
       }
       setDetail(json.data);
+      setSumberRefund('');
       const pertama = (json.data.baris as BarisFaktur[]).find((b) => b.qtyBisaRetur > 0);
       setSku(pertama?.sku ?? '');
       setQty('');
@@ -143,6 +147,9 @@ export default function FormReturPelanggan({
     return { nilai: refund, potong: 0, refund };
   }, [sumber, detail, barisDipilih, qtyNum, refundAktif, nilaiRefund]);
 
+  // Sumber uang hanya ditanyakan bila ada refund tunai dan memang ada penjual yang menerima tunainya
+  const tanyaSumber = sumber === 'faktur' && metodeRefund === 'tunai' && (pratinjau?.refund ?? 0) > 0 && (detail?.pemegang.length ?? 0) > 0;
+
   const aktifkanRefund = (aktif: boolean) => {
     setRefundAktif(aktif);
     // Usulan nilai refund tanpa faktur: harga jual master × qty (boleh diubah)
@@ -160,6 +167,8 @@ export default function FormReturPelanggan({
     }
     if (sumber === 'tanpa' && !pelanggan.trim()) return showToast('warning', 'Isi nama pelanggan', undefined, 'Validasi Form');
 
+    if (tanyaSumber && !sumberRefund) return showToast('warning', 'Pilih uang refund diambil dari mana', undefined, 'Validasi Form');
+
     setMenyimpan(true);
     try {
       const res = await fetch('/api/barang-masuk', {
@@ -176,6 +185,7 @@ export default function FormReturPelanggan({
           pelanggan: sumber === 'tanpa' ? pelanggan.trim() : null,
           nilaiRefund: sumber === 'tanpa' && refundAktif ? n(nilaiRefund) : 0,
           metodeRefund,
+          sumberRefund: tanyaSumber && sumberRefund !== 'kantor' ? sumberRefund : null,
         }),
       });
       const json = await res.json();
@@ -449,6 +459,24 @@ export default function FormReturPelanggan({
                     </button>
                   ))}
                 </div>
+              </div>
+            )}
+
+            {tanyaSumber && detail && pratinjau && (
+              <div>
+                <label className={label} htmlFor="retur-sumber">
+                  Uang Diambil Dari <span className="text-red-500">*</span>
+                </label>
+                <select id="retur-sumber" value={sumberRefund} onChange={(e) => setSumberRefund(e.target.value)} className={input}>
+                  <option value="">-- Pilih sumber uang --</option>
+                  <option value="kantor">Kas kantor</option>
+                  {detail.pemegang.map((p) => (
+                    <option key={p.username} value={p.username} disabled={p.tersedia + 0.009 < pratinjau.refund}>
+                      Uang penjualan {p.nama} (dipegang {formatRupiah(p.tersedia)})
+                    </option>
+                  ))}
+                </select>
+                <p className="text-[11px] text-gray-500 mt-1">Bila diambil dari uang penjual, jumlah yang harus disetor berkurang.</p>
               </div>
             )}
 
