@@ -3,7 +3,8 @@ import { db } from '@/shared/lib/db';
 import { akun, biayaLampiran, biayaOperasional, keuangan, logs, users } from '@/shared/lib/db/schema';
 import { BusinessError } from '@/shared/lib/stock';
 import { nomorUrut } from '@/shared/lib/nomor-urut';
-import { AKUN, adalahFinancePusat, akunKas, balikJurnal, entitasDari, posting, wajibAkunPosting } from '@/shared/lib/jurnal';
+import { AKUN, adalahFinancePusat, akunKas, balikJurnal, cabangFranchise, entitasDari, posting, wajibAkunPosting } from '@/shared/lib/jurnal';
+import { hariIniWib } from '@/shared/lib/laporan-keuangan';
 import { saldoSales } from '@/shared/lib/setoran';
 import { keWebp } from '@/shared/lib/webp';
 import { punyaRole } from '@/shared/lib/auth/roles';
@@ -31,12 +32,15 @@ const metodeDari = (m: unknown) => (m === 'transfer' ? ('transfer' as const) : (
 export async function bacaFoto(mentah: unknown): Promise<string[]> {
   if (mentah === undefined || mentah === null) return [];
   if (!Array.isArray(mentah) || mentah.length > MAKS_FOTO) throw new BusinessError(`Maksimal ${MAKS_FOTO} foto`);
-  return Promise.all(mentah.map((f) => {
+  const hasil: string[] = [];
+  // berurutan: tiga foto besar sekaligus memakan memori server
+  for (const f of mentah) {
     if (typeof f !== 'string' || f.length > MAKS_PANJANG_FOTO || !POLA_FOTO.test(f)) {
       throw new BusinessError('Foto tidak valid atau terlalu besar (gunakan JPG/PNG)');
     }
-    return keWebp(f, { lebar: 1400, tinggi: 1400, fit: 'inside', mutu: 78 });
-  }));
+    hasil.push(await keWebp(f, { lebar: 1400, tinggi: 1400, fit: 'inside', mutu: 78 }));
+  }
+  return hasil;
 }
 
 export interface InputBiayaBaru {
@@ -54,7 +58,13 @@ export interface InputBiayaBaru {
 export async function ajukanBiaya(tx: Tx, p: InputBiayaBaru, user: Pelaku) {
   const jumlah = rp(p.jumlah);
   if (!Number.isFinite(jumlah) || jumlah <= 0) throw new BusinessError('Nominal harus lebih dari 0');
+  if (jumlah > 1e12) throw new BusinessError('Nominal terlalu besar');
   if (Number.isNaN(p.tanggal.getTime())) throw new BusinessError('Tanggal tidak valid');
+  // tanggal ke depan membuat kas penjual sudah berkurang tetapi neraca hari ini belum
+  if (hariIniWib(p.tanggal) > hariIniWib()) throw new BusinessError('Tanggal biaya tidak boleh melewati hari ini');
+  if (await cabangFranchise(tx, p.cabang || 'Pusat')) {
+    throw new BusinessError('Biaya cabang franchise milik pewaralaba, tidak dicatat di pembukuan perusahaan');
+  }
   const sumber = p.sumber as SumberBiaya;
   if (!SUMBER_BIAYA.includes(sumber)) throw new BusinessError('Pilih sumber uang yang dipakai');
   const keterangan = p.keterangan.trim().slice(0, 500);
@@ -179,7 +189,9 @@ export async function batalkanDisetujui(tx: Tx, id: string, alasan: string, user
   const r = await kunci(tx, id);
   if (r.status !== 'disetujui') throw new BusinessError('Hanya biaya berstatus disetujui yang bisa dibatalkan');
   await wajibPemroses(tx, r, user.username);
-  await balikJurnal(tx, { referensi: r.id, sumber: ['BIAYA'], keterangan: `Batalkan biaya ${r.noBiaya ?? r.kategori}: ${a}`, user: user.nama });
+  const dibalik = await balikJurnal(tx, { referensi: r.id, sumber: ['BIAYA'], keterangan: `Batalkan biaya ${r.noBiaya ?? r.kategori}: ${a}`, user: user.nama });
+  // tanpa jurnal yang bisa dibalik, menghapus buku kas akan membuatnya beda dengan buku besar
+  if (!dibalik) throw new BusinessError('Biaya ini tidak punya jurnal sendiri. Koreksi lewat jurnal manual.');
   await tx.update(biayaOperasional).set({ status: 'dibatalkan', alasanTolak: a, diprosesOleh: user.username, diprosesAt: new Date(), keuanganId: null }).where(eq(biayaOperasional.id, id));
   if (r.keuanganId) await tx.delete(keuangan).where(eq(keuangan.id, r.keuanganId));
   await tx.insert(logs).values({ user: user.nama, aksi: 'BATALKAN_BIAYA', detail: `${r.noBiaya ?? r.kategori}: ${a}` });
@@ -195,6 +207,7 @@ export async function reimburseBiaya(tx: Tx, id: string, metode: unknown, foto: 
   const jumlah = rp(Number(r.jumlah));
   const cara = metodeDari(metode);
   const tanggal = new Date();
+  const bukti = await bacaFoto(foto);
   await posting(tx, {
     tanggal, divisi: r.divisi, cabang: r.cabang, sumber: 'REIMBURSE', referensi: r.id,
     keterangan: `Reimburse ${r.noBiaya} ke ${r.createdBy} (${cara})`, user: user.nama, manual: true,
@@ -204,7 +217,6 @@ export async function reimburseBiaya(tx: Tx, id: string, metode: unknown, foto: 
     ],
   });
   const keuanganId = await kasKeluar(tx, r, jumlah, tanggal, `Reimburse ${r.noBiaya} ke ${r.createdBy}`, user.username);
-  const bukti = await bacaFoto(foto);
   if (bukti.length) await tx.insert(biayaLampiran).values(bukti.map((data) => ({ biayaId: id, jenis: 'bayar', data, oleh: user.username })));
   await tx
     .update(biayaOperasional)
@@ -247,12 +259,16 @@ export async function daftarBiaya(ex: Executor, opsi: { divisi: string; username
   if (opsi.dari && opsi.sampai) {
     syarat.push(sql`(b.status = 'menunggu' OR (b.status = 'disetujui' AND b.sumber = 'pribadi') OR (b.tanggal >= ${opsi.dari.toISOString()}::timestamp AND b.tanggal < ${opsi.sampai.toISOString()}::timestamp))`);
   }
+  // Laporan berperiode dipakai untuk total: tidak boleh terpotong. Daftar "Biaya Saya" dibatasi,
+  // tetapi yang masih perlu tindakan didahulukan agar tidak pernah hilang dari halaman.
+  const urutan = opsi.dari && opsi.sampai
+    ? sql`ORDER BY b.tanggal DESC, b.created_at DESC`
+    : sql`ORDER BY (b.status = 'menunggu' OR (b.status = 'disetujui' AND b.sumber = 'pribadi')) DESC, b.tanggal DESC, b.created_at DESC LIMIT 500`;
   const rows = (await ex.execute(sql`
     SELECT b.*, (SELECT count(*)::int FROM biaya_lampiran l WHERE l.biaya_id = b.id) AS jumlah_foto
     FROM biaya_operasional b
     WHERE ${sql.join(syarat, sql` AND `)}
-    ORDER BY b.tanggal DESC, b.created_at DESC
-    LIMIT 500
+    ${urutan}
   `)) as unknown as BarisDaftar[];
   // kolom timestamp tanpa zona menyimpan UTC
   const iso = (v: unknown) => (v ? (v instanceof Date ? v : new Date(String(v).replace(' ', 'T') + 'Z')).toISOString() : null);

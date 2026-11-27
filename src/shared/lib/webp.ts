@@ -19,7 +19,11 @@ export async function keWebp(dataUrl: string, o: OpsiWebp): Promise<string> {
   const isi = POLA.exec(dataUrl)?.[2];
   if (!isi) throw new BusinessError('Format foto harus JPG, PNG, atau WebP');
   try {
-    const hasil = await sharp(Buffer.from(isi, 'base64'), { limitInputPixels: 40_000_000 })
+    const gambar = sharp(Buffer.from(isi, 'base64'), { limitInputPixels: 16_000_000 });
+    // sharp membaca format dari isinya: SVG/GIF/TIFF berlabel image/png tidak diterima
+    const { format } = await gambar.metadata();
+    if (!['jpeg', 'png', 'webp'].includes(format ?? '')) throw new Error('format');
+    const hasil = await gambar
       .rotate() // terapkan orientasi EXIF sebelum metadata dibuang
       .resize({ width: o.lebar, height: o.tinggi, fit: o.fit, withoutEnlargement: o.fit === 'inside' })
       .webp({ quality: o.mutu })

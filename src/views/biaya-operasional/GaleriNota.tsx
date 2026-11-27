@@ -5,7 +5,7 @@ import MemuatProgres from '@/shared/components/ui/MemuatProgres';
 import { ambil } from '@/views/laporan-keuangan/util';
 
 /** Foto nota & bukti bayar satu biaya. Klik foto untuk memperbesar di tempat. */
-export default function GaleriNota({ id, versi = 0 }: { id: string; versi?: number }) {
+export default function GaleriNota({ id, versi = 0, onMuat }: { id: string; versi?: number; onMuat?: (jumlahNota: number) => void }) {
   const [foto, setFoto] = useState<{ id: string; jenis: 'nota' | 'bayar'; data: string }[] | null>(null);
   const [galat, setGalat] = useState('');
   const [besar, setBesar] = useState<string | null>(null);
@@ -14,7 +14,10 @@ export default function GaleriNota({ id, versi = 0 }: { id: string; versi?: numb
     let batal = false;
     ambil<NonNullable<typeof foto>>(`/api/biaya-operasional/${id}/lampiran`).then((h) => {
       if (batal) return;
-      if (h.ok) setFoto(h.data);
+      if (h.ok) {
+        setFoto(h.data);
+        onMuat?.(h.data.filter((f) => f.jenis === 'nota').length);
+      }
       else {
         setFoto([]);
         setGalat(h.pesan);
@@ -23,7 +26,7 @@ export default function GaleriNota({ id, versi = 0 }: { id: string; versi?: numb
     return () => {
       batal = true;
     };
-  }, [id, versi]);
+  }, [id, versi, onMuat]);
 
   if (!foto) return <MemuatProgres teks="Memuat foto…" />;
   if (galat) return <p role="alert" className="text-xs text-red-600">{galat}</p>;
