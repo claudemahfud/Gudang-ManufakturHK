@@ -251,6 +251,7 @@ async function postReturPelanggan(body: Record<string, unknown>, sessionUser: Se
           pelanggan: typeof body.pelanggan === 'string' ? body.pelanggan : null,
           nilaiRefund: noFaktur ? 0 : Number(body.nilaiRefund) || 0,
           metodeRefund: body.metodeRefund === 'transfer' ? 'transfer' : 'tunai',
+          sumberRefund: noFaktur && typeof body.sumberRefund === 'string' && body.sumberRefund ? body.sumberRefund : null,
           cabang,
           divisi: typeof body.divisi === 'string' && body.divisi ? body.divisi : '',
         },

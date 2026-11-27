@@ -7,6 +7,7 @@ import Sidebar from '@/shared/components/layout/Sidebar';
 import Header from '@/shared/components/layout/Header';
 import { useSession } from 'next-auth/react';
 import AssistivePosButton from '@/shared/components/pos/AssistivePosButton';
+import SesiHabis from '@/shared/components/layout/SesiHabis';
 import { HeartPulse } from 'lucide-react';
 import { rolesOf } from '@/shared/lib/auth/roles';
 import { usePintasanSinkron } from '@/shared/lib/pintasan-sinkron';
@@ -131,6 +132,8 @@ function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
 
       {/* Floating Assistive Touch Button for POS */}
       <AssistivePosButton />
+
+      <SesiHabis />
     </div>
   );
 }

@@ -14,7 +14,8 @@ import {
 } from '@/shared/lib/db/schema';
 import { BusinessError, decrementStock, incrementStock } from '@/shared/lib/stock';
 import { nomorUrut } from '@/shared/lib/nomor-urut';
-import { AKUN, akunKas, balikJurnal, posting } from '@/shared/lib/jurnal';
+import { AKUN, akunKas, balikJurnal, entitasDari, posting } from '@/shared/lib/jurnal';
+import { saldoSales } from '@/shared/lib/setoran';
 
 // ============================================================
 // Retur dari pelanggan (dicatat lewat Barang Masuk, jenis RETUR_PELANGGAN).
@@ -93,6 +94,27 @@ export async function barisReturFaktur(ex: Executor, noFaktur: string) {
   return { faktur: f, baris };
 }
 
+/**
+ * Penjual / penagih yang menerima TUNAI faktur ini (jurnal 1-1350) beserta uang yang masih bisa dipakai
+ * (sudah dikurangi setoran & biaya yang menunggu). Uang yang sudah disetor tidak bisa dipakai lagi.
+ */
+export async function pemegangKasFaktur(ex: Executor, noFaktur: string, divisi: string) {
+  const rows = (await ex.execute(sql`
+    SELECT b.sales
+    FROM jurnal_baris b JOIN jurnal j ON j.id = b.jurnal_id
+    WHERE j.referensi = ${noFaktur} AND j.entitas = ${entitasDari(divisi)}
+      AND b.akun_kode = ${AKUN.KAS_SALES} AND b.sales IS NOT NULL
+    GROUP BY b.sales
+    HAVING SUM(b.debit - b.kredit) > 0.009
+  `)) as unknown as { sales: string }[];
+  const hasil: { username: string; nama: string; tersedia: number }[] = [];
+  for (const r of rows) {
+    const [s] = await saldoSales(ex, divisi, r.sales);
+    hasil.push({ username: r.sales, nama: s.nama, tersedia: s.tersedia });
+  }
+  return hasil;
+}
+
 /** Faktur terbaru untuk dipilih sebagai asal retur (bukan faktur order franchise). */
 export async function daftarFakturRetur(ex: Executor, cari: string | null, limit = 50) {
   const q = cari?.trim();
@@ -129,6 +151,8 @@ export interface ReturInput {
   nilaiRefund: number;
   /** Cara uang dikembalikan (tanpa faktur dengan refund, atau faktur yang sudah dibayar). */
   metodeRefund: MetodeRefund;
+  /** Refund tunai dibayar dari uang penjualan yang dipegang orang ini; kosong = kas kantor. */
+  sumberRefund?: string | null;
   /** Cabang tujuan stok; dengan faktur bawaannya cabang faktur. */
   cabang: string;
   divisi: string;
@@ -153,6 +177,7 @@ export async function catatReturPelanggan(tx: Tx, p: ReturInput, user: string) {
   let refund = 0;
   let sisaSetelah = 0;
   let ppnBagian = 0; // porsi PPN keluaran di nilai retur (faktur ber-PPN)
+  let pemegang: { username: string; nama: string } | null = null; // refund diambil dari uang penjual ini
 
   if (p.noFaktur) {
     // Kunci faktur: retur & pembayaran bersamaan pada faktur yang sama antre
@@ -185,6 +210,18 @@ export async function catatReturPelanggan(tx: Tx, p: ReturInput, user: string) {
     const dasar = Number(f.grandTotal) - Number(f.ongkir);
     ppnBagian = Number(f.ppn) > 0 && dasar > 0 ? rp((nilai * Number(f.ppn)) / dasar) : 0;
 
+    if (p.sumberRefund && refund > 0) {
+      if (p.metodeRefund !== 'tunai') throw new BusinessError('Uang penjual hanya bisa dipakai untuk refund tunai');
+      // kunci yang sama dengan setoran & biaya: uang yang sama tidak bisa dipakai dua kali
+      await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${'setoran:' + p.sumberRefund}))`);
+      const calon = (await pemegangKasFaktur(tx, p.noFaktur, f.divisi)).find((x) => x.username === p.sumberRefund);
+      if (!calon) throw new BusinessError('Orang itu tidak menerima uang tunai faktur ini');
+      if (refund > calon.tersedia + 0.009) {
+        throw new BusinessError(`Uang yang dipegang ${calon.nama} hanya ${rupiah(calon.tersedia)}. Pilih Kas kantor.`);
+      }
+      pemegang = calon;
+    }
+
     await tx
       .update(fakturPenjualan)
       .set({
@@ -209,10 +246,11 @@ export async function catatReturPelanggan(tx: Tx, p: ReturInput, user: string) {
       await tx.insert(keuangan).values({
         tanggal: p.tanggal, jenis: 'keluar', kategori: 'Refund Retur Penjualan', jumlah: String(refund),
         divisi, cabang, referensi: p.noFaktur, createdBy: user,
-        keterangan: `Refund retur ${p.sku} x${p.qty} faktur ${p.noFaktur} ke ${pelanggan} (${p.metodeRefund})`,
+        keterangan: `Refund retur ${p.sku} x${p.qty} faktur ${p.noFaktur} ke ${pelanggan} (${p.metodeRefund}${pemegang ? `, dari uang penjualan ${pemegang.nama}` : ''})`,
       });
     }
   } else {
+    if (p.sumberRefund) throw new BusinessError('Retur tanpa faktur hanya bisa direfund dari kas kantor / bank');
     if (!pelanggan) throw new BusinessError('Nama pelanggan wajib diisi untuk retur tanpa faktur');
     refund = rp(Number(p.nilaiRefund) || 0);
     if (refund < 0) throw new BusinessError('Nilai refund tidak boleh negatif');
@@ -267,7 +305,7 @@ export async function catatReturPelanggan(tx: Tx, p: ReturInput, user: string) {
       { akun: AKUN.RETUR_PENJUALAN, debit: rp(nilai - ppnBagian) },
       { akun: AKUN.PPN_KELUARAN, debit: ppnBagian },
       { akun: AKUN.PIUTANG, kredit: potong },
-      { akun: akunKas(p.metodeRefund), kredit: refund },
+      pemegang ? { akun: AKUN.KAS_SALES, kredit: refund, sales: pemegang.username } : { akun: akunKas(p.metodeRefund), kredit: refund },
       { akun: AKUN.PERSEDIAAN, debit: hppKembali },
       { akun: AKUN.HPP, kredit: hppKembali },
     ],
@@ -291,7 +329,7 @@ export async function catatReturPelanggan(tx: Tx, p: ReturInput, user: string) {
       `Retur ${p.sku} x${p.qty} pcs dari ${pelanggan}${p.noFaktur ? ` (faktur ${p.noFaktur})` : ''}, ` +
       `${p.kondisi === 'layak' ? `masuk stok ${cabang}` : 'dicatat rusak'}` +
       (potong > 0 ? `, potong piutang ${rupiah(potong)}` : '') +
-      (refund > 0 ? `, refund ${rupiah(refund)} (${p.metodeRefund})` : ''),
+      (refund > 0 ? `, refund ${rupiah(refund)} (${p.metodeRefund}${pemegang ? `, uang ${pemegang.nama}` : ''})` : ''),
   });
 
   return { retur, nilai, potong, refund, sisaSetelah };

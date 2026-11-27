@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { db } from '@/shared/lib/db';
 import { requireAuthRole, ROLES_WAREHOUSE } from '@/shared/lib/auth/rbac';
 import { errorResponse } from '@/shared/lib/stock';
-import { barisReturFaktur, daftarFakturRetur } from '@/shared/lib/retur-pelanggan';
+import { barisReturFaktur, daftarFakturRetur, pemegangKasFaktur } from '@/shared/lib/retur-pelanggan';
 
 // GET /api/retur-pelanggan?q=...        -> faktur penjualan yang bisa jadi asal retur
 // GET /api/retur-pelanggan?noFaktur=... -> baris faktur: qty terjual, sudah diretur, nilai per pcs
@@ -29,6 +29,7 @@ export async function GET(req: Request) {
             divisi: faktur.divisi,
           },
           baris,
+          pemegang: await pemegangKasFaktur(db, faktur.noFaktur, faktur.divisi),
         },
       });
     }
