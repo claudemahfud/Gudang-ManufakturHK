@@ -59,7 +59,10 @@ export default function BiayaOperasional() {
   const batalkan = async (i: ItemBiaya) => {
     if (!window.confirm(`Batalkan pengajuan ${i.noBiaya} sebesar ${formatRupiah(i.jumlah)}?`)) return;
     const h = await ambil<unknown>(`/api/biaya-operasional/${i.id}`, { method: 'DELETE' });
-    if (!h.ok) return notify(h.pesan, 'error');
+    if (!h.ok) {
+      muatUlang();
+      return notify(h.pesan, 'error');
+    }
     notify('Pengajuan dibatalkan', 'success');
     muatUlang();
   };
@@ -160,6 +163,7 @@ function ModalNota({ item, onClose, onSaved }: { item: ItemBiaya; onClose: () =>
   const [kirim, setKirim] = useState(false);
   const [galat, setGalat] = useState('');
   const [terunggah, setTerunggah] = useState(item.jumlahFoto);
+  const [prosesFoto, setProsesFoto] = useState(false);
 
   const unggah = async () => {
     setKirim(true);
@@ -167,7 +171,6 @@ function ModalNota({ item, onClose, onSaved }: { item: ItemBiaya; onClose: () =>
     const h = await kirimJson(`/api/biaya-operasional/${item.id}/lampiran`, { foto });
     setKirim(false);
     if (!h.ok) return setGalat(h.pesan);
-    setTerunggah((n) => n + foto.length);
     setFoto([]);
     setVersi((v) => v + 1);
     onSaved();
@@ -176,12 +179,12 @@ function ModalNota({ item, onClose, onSaved }: { item: ItemBiaya; onClose: () =>
   return (
     <Bingkai judul="Foto Nota" sub={`${item.noBiaya} · ${item.kategori} · ${formatRupiah(item.jumlah)}`} onClose={onClose}>
       <div className="flex-1 space-y-4 overflow-y-auto p-5 sm:px-8">
-        <GaleriNota id={item.id} versi={versi} />
+        <GaleriNota id={item.id} versi={versi} onMuat={setTerunggah} />
         {item.status === 'menunggu' && terunggah < 3 && (
           <>
-            <FotoNota foto={foto} onChange={setFoto} maks={3 - terunggah} label="Tambah foto" />
+            <FotoNota foto={foto} onChange={setFoto} onProses={setProsesFoto} maks={3 - terunggah} label="Tambah foto" />
             {foto.length > 0 && (
-              <button type="button" onClick={unggah} disabled={kirim} className="h-11 rounded-xl bg-emerald-600 px-5 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-50">
+              <button type="button" onClick={unggah} disabled={kirim || prosesFoto} className="h-11 rounded-xl bg-emerald-600 px-5 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-50">
                 {kirim ? 'Mengunggah…' : 'Unggah'}
               </button>
             )}
@@ -202,12 +205,13 @@ function ModalBiaya({ akun, uangPenjualan, divisi, cabang, onClose, onSaved }: {
   const [sumber, setSumber] = useState<SumberBiaya>(uangPenjualan > 0 ? 'penjualan' : 'pribadi');
   const [metode, setMetode] = useState<'tunai' | 'transfer'>('tunai');
   const [foto, setFoto] = useState<string[]>([]);
+  const [prosesFoto, setProsesFoto] = useState(false);
   const [kirim, setKirim] = useState(false);
   const [galat, setGalat] = useState('');
 
   const n = Number(jumlah) || 0;
   const lebih = sumber === 'penjualan' && n > uangPenjualan;
-  const salah = !akunKode || !(n > 0) || !keterangan.trim() || lebih;
+  const salah = prosesFoto || !akunKode || !(n > 0) || !keterangan.trim() || lebih;
 
   const simpan = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -248,7 +252,7 @@ function ModalBiaya({ akun, uangPenjualan, divisi, cabang, onClose, onSaved }: {
             </label>
             <label className={lbl}>
               Tanggal *
-              <input type="date" required value={tanggal} onChange={(e) => setTanggal(e.target.value)} className={`${kontrol} mt-1 w-full font-normal`} />
+              <input type="date" required max={tglWib()} value={tanggal} onChange={(e) => setTanggal(e.target.value)} className={`${kontrol} mt-1 w-full font-normal`} />
             </label>
           </div>
           <fieldset>
@@ -273,7 +277,7 @@ function ModalBiaya({ akun, uangPenjualan, divisi, cabang, onClose, onSaved }: {
               </select>
             </label>
           )}
-          <FotoNota foto={foto} onChange={setFoto} />
+          <FotoNota foto={foto} onChange={setFoto} onProses={setProsesFoto} />
           <p className="text-[11px] text-gray-500">Foto boleh ditambahkan belakangan, tetapi biaya baru bisa disetujui setelah ada foto dan nota fisik diserahkan.</p>
           {galat && <p role="alert" className="text-xs font-semibold text-red-600">{galat}</p>}
         </div>

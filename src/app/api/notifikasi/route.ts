@@ -149,13 +149,19 @@ export async function GET(req: NextRequest) {
         });
       }
     }
-    if (financePusat) {
+    const direkturUtama = punyaRole(user, ['Direktur Utama']);
+    if (financePusat || direkturUtama) {
+      // Finance Pusat: milik orang lain. Direktur Utama: hanya milik Finance Pusat.
+      const saya = String(user?.username ?? '');
+      const lingkup = financePusat
+        ? sql`username IS DISTINCT FROM ${saya}`
+        : sql`username IN (SELECT u.username FROM users u WHERE u.role = 'Finance & Accounting' AND COALESCE(NULLIF(u.cabang, ''), 'Pusat') = 'Pusat' AND u.username <> ${saya})`;
       const [bop] = (await db.execute(sql`
         SELECT COUNT(*) FILTER (WHERE status = 'menunggu')::int AS tunggu,
                COUNT(*) FILTER (WHERE status = 'disetujui' AND sumber = 'pribadi')::int AS ganti,
                COALESCE(SUM(jumlah) FILTER (WHERE status = 'menunggu'), 0) AS total_tunggu,
                COALESCE(SUM(jumlah) FILTER (WHERE status = 'disetujui' AND sumber = 'pribadi'), 0) AS total_ganti
-        FROM biaya_operasional WHERE divisi = ${divisi}
+        FROM biaya_operasional WHERE divisi = ${divisi} AND ${lingkup}
       `)) as unknown as Baris[];
       if (Number(bop?.tunggu) > 0) {
         daftar.push({ id: `biaya:${bop.tunggu}:${bop.total_tunggu}`, tipe: 'warning', judul: `${bop.tunggu} biaya operasional menunggu persetujuan`, pesan: `Total ${rp(bop.total_tunggu)}. Cek nota fisik dan fotonya.`, href: '/laporan-operasional', waktu: null });

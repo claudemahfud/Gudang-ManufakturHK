@@ -22,8 +22,8 @@ import LencanaStatus from '@/views/biaya-operasional/LencanaStatus';
 interface Data {
   items: ItemBiaya[];
   financePusat: boolean;
-  direktur: boolean;
-  username: string;
+  dari: string;
+  sampai: string;
 }
 
 type Saring = 'semua' | 'menunggu' | 'reimburse' | 'dibukukan';
@@ -55,7 +55,7 @@ export default function LaporanOperasional() {
   const [dari, setDari] = useState(`${tglWib().slice(0, 8)}01`);
   const [sampai, setSampai] = useState(tglWib());
   const [data, setData] = useState<Data | null>(null);
-  const [terlarang, setTerlarang] = useState(false);
+  const [terlarang, setTerlarang] = useState('');
   const [versi, setVersi] = useState(0);
   const [saring, setSaring] = useState<Saring>('semua');
   const [aktif, setAktif] = useState<{ item: ItemBiaya; aksi: Aksi } | null>(null);
@@ -70,9 +70,11 @@ export default function LaporanOperasional() {
     let batal = false;
     ambil<Data>(`/api/laporan-operasional?divisi=${division}&dari=${dari}&sampai=${sampai}`).then((h) => {
       if (batal) return;
-      if (h.ok) setData(h.data);
-      else {
-        setTerlarang(h.terlarang);
+      if (h.ok) {
+        setTerlarang('');
+        setData(h.data);
+      } else {
+        if (h.terlarang) setTerlarang(h.pesan);
         notify(h.pesan, 'error');
       }
     });
@@ -81,18 +83,20 @@ export default function LaporanOperasional() {
     };
   }, [division, dari, sampai, versi, notify]);
 
-  if (terlarang) return <KotakTerlarang />;
+  if (terlarang) return <KotakTerlarang pesan={terlarang} />;
 
   const items = data?.items ?? [];
-  const tampil = items.filter(SARING.find((s) => s[0] === saring)![2]);
+  // tagihan lama / yang belum diproses ikut terkirim apa pun periodenya, tetapi bukan beban periode ini
+  const dalamPeriode = (i: ItemBiaya) => {
+    if (!data) return false;
+    const hari = tglWib(new Date(i.tanggal));
+    return hari >= data.dari && hari <= data.sampai;
+  };
+  const bebanPeriode = items.filter((i) => dibukukan(i) && dalamPeriode(i));
+  const tampil = saring === 'dibukukan' ? bebanPeriode : items.filter(SARING.find((s) => s[0] === saring)![2]);
   const hutang = items.filter(SARING[2][2]);
-  // tagihan lama yang belum direimburse ikut terkirim, tetapi tidak dihitung sebagai beban periode ini
-  const bebanPeriode = items.filter((i) => dibukukan(i) && new Date(i.tanggal) >= new Date(`${dari}T00:00:00+07:00`));
   const perKaryawan = kelompok(hutang, (i) => i.nama || i.username || '-');
   const perAkun = kelompok(bebanPeriode, (i) => `${i.akunKode ?? ''} ${i.kategori}`.trim());
-
-  // Finance Pusat memproses milik orang lain; biaya Finance Pusat sendiri diproses Direktur Utama (dijaga juga di server)
-  const bisaProses = (i: ItemBiaya) => !!data && i.username !== data.username && (data.financePusat || data.direktur);
 
   return (
     <div className="space-y-6">
@@ -213,13 +217,13 @@ export default function LaporanOperasional() {
                     <td data-aksi className="p-3">
                       <div className="flex flex-wrap justify-end gap-1.5">
                         {tombol('lihat', `Nota (${i.jumlahFoto})`, 'border border-gray-200 text-gray-700 hover:bg-gray-50')}
-                        {bisaProses(i) && i.status === 'menunggu' && (
+                        {i.bisaProses && i.status === 'menunggu' && (
                           <>
                             {tombol('setujui', 'Setujui', 'bg-emerald-600 text-white hover:bg-emerald-700')}
                             {tombol('tolak', 'Tolak', 'border border-red-200 text-red-700 hover:bg-red-50')}
                           </>
                         )}
-                        {bisaProses(i) && i.status === 'disetujui' && (
+                        {i.bisaProses && i.status === 'disetujui' && (
                           <>
                             {i.sumber === 'pribadi' && tombol('reimburse', 'Reimburse', 'bg-blue-600 text-white hover:bg-blue-700')}
                             {tombol('batalkan', 'Batalkan', 'border border-red-200 text-red-700 hover:bg-red-50')}
@@ -236,7 +240,7 @@ export default function LaporanOperasional() {
       </section>
 
       {aktif && (
-        <ModalProses {...aktif} onClose={() => setAktif(null)} onSaved={(pesan) => { setAktif(null); notify(pesan, 'success'); setVersi((v) => v + 1); }} />
+        <ModalProses {...aktif} onClose={() => setAktif(null)} onGagal={() => setVersi((v) => v + 1)} onSaved={(pesan) => { setAktif(null); notify(pesan, 'success'); setVersi((v) => v + 1); }} />
       )}
     </div>
   );
@@ -250,7 +254,10 @@ const JUDUL: Record<Aksi, [string, string]> = {
   reimburse: ['Reimburse Karyawan', 'Bayar Reimburse'],
 };
 
-function ModalProses({ item, aksi, onClose, onSaved }: { item: ItemBiaya; aksi: Aksi; onClose: () => void; onSaved: (pesan: string) => void }) {
+function ModalProses({ item, aksi, onClose, onGagal, onSaved }: { item: ItemBiaya; aksi: Aksi; onClose: () => void; onGagal: () => void; onSaved: (pesan: string) => void }) {
+  // jumlah foto terbaru dari galeri: karyawan bisa menambah nota setelah daftar dimuat
+  const [jumlahFoto, setJumlahFoto] = useState(item.jumlahFoto);
+  const [prosesFoto, setProsesFoto] = useState(false);
   const [notaFisik, setNotaFisik] = useState(false);
   const [alasan, setAlasan] = useState('');
   const [metode, setMetode] = useState<'tunai' | 'transfer'>('tunai');
@@ -259,7 +266,7 @@ function ModalProses({ item, aksi, onClose, onSaved }: { item: ItemBiaya; aksi: 
   const [galat, setGalat] = useState('');
   const [judul, teks] = JUDUL[aksi];
   const butuhAlasan = aksi === 'tolak' || aksi === 'batalkan';
-  const belumSiap = (aksi === 'setujui' && (!notaFisik || item.jumlahFoto === 0)) || (butuhAlasan && !alasan.trim()) || (aksi === 'reimburse' && item.jumlahFoto === 0);
+  const belumSiap = prosesFoto || (aksi === 'setujui' && (!notaFisik || jumlahFoto === 0)) || (butuhAlasan && !alasan.trim()) || (aksi === 'reimburse' && jumlahFoto === 0);
 
   const simpan = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -268,7 +275,10 @@ function ModalProses({ item, aksi, onClose, onSaved }: { item: ItemBiaya; aksi: 
     setGalat('');
     const h = await kirimJson(`/api/biaya-operasional/${item.id}`, { aksi, notaFisik, alasan, metode, foto: bukti });
     setKirim(false);
-    if (!h.ok) return setGalat(h.pesan);
+    if (!h.ok) {
+      onGagal();
+      return setGalat(h.pesan);
+    }
     onSaved(`${judul}: ${item.noBiaya} berhasil`);
   };
 
@@ -277,7 +287,7 @@ function ModalProses({ item, aksi, onClose, onSaved }: { item: ItemBiaya; aksi: 
       <form onSubmit={simpan} className="flex min-h-0 flex-1 flex-col">
         <div className="flex-1 space-y-4 overflow-y-auto p-5 sm:px-8">
           <p className="text-sm text-gray-700">{item.kategori}: {item.keterangan} <span className="block text-xs text-gray-500">{LABEL_SUMBER_BIAYA[item.sumber]}</span></p>
-          <GaleriNota id={item.id} />
+          <GaleriNota id={item.id} onMuat={setJumlahFoto} />
           {aksi === 'setujui' && (
             <label className="flex min-h-11 items-start gap-2 rounded-xl border border-gray-200 p-3 text-sm font-semibold text-gray-800">
               <input type="checkbox" checked={notaFisik} onChange={(e) => setNotaFisik(e.target.checked)} className="mt-0.5 h-4 w-4" />
@@ -299,7 +309,7 @@ function ModalProses({ item, aksi, onClose, onSaved }: { item: ItemBiaya; aksi: 
                   <option value="transfer">Bank (transfer)</option>
                 </select>
               </label>
-              <FotoNota foto={bukti} onChange={setBukti} maks={1} label="Bukti pembayaran (opsional)" />
+              <FotoNota foto={bukti} onChange={setBukti} onProses={setProsesFoto} maks={1} label="Bukti pembayaran (opsional)" />
             </>
           )}
           {galat && <p role="alert" className="text-xs font-semibold text-red-600">{galat}</p>}
