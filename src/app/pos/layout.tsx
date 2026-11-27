@@ -1,6 +1,7 @@
 'use client';
 
 import { SessionProvider } from 'next-auth/react';
+import SesiHabis from '@/shared/components/layout/SesiHabis';
 
 // ============================================================
 // STANDALONE POS LAYOUT (Terpisah 100% dari BackOffice Gudang)
@@ -18,6 +19,7 @@ export default function PosStandaloneLayout({
       <div className="min-h-screen w-screen overflow-x-hidden bg-slate-950 font-sans antialiased text-slate-100">
         {children}
       </div>
+      <SesiHabis />
     </SessionProvider>
   );
 }
