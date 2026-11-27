@@ -224,6 +224,19 @@ export async function daftarSetoran(ex: Executor, divisi: string, opsi: { sales?
 }
 
 /**
+ * Username yang pernah punya kas penjual atau setoran. Baris jurnal tidak bisa diubah, jadi username itu
+ * tidak boleh diganti, dan tidak boleh dipakai akun lain (saldonya akan ikut diwarisi).
+ */
+export async function punyaRiwayatKas(ex: Executor, username: string, termasukBiaya = false) {
+  const [r] = (await ex.execute(sql`
+    SELECT (EXISTS (SELECT 1 FROM jurnal_baris WHERE sales = ${username})
+        OR EXISTS (SELECT 1 FROM setoran_sales WHERE sales = ${username})
+        ${termasukBiaya ? sql`OR EXISTS (SELECT 1 FROM biaya_operasional WHERE username = ${username})` : sql``}) AS ada
+  `)) as unknown as { ada: boolean }[];
+  return !!r?.ada;
+}
+
+/**
  * Penerimaan penjualan hari ini (WIB) atas nama seorang penjual: tunai (harus disetor) dan
  * transfer/QRIS (sudah di rekening perusahaan, hanya ditampilkan).
  */
@@ -233,7 +246,7 @@ export async function omsetHariIni(ex: Executor, divisi: string, sales: string) 
            COALESCE(SUM(b.debit - b.kredit) FILTER (WHERE b.akun_kode <> ${AKUN.KAS_SALES}), 0)::float8 AS non_tunai
     FROM jurnal_baris b JOIN jurnal j ON j.id = b.jurnal_id
     LEFT JOIN jurnal asal ON asal.id = j.pembalik_dari
-    WHERE b.sales = ${sales} AND j.entitas = ${entitasDari(divisi)} AND COALESCE(asal.sumber, j.sumber) NOT IN ('SETORAN','BIAYA')
+    WHERE b.sales = ${sales} AND j.entitas = ${entitasDari(divisi)} AND COALESCE(asal.sumber, j.sumber) NOT IN ('SETORAN','BIAYA','VERIFIKASI')
       AND (j.tanggal + interval '7 hours')::date = (now() AT TIME ZONE 'Asia/Jakarta')::date
   `)) as unknown as { tunai: number; non_tunai: number }[];
   return { tunai: rp(Number(r?.tunai) || 0), nonTunai: rp(Number(r?.non_tunai) || 0) };

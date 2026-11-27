@@ -35,7 +35,7 @@ async function kecilkan(file: File): Promise<string> {
 
 const tombol = 'inline-flex h-11 cursor-pointer items-center gap-1.5 rounded-xl border border-gray-200 bg-white px-3 text-xs font-semibold text-gray-700 hover:bg-gray-50 focus-within:ring-2 focus-within:ring-emerald-300';
 
-export default function FotoNota({ foto, onChange, maks = MAKS_FOTO, label = 'Foto nota / invoice' }: { foto: string[]; onChange: (f: string[]) => void; maks?: number; label?: string }) {
+export default function FotoNota({ foto, onChange, onProses, maks = MAKS_FOTO, label = 'Foto nota / invoice' }: { foto: string[]; onChange: (f: string[]) => void; onProses: (sedang: boolean) => void; maks?: number; label?: string }) {
   const [galat, setGalat] = useState('');
   const [proses, setProses] = useState(false);
 
@@ -44,6 +44,7 @@ export default function FotoNota({ foto, onChange, maks = MAKS_FOTO, label = 'Fo
     e.target.value = '';
     if (!berkas.length) return;
     setProses(true);
+    onProses(true);
     setGalat('');
     try {
       const baru: string[] = [];
@@ -53,6 +54,7 @@ export default function FotoNota({ foto, onChange, maks = MAKS_FOTO, label = 'Fo
       setGalat('Foto tidak bisa dibaca. Gunakan JPG atau PNG.');
     } finally {
       setProses(false);
+      onProses(false);
     }
   };
 
@@ -65,7 +67,7 @@ export default function FotoNota({ foto, onChange, maks = MAKS_FOTO, label = 'Fo
             <li key={i} className="relative">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={src} alt={`Foto ${i + 1}`} className="h-20 w-20 rounded-lg border border-gray-200 object-cover" />
-              <button type="button" aria-label={`Hapus foto ${i + 1}`} onClick={() => onChange(foto.filter((_, j) => j !== i))} className="absolute -right-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full bg-red-600 text-white">
+              <button type="button" aria-label={`Hapus foto ${i + 1}`} disabled={proses} onClick={() => onChange(foto.filter((_, j) => j !== i))} className="absolute -right-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full bg-red-600 text-white">
                 <X className="h-3.5 w-3.5" aria-hidden="true" />
               </button>
             </li>
@@ -76,15 +78,15 @@ export default function FotoNota({ foto, onChange, maks = MAKS_FOTO, label = 'Fo
         <div className="mt-2 flex flex-wrap gap-2">
           <label className={tombol}>
             <ImagePlus className="h-4 w-4" aria-hidden="true" /> Pilih File
-            <input type="file" accept="image/*" multiple={maks > 1} onChange={pilih} className="sr-only" />
+            <input type="file" accept="image/*" multiple={maks > 1} disabled={proses} onChange={pilih} className="sr-only" />
           </label>
           <label className={tombol}>
             <Camera className="h-4 w-4" aria-hidden="true" /> Buka Kamera
-            <input type="file" accept="image/*" capture="environment" onChange={pilih} className="sr-only" />
+            <input type="file" accept="image/*" capture="environment" disabled={proses} onChange={pilih} className="sr-only" />
           </label>
         </div>
       )}
-      {proses && <p className="mt-1 text-[11px] text-gray-500">Memproses foto…</p>}
+      {proses && <p role="status" className="mt-1 text-[11px] text-gray-500">Memproses foto…</p>}
       {galat && <p role="alert" className="mt-1 text-[11px] font-semibold text-red-600">{galat}</p>}
     </fieldset>
   );

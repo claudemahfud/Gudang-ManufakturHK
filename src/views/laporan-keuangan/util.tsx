@@ -87,8 +87,8 @@ export type Hasil<T> = { ok: true; data: T; json: Record<string, unknown> } | { 
 export async function ambil<T>(url: string, init?: RequestInit): Promise<Hasil<T>> {
   try {
     const r = await fetch(url, init);
-    if (r.status === 401 || r.status === 403) return { ok: false, terlarang: true, pesan: PESAN_TERLARANG };
     const j = await r.json().catch(() => ({}));
+    if (r.status === 401 || r.status === 403) return { ok: false, terlarang: true, pesan: j.message || PESAN_TERLARANG };
     if (!r.ok || !j.success) return { ok: false, terlarang: false, pesan: j.message || 'Gagal memuat data' };
     return { ok: true, data: j.data as T, json: j };
   } catch {
@@ -99,12 +99,12 @@ export async function ambil<T>(url: string, init?: RequestInit): Promise<Hasil<T
 export const kirimJson = (url: string, body: unknown) =>
   ambil<unknown>(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
 
-export function KotakTerlarang() {
+export function KotakTerlarang({ pesan = PESAN_TERLARANG }: { pesan?: string }) {
   return (
     <div className="rounded-2xl border border-amber-200 bg-amber-50 p-6 text-center">
       <ShieldAlert className="mx-auto h-8 w-8 text-amber-600" aria-hidden="true" />
-      <p className="mt-2 text-sm font-bold text-amber-900">{PESAN_TERLARANG}</p>
-      <p className="text-xs text-amber-700">Akun Anda tidak memiliki akses ke pembukuan.</p>
+      <p className="mt-2 text-sm font-bold text-amber-900">{pesan}</p>
+      <p className="text-xs text-amber-700">Akun Anda tidak memiliki akses ke halaman ini.</p>
     </div>
   );
 }

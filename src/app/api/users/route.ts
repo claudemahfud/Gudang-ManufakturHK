@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { punyaRiwayatKas } from '@/shared/lib/setoran';
 import { db } from '@/shared/lib/db';
 import { users, logs } from '@/shared/lib/db/schema';
 import { desc, eq } from 'drizzle-orm';
@@ -67,6 +68,13 @@ export async function POST(req: Request) {
       return NextResponse.json(
         { success: false, message: 'Username sudah digunakan, silakan pilih yang lain' },
         { status: 400 }
+      );
+    }
+
+    if (await punyaRiwayatKas(db, username.trim().toLowerCase(), true)) {
+      return NextResponse.json(
+        { success: false, message: 'Username ini pernah dipakai dan masih punya riwayat kas. Pilih yang lain.' },
+        { status: 409 }
       );
     }
 

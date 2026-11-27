@@ -13,6 +13,7 @@ import {
   type Template,
 } from '@/shared/lib/pemetaan-akuntansi';
 import { kirimJson, tglWib, type Akun } from '@/views/laporan-keuangan/util';
+import { bolehAkunBiaya } from '@/shared/lib/biaya-aturan';
 
 // ============================================================
 // Catat Transaksi (pemandu pembukuan): pilih / ketik jenis transaksi dalam bahasa biasa,
@@ -60,7 +61,9 @@ export default function CatatTransaksi({
   const otomatis = !pilihManual && !!saran;
 
   const daftarAkun = useMemo(
-    () => (template?.pilihAwalan ? akun.filter((a) => a.posting && template.pilihAwalan!.some((p) => a.kode.startsWith(p))) : []),
+    () => (template?.pilihAwalan
+      ? akun.filter((a) => a.posting && template.pilihAwalan!.some((p) => a.kode.startsWith(p)) && (template.rute !== 'biaya' || bolehAkunBiaya(a.kode)))
+      : []),
     [template, akun]
   );
   const akunSah = akunDipilih && daftarAkun.some((a) => a.kode === akunDipilih) ? akunDipilih : '';
