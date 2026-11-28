@@ -74,11 +74,8 @@ export async function terimaFakturPo(tx: Tx, poId: string, f: FakturInput) {
       .where(eq(inventory.sku, sku))
       .limit(1);
     const satuanPo = normalizeSatuan(it.satuan);
-    const hargaInput = Number(input.hargaBeli);
-    const harga =
-      f.bolehHpp && input.hargaBeli !== undefined && input.hargaBeli !== '' && Number.isFinite(hargaInput) && hargaInput >= 0
-        ? hargaInput
-        : hargaUntukSatuan(inv, satuanPo, 'beli');
+    // Harga beli dikunci dari Master Barang; perubahan harga hanya lewat Master Barang
+    const harga = hargaUntukSatuan(inv, satuanPo, 'beli');
 
     const { totalBeli } = await catatBarangMasuk(tx, {
       tanggal: f.tanggal,

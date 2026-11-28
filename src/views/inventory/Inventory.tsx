@@ -981,7 +981,7 @@ export default function Inventory() {
 
             {/* Form Body (Landscape 2 Columns on Desktop) */}
             <form onSubmit={handleFormSubmit} className="flex-1 flex flex-col overflow-hidden">
-              <div className="flex-1 overflow-y-auto p-6 sm:px-8">
+              <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 sm:p-6 sm:px-8">
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 lg:gap-6">
                   {/* Kolom Kiri: Identitas Produk & Spesifikasi */}
                   <div className="space-y-4">
@@ -1057,8 +1057,8 @@ export default function Inventory() {
                       </div>
                     </div>
 
-                    {/* Brand, Gramasi, Varian */}
-                    <div className="grid grid-cols-3 gap-3">
+                    {/* Brand, Satuan, Varian */}
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
                       <div>
                         <label className="block text-xs font-bold text-gray-700 mb-1 uppercase tracking-wider">
                           Brand / Merek {isDifferentSupplierMissingBrand && <span className="text-red-600 font-bold">* WAJIB</span>}
@@ -1240,7 +1240,7 @@ export default function Inventory() {
                     </div>
 
                     {/* Stok Fisik & Stok Minimum */}
-                    <div className="grid grid-cols-2 gap-3.5">
+                    <div className="grid grid-cols-2 gap-3.5 items-end">
                       <div>
                         <label className="block text-xs font-bold text-gray-700 mb-1 uppercase tracking-wider">
                           Stok Fisik (pcs)
@@ -1271,7 +1271,7 @@ export default function Inventory() {
                     </div>
 
                     {/* Harga Beli & Harga Jual dengan Penjelasan Bisnis */}
-                    <div className="grid grid-cols-2 gap-3.5">
+                    <div className="grid grid-cols-2 gap-3.5 items-end">
                       <div>
                         <label className="block text-xs font-bold text-gray-700 mb-1 uppercase tracking-wider">
                           Harga Beli per Pcs (Rp)

@@ -39,6 +39,7 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
         id: inventory.id,
         sku: inventory.sku,
         hargaBeli: inventory.hargaBeli,
+        hargaBeliKarton: inventory.hargaBeliKarton,
         hargaJual: inventory.hargaJual,
         divisi: inventory.divisi,
       })
@@ -158,11 +159,22 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
     return updated;
     });
 
+    const hargaKartonLama = Number(existing.hargaBeliKarton ?? 0) || 0;
+    const hargaKartonBerubah = hargaKartonBaru !== undefined && Math.abs(hargaKartonBaru - hargaKartonLama) >= 0.005;
+
     if (hargaJualBerubah) {
       await db.insert(logs).values({
         user: actor,
         aksi: 'KOREKSI_INVENTORY',
         detail: `Edit master ${decodedSku}: harga jual ${existing.hargaJual} -> ${hargaJualBaru}`,
+      });
+    }
+
+    if (hargaKartonBerubah) {
+      await db.insert(logs).values({
+        user: actor,
+        aksi: 'KOREKSI_HARGA_KARTON',
+        detail: `Edit master ${decodedSku}: harga beli karton ${hargaKartonLama} -> ${hargaKartonBaru}`,
       });
     }
 

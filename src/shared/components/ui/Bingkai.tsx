@@ -54,7 +54,7 @@ export default function Bingkai({
   }, [onClose]);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 overflow-x-hidden bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
       <div
         ref={kotak}
         tabIndex={-1}

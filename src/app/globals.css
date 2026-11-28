@@ -29,10 +29,24 @@
   box-sizing: border-box;
 }
 
+html,
+body {
+  overflow-x: clip;
+  max-width: 100%;
+  overscroll-behavior-x: none;
+}
+
 body {
   font-family: var(--font-poppins), 'Poppins', sans-serif;
   color: var(--text);
   background: var(--bg);
+}
+
+input,
+select,
+textarea {
+  min-width: 0;
+  max-width: 100%;
 }
 
 /* Scrollbar custom */

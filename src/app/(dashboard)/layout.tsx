@@ -117,7 +117,7 @@ function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         <Header onMenuClick={toggleSidebar} />
         
-        <main className="flex-1 overflow-y-auto flex flex-col justify-between">
+        <main className="flex-1 overflow-y-auto overflow-x-hidden flex flex-col justify-between">
           {/* key = pathname: konten halaman baru muncul dengan fade halus */}
           <div key={pathname} className="p-4 md:p-6 flex-1 animate-in fade-in slide-in-from-bottom-1 duration-200">
             {children}

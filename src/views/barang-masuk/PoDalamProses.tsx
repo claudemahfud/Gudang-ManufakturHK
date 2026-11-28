@@ -183,7 +183,6 @@ export default function PoDalamProses({ onReceived, notify }: { onReceived: () =
             return {
               itemId: r.itemId,
               qtyTerima: Number(r.qtyTerima) || 0,
-              ...(bolehHpp && r.hargaBeli !== '' && { hargaBeli: Number(r.hargaBeli) }),
               ...(r.satuan === 'karton' && isiMaster <= 1 && Number(r.isiKarton) >= 2 && { isiKarton: Number(r.isiKarton) }),
             };
           }),
@@ -307,19 +306,19 @@ export default function PoDalamProses({ onReceived, notify }: { onReceived: () =
 
       {/* Modal Faktur Pembelian (konversi dari PO) */}
       {po && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 overflow-x-hidden bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
           <div
             role="dialog"
             aria-modal="true"
             aria-labelledby="faktur-title"
-            className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[92vh] flex flex-col border border-gray-100 animate-in fade-in zoom-in-95 duration-200"
+            className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[92vh] flex flex-col overflow-hidden border border-gray-100 animate-in fade-in zoom-in-95 duration-200"
           >
-            <div className="flex items-start justify-between gap-4 px-6 sm:px-8 py-4 border-b border-gray-100">
-              <div>
+            <div className="flex items-start justify-between gap-3 px-4 sm:px-8 py-4 border-b border-gray-100">
+              <div className="min-w-0">
                 <h3 id="faktur-title" className="text-lg font-bold text-gray-900">
                   Faktur Pembelian
                 </h3>
-                <p className="text-xs text-gray-500 mt-0.5">
+                <p className="text-xs text-gray-500 mt-0.5 break-words">
                   Dari <span className="font-mono font-semibold">{po.noPo}</span> · {po.supplier} · Cabang {po.cabang}.
                   Sesuaikan jumlah dengan barang yang benar-benar datang.
                 </p>
@@ -327,16 +326,16 @@ export default function PoDalamProses({ onReceived, notify }: { onReceived: () =
               <button
                 type="button"
                 onClick={() => setPo(null)}
-                className="p-1.5 rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+                className="p-1.5 rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-600 shrink-0"
                 aria-label="Tutup"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="overflow-y-auto px-6 sm:px-8 py-4 space-y-4">
+            <div className="overflow-y-auto overflow-x-hidden px-4 sm:px-8 py-4 space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
-                <label className="block text-xs font-semibold text-gray-700">
+                <label className="block min-w-0 text-xs font-semibold text-gray-700">
                   No. Faktur Suplier
                   <input
                     value={noFaktur}
@@ -345,7 +344,7 @@ export default function PoDalamProses({ onReceived, notify }: { onReceived: () =
                     className={`${input} mt-1 font-normal`}
                   />
                 </label>
-                <label className="block text-xs font-semibold text-gray-700">
+                <label className="block min-w-0 text-xs font-semibold text-gray-700">
                   Tanggal Terima
                   <input
                     type="date"
@@ -354,7 +353,7 @@ export default function PoDalamProses({ onReceived, notify }: { onReceived: () =
                     className={`${input} mt-1 font-normal`}
                   />
                 </label>
-                <label className="block text-xs font-semibold text-gray-700">
+                <label className="block min-w-0 text-xs font-semibold text-gray-700">
                   Skema Bayar
                   <select
                     value={skemaBayar}
@@ -366,7 +365,7 @@ export default function PoDalamProses({ onReceived, notify }: { onReceived: () =
                   </select>
                 </label>
                 {skemaBayar === 'hutang' && (
-                  <label className="block text-xs font-semibold text-gray-700">
+                  <label className="block min-w-0 text-xs font-semibold text-gray-700">
                     Jatuh Tempo
                     <input
                       type="date"
@@ -379,7 +378,7 @@ export default function PoDalamProses({ onReceived, notify }: { onReceived: () =
                 )}
               </div>
 
-              <div className="border border-gray-200 rounded-xl overflow-x-auto">
+              <div className="border border-gray-200 rounded-xl overflow-hidden md:overflow-x-auto">
                 <table className="w-full text-left text-xs">
                   <thead className="bg-gray-50 text-gray-500 font-semibold">
                     <tr>
@@ -443,14 +442,10 @@ export default function PoDalamProses({ onReceived, notify }: { onReceived: () =
                           </td>
                           <td className="p-2.5 text-right">
                             {bolehHpp ? (
-                              <input
-                                type="number"
-                                min={0}
-                                value={r.hargaBeli}
-                                onChange={(e) => setRow(i, { hargaBeli: e.target.value })}
-                                aria-label={`Harga beli ${r.namaBarang}`}
-                                className="w-full px-2 py-1.5 rounded-lg border border-gray-200 text-right tabular-nums outline-none focus:border-emerald-500"
-                              />
+                              <div className="px-2 py-1.5 rounded-lg border border-gray-200 bg-gray-100 text-right tabular-nums font-semibold text-gray-700">
+                                {formatRupiah(Number(r.hargaBeli) || 0)}
+                                <div className="text-[9px] font-normal text-gray-500">Terkunci (Master)</div>
+                              </div>
                             ) : (
                               <span className="text-gray-400">Harga master</span>
                             )}
@@ -469,7 +464,7 @@ export default function PoDalamProses({ onReceived, notify }: { onReceived: () =
               </p>
             </div>
 
-            <div className="flex flex-wrap items-center justify-between gap-3 px-6 sm:px-8 py-4 border-t border-gray-100">
+            <div className="flex flex-wrap items-center justify-between gap-2.5 px-4 sm:px-8 py-3.5 border-t border-gray-100 bg-gray-50/60">
               <div className="text-sm text-gray-600">
                 {bolehHpp && (
                   <>

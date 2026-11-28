@@ -983,18 +983,20 @@ export default function BarangMasuk() {
                       <input
                         type="number"
                         min="0"
+                        readOnly={Boolean(selectedInv)}
                         placeholder="Harga beli modal per satuan"
                         value={form.hargaBeli}
-                        onChange={(e) => setForm({ ...form, hargaBeli: e.target.value })}
-                        className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 text-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 outline-none transition font-semibold"
+                        onChange={(e) => !selectedInv && setForm({ ...form, hargaBeli: e.target.value })}
+                        className={`w-full px-3.5 py-2.5 rounded-xl border border-gray-200 text-sm outline-none transition font-semibold ${
+                          selectedInv
+                            ? 'bg-gray-100 text-gray-600 cursor-not-allowed'
+                            : 'focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100'
+                        }`}
                       />
                       <p className="text-[10px] text-gray-500 mt-1">
-                        Harga yang <strong>dibayar kepada Suplier</strong> untuk 1 {pakaiKarton ? 'karton' : 'pcs'}
-                        {selectedInv && Number(pakaiKarton ? selectedInv.hargaBeliKarton : selectedInv.hargaBeli) > 0
-                          ? ' (dari Master Barang, bisa diubah bila faktur berbeda).'
-                          : pakaiKarton && selectedInv
-                            ? '. Harga karton belum diatur di Master Barang.'
-                            : '.'}
+                        {selectedInv
+                          ? 'Harga beli dikunci dari Master Barang. Perubahan harga hanya dapat dilakukan di menu Master Barang.'
+                          : `Harga yang dibayar kepada Suplier untuk 1 ${pakaiKarton ? 'karton' : 'pcs'}.`}
                         {pakaiKarton && isiKarton > 1 && Number(form.hargaBeli) > 0 && (
                           <> Setara <strong>{formatRupiah(Number(form.hargaBeli) / isiKarton)}</strong> per pcs (HPP stok).</>
                         )}
