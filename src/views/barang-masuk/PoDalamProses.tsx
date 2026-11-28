@@ -15,6 +15,7 @@ import { useDivision } from '@/shared/context/DivisionContext';
 import { ROUTES } from '@/router/routes';
 import { PO_STATUS, PO_STATUS_LABEL } from '@/shared/lib/po-status';
 import MemuatProgres from '@/shared/components/ui/MemuatProgres';
+import { hargaUntukSatuan, isiKartonOf, normalizeSatuan, type InfoSatuanProduk } from '@/shared/lib/satuan';
 
 interface PoItem {
   id: string;
@@ -66,7 +67,7 @@ export default function PoDalamProses({ onReceived, notify }: { onReceived: () =
   const { division } = useDivision();
   const [list, setList] = useState<PoTerbuka[]>([]);
   const [loading, setLoading] = useState(true);
-  const [hargaMaster, setHargaMaster] = useState<Record<string, number | null>>({});
+  const [produkMaster, setProdukMaster] = useState<Record<string, InfoSatuanProduk>>({});
   const [bolehHpp, setBolehHpp] = useState(false);
 
   // Faktur yang sedang diisi
@@ -94,13 +95,19 @@ export default function PoDalamProses({ onReceived, notify }: { onReceived: () =
         .then(([poRes, invRes]) => {
           if (poRes.success) setList(poRes.data || []);
           if (invRes.success) {
-            const map: Record<string, number | null> = {};
+            const map: Record<string, InfoSatuanProduk> = {};
             let visible = false;
             for (const it of invRes.data || []) {
-              map[it.sku] = it.hargaBeli === null || it.hargaBeli === undefined ? null : Number(it.hargaBeli);
+              const key = String(it.sku || '').trim().toUpperCase();
+              map[key] = {
+                hargaBeli: it.hargaBeli,
+                hargaBeliKarton: it.hargaBeliKarton,
+                pakaiKarton: it.pakaiKarton,
+                settingPcs: it.settingPcs,
+              };
               if (it.hargaBeli !== null && it.hargaBeli !== undefined) visible = true;
             }
-            setHargaMaster(map);
+            setProdukMaster(map);
             // HPP disembunyikan server untuk role yang tidak berhak: kolom harga hanya baca
             setBolehHpp(visible);
           }
@@ -122,15 +129,20 @@ export default function PoDalamProses({ onReceived, notify }: { onReceived: () =
     setJatuhTempo('');
     setRows(
       p.items
-        .map((it) => ({
-          itemId: it.id,
-          sku: it.sku,
-          namaBarang: it.namaBarang,
-          satuan: it.satuan,
-          sisa: it.qtyOrder - it.qtyTerima,
-          qtyTerima: String(it.qtyOrder - it.qtyTerima),
-          hargaBeli: String(hargaMaster[it.sku.trim().toUpperCase()] ?? hargaMaster[it.sku] ?? ''),
-        }))
+        .map((it) => {
+          const info = produkMaster[it.sku.trim().toUpperCase()];
+          const satuanPo = normalizeSatuan(it.satuan);
+          const hargaDefault = info ? hargaUntukSatuan(info, satuanPo, 'beli') : 0;
+          return {
+            itemId: it.id,
+            sku: it.sku,
+            namaBarang: it.namaBarang,
+            satuan: satuanPo,
+            sisa: it.qtyOrder - it.qtyTerima,
+            qtyTerima: String(it.qtyOrder - it.qtyTerima),
+            hargaBeli: hargaDefault > 0 ? String(hargaDefault) : '',
+          };
+        })
         .filter((r) => r.sisa > 0)
     );
   };
@@ -370,11 +382,15 @@ export default function PoDalamProses({ onReceived, notify }: { onReceived: () =
                     {rows.map((r, i) => {
                       const q = Number(r.qtyTerima);
                       const salah = !Number.isInteger(q) || q < 0 || q > r.sisa;
+                      const isi = r.satuan === 'karton' ? isiKartonOf(produkMaster[r.sku.trim().toUpperCase()]) : 0;
                       return (
                         <tr key={r.itemId}>
                           <td className="p-2.5">
                             <div className="font-semibold text-gray-800">{r.namaBarang}</div>
-                            <div className="text-[10px] font-mono text-gray-400">{r.sku}</div>
+                            <div className="text-[10px] font-mono text-gray-400">
+                              {r.sku}
+                              {isi > 1 && <span className="ml-1.5 font-sans text-emerald-700 font-semibold">· 1 karton = {isi} pcs</span>}
+                            </div>
                           </td>
                           <td className="p-2.5 text-center tabular-nums text-gray-600">
                             {r.sisa} {r.satuan}
@@ -392,6 +408,11 @@ export default function PoDalamProses({ onReceived, notify }: { onReceived: () =
                                 salah ? 'border-red-400 bg-red-50' : 'border-gray-200 focus:border-emerald-500'
                               }`}
                             />
+                            {isi > 1 && !salah && q > 0 && (
+                              <div className="text-[10px] text-emerald-700 text-center mt-0.5 font-medium">
+                                = {(q * isi).toLocaleString('id-ID')} pcs
+                              </div>
+                            )}
                             {salah && <div className="text-[10px] text-red-600 mt-0.5">0 – {r.sisa}</div>}
                           </td>
                           <td className="p-2.5 text-right">

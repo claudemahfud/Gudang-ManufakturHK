@@ -10,6 +10,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Plus, Receipt, Trash2, X } from 'lucide-react';
 import { formatRupiah } from '@/shared/lib/utils';
 import { hitungFaktur, LABEL_STATUS, type MetodeBayar } from '@/shared/lib/faktur-hitung';
+import PilihSatuan from '@/shared/components/ui/PilihSatuan';
 
 export interface InventoryOption {
   sku: string;
@@ -340,16 +341,13 @@ export default function FormFakturPenjualan({
                             )}
                           </td>
                           <td className="p-2">
-                            <select
-                              aria-label={`Satuan beli baris ${i + 1}`}
+                            <PilihSatuan
+                              compact
                               value={b.satuan}
-                              disabled={!isi}
-                              onChange={(e) => gantiSatuan(i, e.target.value as Baris['satuan'])}
-                              className={`${input} disabled:bg-gray-50 disabled:text-gray-500`}
-                            >
-                              <option value="pcs">Satuan (pcs)</option>
-                              {isi > 0 && <option value="karton">Kartonan ({isi} pcs)</option>}
-                            </select>
+                              onChange={(s) => gantiSatuan(i, s)}
+                              produk={produk}
+                              ariaLabel={`Satuan beli baris ${i + 1}`}
+                            />
                           </td>
                           <td className="p-2">
                             <input

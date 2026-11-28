@@ -4,6 +4,7 @@ import { inventory, logs, poLoading, poLoadingItems } from '@/shared/lib/db/sche
 import { catatBarangMasuk, catatPembayaranPembelian } from '@/shared/lib/barang-masuk';
 import { BusinessError, normalizeSku } from '@/shared/lib/stock';
 import { PO_STATUS } from '@/shared/lib/po-status';
+import { hargaUntukSatuan, normalizeSatuan } from '@/shared/lib/satuan';
 
 // ============================================================
 // Faktur Pembelian dari PO ("Barang Datang" di Barang Masuk).
@@ -62,15 +63,21 @@ export async function terimaFakturPo(tx: Tx, poId: string, f: FakturInput) {
 
     const sku = normalizeSku(it.sku);
     const [inv] = await tx
-      .select({ hargaBeli: inventory.hargaBeli })
+      .select({
+        hargaBeli: inventory.hargaBeli,
+        hargaBeliKarton: inventory.hargaBeliKarton,
+        pakaiKarton: inventory.pakaiKarton,
+        settingPcs: inventory.settingPcs,
+      })
       .from(inventory)
       .where(eq(inventory.sku, sku))
       .limit(1);
+    const satuanPo = normalizeSatuan(it.satuan);
     const hargaInput = Number(input.hargaBeli);
     const harga =
       f.bolehHpp && input.hargaBeli !== undefined && input.hargaBeli !== '' && Number.isFinite(hargaInput) && hargaInput >= 0
         ? hargaInput
-        : Number(inv?.hargaBeli ?? 0) || 0;
+        : hargaUntukSatuan(inv, satuanPo, 'beli');
 
     const { totalBeli } = await catatBarangMasuk(tx, {
       tanggal: f.tanggal,

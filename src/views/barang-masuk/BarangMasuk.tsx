@@ -15,6 +15,8 @@ import PoDalamProses from './PoDalamProses';
 import FormReturPelanggan from './FormReturPelanggan';
 import { AksiHeader, GrupIkon, TombolIkon } from '@/shared/components/ui/AksiHeader';
 import MemuatProgres from '@/shared/components/ui/MemuatProgres';
+import PilihSatuan from '@/shared/components/ui/PilihSatuan';
+import { normalizeSatuan } from '@/shared/lib/satuan';
 
 // ============================================================
 // PAGE: Barang Masuk (Purchasing & Penerimaan Stok)
@@ -916,17 +918,18 @@ export default function BarangMasuk() {
                       </div>
                     </div>
 
-                    {/* Satuan Karton (centang terpisah) */}
+                    {/* Satuan Barang (tinggal klik pcs / karton, otomatis terhubung Master Barang) */}
                     <div className={`p-3.5 rounded-xl border space-y-2 ${pakaiKarton ? 'bg-emerald-50/60 border-emerald-200' : 'bg-gray-50 border-gray-200'}`}>
-                      <label className="flex items-center gap-2.5 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={pakaiKarton}
-                          onChange={(e) => handleKartonToggle(e.target.checked)}
-                          className="w-4 h-4 accent-emerald-600 rounded"
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <span className="text-xs sm:text-sm font-semibold text-gray-800">Satuan Barang</span>
+                        <PilihSatuan
+                          value={normalizeSatuan(form.satuan)}
+                          onChange={(s) => handleKartonToggle(s === 'karton')}
+                          produk={selectedInv}
+                          allowKartonBaru
+                          ariaLabel="Pilih satuan barang masuk"
                         />
-                        <span className="text-xs sm:text-sm font-semibold text-gray-800">Gunakan satuan Karton</span>
-                      </label>
+                      </div>
                       {pakaiKarton && (
                         isiMaster > 0 ? (
                           <p className="text-[11px] text-gray-600">

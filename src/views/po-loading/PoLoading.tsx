@@ -9,6 +9,8 @@ import DateTimeFilterBar from '@/shared/components/ui/DateTimeFilterBar';
 import { isPoTerbuka, PO_STATUS, PO_STATUS_LABEL } from '@/shared/lib/po-status';
 import { AksiHeader, GrupIkon, TombolIkon, TombolUtama } from '@/shared/components/ui/AksiHeader';
 import MemuatProgres from '@/shared/components/ui/MemuatProgres';
+import PilihSatuan from '@/shared/components/ui/PilihSatuan';
+import { isiKartonOf, type SatuanBarang } from '@/shared/lib/satuan';
 
 const statusBadge = (status: string) =>
   status === PO_STATUS.SELESAI
@@ -38,13 +40,15 @@ interface PoHeader {
 interface InventoryOption {
   sku: string;
   namaBarang: string;
+  pakaiKarton?: boolean | null;
+  settingPcs?: number | null;
 }
 
 interface ItemRow {
   sku: string;
   namaBarang: string;
   qtyOrder: number;
-  satuan: string;
+  satuan: SatuanBarang;
 }
 
 export default function PoLoading() {
@@ -219,6 +223,7 @@ export default function PoLoading() {
           ...copy[idx],
           sku: value,
           namaBarang: prod ? prod.namaBarang : '',
+          satuan: 'pcs',
         };
       } else {
         copy[idx] = { ...copy[idx], [field]: value };
@@ -576,19 +581,22 @@ export default function PoLoading() {
 
                 <div className="bg-slate-50/75 p-3 rounded-2xl border border-slate-200/80 space-y-2">
                   <div className="hidden sm:grid grid-cols-12 gap-2 px-2 py-1 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-                    <div className="col-span-6">Pilih Produk *</div>
+                    <div className="col-span-5">Pilih Produk *</div>
                     <div className="col-span-3">Jumlah Order (Qty) *</div>
-                    <div className="col-span-2">Satuan</div>
+                    <div className="col-span-3">Satuan</div>
                     <div className="col-span-1 text-center">Aksi</div>
                   </div>
 
                   <div className="space-y-2">
-                    {items.map((row, idx) => (
+                    {items.map((row, idx) => {
+                      const prod = inventoryList.find((i) => i.sku === row.sku);
+                      const isi = isiKartonOf(prod);
+                      return (
                       <div
                         key={idx}
                         className="grid grid-cols-1 sm:grid-cols-12 gap-2 items-center bg-white p-2.5 rounded-xl border border-slate-200/70 shadow-sm"
                       >
-                        <div className="col-span-1 sm:col-span-6">
+                        <div className="col-span-1 sm:col-span-5">
                           <label className="sm:hidden block text-[11px] font-semibold text-gray-600 mb-1">
                             Pilih Produk *
                           </label>
@@ -622,17 +630,22 @@ export default function PoLoading() {
                           />
                         </div>
 
-                        <div className="col-span-1 sm:col-span-2">
+                        <div className="col-span-1 sm:col-span-3 flex flex-col items-start">
                           <label className="sm:hidden block text-[11px] font-semibold text-gray-600 mb-1">
-                            Satuan
+                            Satuan (Klik Pilih)
                           </label>
-                          <input
-                            type="text"
-                            placeholder="Satuan"
+                          <PilihSatuan
+                            compact
                             value={row.satuan}
-                            onChange={(e) => updateItemRow(idx, 'satuan', e.target.value)}
-                            className="w-full h-10 px-3 rounded-xl border border-gray-200 text-xs focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none"
+                            onChange={(s) => updateItemRow(idx, 'satuan', s)}
+                            produk={prod}
+                            ariaLabel={`Satuan order baris ${idx + 1}`}
                           />
+                          {row.satuan === 'karton' && isi > 1 && row.qtyOrder > 0 && (
+                            <span className="text-[10px] text-emerald-700 font-medium mt-0.5">
+                              = {(row.qtyOrder * isi).toLocaleString('id-ID')} pcs
+                            </span>
+                          )}
                         </div>
 
                         <div className="col-span-1 sm:col-span-1 flex items-center justify-center">
@@ -647,7 +660,8 @@ export default function PoLoading() {
                           </button>
                         </div>
                       </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               </div>

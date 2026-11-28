@@ -4,6 +4,7 @@ import { suratJalan, suratJalanItems, logs } from '@/shared/lib/db/schema';
 import { requireAuthRole, ROLES_EXPEDISI } from '@/shared/lib/auth/rbac';
 import { desc, eq } from 'drizzle-orm';
 import { nomorUrut } from '@/shared/lib/nomor-urut';
+import { normalizeSatuan } from '@/shared/lib/satuan';
 
 // ============================================================
 // API: /api/surat-jalan
@@ -74,7 +75,7 @@ export async function POST(req: Request) {
           sku: it.sku,
           namaBarang: it.namaBarang,
           qty: parseInt(it.qty, 10) || 1,
-          satuan: it.satuan || 'pcs',
+          satuan: normalizeSatuan(it.satuan),
           keterangan: it.keterangan || null,
         });
       }

@@ -6,6 +6,8 @@ import { useState, useEffect } from 'react';
 import { formatTanggal } from '@/shared/lib/utils';
 import { AksiHeader, TombolUtama } from '@/shared/components/ui/AksiHeader';
 import MemuatProgres from '@/shared/components/ui/MemuatProgres';
+import PilihSatuan from '@/shared/components/ui/PilihSatuan';
+import { type SatuanBarang } from '@/shared/lib/satuan';
 
 // ============================================================
 // PAGE: Surat Jalan
@@ -29,13 +31,15 @@ interface InventoryOption {
   sku: string;
   namaBarang: string;
   stok: number;
+  pakaiKarton?: boolean | null;
+  settingPcs?: number | null;
 }
 
 interface ItemRow {
   sku: string;
   namaBarang: string;
   qty: number;
-  satuan: string;
+  satuan: SatuanBarang;
   keterangan: string;
 }
 
@@ -111,6 +115,7 @@ export default function SuratJalan() {
           ...copy[idx],
           sku: value,
           namaBarang: prod ? prod.namaBarang : '',
+          satuan: 'pcs',
         };
       } else {
         copy[idx] = { ...copy[idx], [field]: value };
@@ -434,12 +439,12 @@ export default function SuratJalan() {
                         onChange={(e) => updateItemRow(idx, 'qty', parseInt(e.target.value) || 0)}
                         className="w-20 px-2 py-1.5 rounded-lg border border-gray-200 text-xs focus:border-emerald-500 outline-none"
                       />
-                      <input
-                        type="text"
-                        placeholder="Satuan"
+                      <PilihSatuan
+                        compact
                         value={row.satuan}
-                        onChange={(e) => updateItemRow(idx, 'satuan', e.target.value)}
-                        className="w-20 px-2 py-1.5 rounded-lg border border-gray-200 text-xs focus:border-emerald-500 outline-none"
+                        onChange={(s) => updateItemRow(idx, 'satuan', s)}
+                        produk={inventoryList.find((i) => i.sku === row.sku)}
+                        ariaLabel={`Satuan barang baris ${idx + 1}`}
                       />
                       <button
                         type="button"

@@ -1278,7 +1278,14 @@ export default function Inventory() {
                           type="checkbox"
                           id="pakaiKarton"
                           checked={form.pakaiKarton}
-                          onChange={(e) => setForm((p) => ({ ...p, pakaiKarton: e.target.checked }))}
+                          onChange={(e) => {
+                            const checked = e.target.checked;
+                            setForm((p) => ({
+                              ...p,
+                              pakaiKarton: checked,
+                              settingPcs: checked && Number(p.settingPcs) <= 1 ? 12 : p.settingPcs,
+                            }));
+                          }}
                           className="w-4 h-4 text-emerald-600 rounded focus:ring-emerald-500"
                         />
                         <label htmlFor="pakaiKarton" className="text-xs sm:text-sm font-semibold text-gray-800 cursor-pointer">
@@ -1294,12 +1301,12 @@ export default function Inventory() {
                           <div className="flex items-center gap-3">
                             <input
                               type="number"
-                              min={1}
+                              min={2}
                               value={form.settingPcs}
                               onChange={(e) => setForm((p) => ({ ...p, settingPcs: e.target.value }))}
                               className="w-28 px-3 py-1.5 bg-white border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 font-semibold"
                             />
-                            <span className="text-xs text-gray-500">pcs per 1 karton</span>
+                            <span className="text-xs text-gray-500">pcs per 1 karton (min. 2)</span>
                           </div>
                           <label className="block text-[11px] font-medium text-gray-600 mt-2.5 mb-1">
                             Harga Beli per Karton (Rp)

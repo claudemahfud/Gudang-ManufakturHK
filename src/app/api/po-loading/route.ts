@@ -6,6 +6,7 @@ import { resolveRequestCabang } from '@/shared/lib/stock';
 import { desc, inArray } from 'drizzle-orm';
 import { PO_STATUS } from '@/shared/lib/po-status';
 import { nomorUrut } from '@/shared/lib/nomor-urut';
+import { normalizeSatuan } from '@/shared/lib/satuan';
 
 // ============================================================
 // API: /api/po-loading
@@ -94,7 +95,7 @@ export async function POST(req: Request) {
           namaBarang: it.namaBarang,
           qtyOrder: parseInt(it.qtyOrder, 10) || 1,
           qtyTerima: 0,
-          satuan: it.satuan || 'pcs',
+          satuan: normalizeSatuan(it.satuan),
         });
       }
 
