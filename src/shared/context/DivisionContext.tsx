@@ -87,7 +87,10 @@ export function DivisionProvider({ children }: { children: React.ReactNode }) {
     }
 
     try {
-      const res = await fetch(`/api/cabang?divisi=${division}`);
+      const res = await fetch(`/api/cabang?divisi=${division}`, {
+        headers: { 'x-senyap': '1' },
+      });
+      if (!res.ok) return;           // belum login atau error → abaikan tanpa toast
       const json = await res.json();
       if (json.success && Array.isArray(json.data) && json.data.length > 0) {
         setAllCabangList(json.data);
@@ -130,7 +133,9 @@ export function DivisionProvider({ children }: { children: React.ReactNode }) {
       }
     }
 
-    // 2. Inisialisasi Cabang
+    // 2. Inisialisasi Cabang (hanya kalau sudah login)
+    if (!session) return;
+
     if (isBranchEmployee) {
       setCabangState(userCabang);
       setAvailableCabang([userCabang]);
@@ -139,7 +144,7 @@ export function DivisionProvider({ children }: { children: React.ReactNode }) {
     } else {
       refetchCabang();
     }
-  }, [divisiAssigned, isBranchEmployee, userCabang, refetchCabang]);
+  }, [session, divisiAssigned, isBranchEmployee, userCabang, refetchCabang]);
 
   const setDivision = (mode: DivisionMode) => {
     if (isBawahan) return;

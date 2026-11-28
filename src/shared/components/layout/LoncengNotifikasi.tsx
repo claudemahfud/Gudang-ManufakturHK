@@ -40,7 +40,10 @@ export default function LoncengNotifikasi() {
   const muat = useCallback(async () => {
     setMemuat(true);
     try {
-      const res = await fetch(`/api/notifikasi?divisi=${division}`, { cache: 'no-store' });
+      const res = await fetch(`/api/notifikasi?divisi=${division}`, {
+        cache: 'no-store',
+        headers: { 'x-senyap': '1' },
+      });
       const json = await res.json();
       if (!res.ok || !json.success) throw new Error();
       setDaftar(json.data);

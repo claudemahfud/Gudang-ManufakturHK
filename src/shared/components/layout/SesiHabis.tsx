@@ -1,20 +1,29 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import Bingkai from '@/shared/components/ui/Bingkai';
 
 /**
  * Sesi hilang saat halaman masih terbuka: tanpa ini tombol & data hilang diam-diam
  * (mis. tombol Edit lenyap dan avatar jadi "U").
+ *
+ * Hanya tampil kalau sesi **pernah aktif** lalu hilang — bukan saat
+ * halaman baru dibuka dan NextAuth masih loading/belum authenticated.
  */
 export default function SesiHabis() {
   const { status } = useSession();
   const [tampil, setTampil] = useState(false);
+  const pernahLogin = useRef(false);
 
-  // ditunda sebentar agar tidak berkedip saat Keluar biasa (langsung pindah ke halaman login)
+  // Catat: sesi pernah aktif
   useEffect(() => {
-    if (status !== 'unauthenticated') return;
+    if (status === 'authenticated') pernahLogin.current = true;
+  }, [status]);
+
+  // Hanya tampilkan modal kalau sesi PERNAH aktif lalu hilang
+  useEffect(() => {
+    if (status !== 'unauthenticated' || !pernahLogin.current) return;
     const t = setTimeout(() => setTampil(true), 1500);
     return () => {
       clearTimeout(t);
