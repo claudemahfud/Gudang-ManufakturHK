@@ -57,6 +57,39 @@ const initialForm: FormState = {
 // SECTION: Main Component
 // ============================================================
 
+const SATUAN_PILIHAN = [
+  'pcs',
+  'kg',
+  'gram',
+  'ons',
+  'liter',
+  'ml',
+  'oz',
+  'bungkus',
+  'pack',
+  'botol',
+  'kaleng',
+  'sachet',
+  'sak',
+  'roll',
+  'meter',
+  'buah',
+  'porsi',
+  'cup',
+] as const;
+
+function parseSatuanMaster(raw: string): { angka: string; unit: string } {
+  const s = (raw || '').trim();
+  if (!s) return { angka: '1', unit: 'pcs' };
+  const m = s.replace(',', '.').match(/^([\d.]+)\s*(.+)$/);
+  if (m) {
+    const rawUnit = m[2].trim().toLowerCase();
+    const mapped = rawUnit === 'g' || rawUnit === 'gr' ? 'gram' : rawUnit === 'l' || rawUnit === 'lt' ? 'liter' : rawUnit === 'bks' ? 'bungkus' : rawUnit;
+    return { angka: m[1], unit: mapped };
+  }
+  return { angka: '1', unit: s.toLowerCase() };
+}
+
 export default function Inventory() {
   const { division, isManufaktur, isFnb } = useDivision();
 
@@ -478,7 +511,7 @@ export default function Inventory() {
         { header: 'SKU', accessor: (i) => i.sku },
         { header: 'Nama Barang', accessor: (i) => i.namaBarang },
         { header: 'Brand / Merk', accessor: (i) => i.brand || '-' },
-        { header: 'Gramasi', accessor: (i) => i.gramasi || '-' },
+        { header: 'Satuan', accessor: (i) => i.gramasi || 'pcs' },
         { header: 'Varian', accessor: (i) => i.varian || '-' },
         { header: 'Stok Fisik (Pcs)', accessor: (i) => i.stok },
         {
@@ -649,7 +682,7 @@ export default function Inventory() {
                 <th className="py-3.5 px-4">SKU</th>
                 <th className="py-3.5 px-4">Nama Barang</th>
                 <th className="py-3.5 px-4">Suplier / Brand</th>
-                <th className="py-3.5 px-4">Gramasi / Varian</th>
+                <th className="py-3.5 px-4">Satuan / Varian</th>
                 <th className="py-3.5 px-4">Stok Fisik</th>
                 <th className="py-3.5 px-4">Harga Jual</th>
                 <th className="py-3.5 px-4 text-center">Aksi</th>
@@ -1046,16 +1079,46 @@ export default function Inventory() {
 
                       <div>
                         <label className="block text-xs font-bold text-gray-700 mb-1 uppercase tracking-wider">
-                          Gramasi
+                          Satuan Barang
                         </label>
-                        <input
-                          type="text"
-                          disabled={submitting}
-                          value={form.gramasi}
-                          onChange={(e) => setForm((p) => ({ ...p, gramasi: e.target.value }))}
-                          placeholder="500g"
-                          className="w-full px-3 py-2 rounded-xl border border-gray-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 outline-none transition text-xs sm:text-sm"
-                        />
+                        {(() => {
+                          const { angka, unit } = parseSatuanMaster(form.gramasi);
+                          const unitInList = SATUAN_PILIHAN.includes(unit as (typeof SATUAN_PILIHAN)[number]);
+                          return (
+                            <div className="flex gap-1.5">
+                              <input
+                                type="number"
+                                min="0.01"
+                                step="any"
+                                disabled={submitting}
+                                value={angka}
+                                onChange={(e) => {
+                                  const v = e.target.value;
+                                  setForm((p) => ({ ...p, gramasi: `${v || '1'} ${unit}` }));
+                                }}
+                                aria-label="Ukuran per satuan"
+                                className="w-20 px-2.5 py-2 rounded-xl border border-gray-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 outline-none transition text-xs sm:text-sm font-semibold text-center"
+                              />
+                              <select
+                                disabled={submitting}
+                                value={unit}
+                                onChange={(e) => {
+                                  const u = e.target.value;
+                                  setForm((p) => ({ ...p, gramasi: `${angka || '1'} ${u}` }));
+                                }}
+                                aria-label="Pilih satuan barang"
+                                className="flex-1 min-w-0 px-2.5 py-2 rounded-xl border border-gray-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 outline-none transition text-xs sm:text-sm bg-white font-semibold"
+                              >
+                                {!unitInList && <option value={unit}>{unit}</option>}
+                                {SATUAN_PILIHAN.map((u) => (
+                                  <option key={u} value={u}>
+                                    {u}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                          );
+                        })()}
                       </div>
 
                       <div>
