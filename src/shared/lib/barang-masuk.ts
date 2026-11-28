@@ -31,7 +31,7 @@ export interface BarangMasukInput {
   isiKarton?: number | null;
 }
 
-const ALIAS_KARTON = ['karton', 'ctn', 'dus', 'dos'];
+const ALIAS_KARTON = ['karton', 'krt', 'ctn', 'dus', 'dos', 'box'];
 
 /**
  * Ubah qty & harga dari satuan input ke satuan dasar stok (pcs).

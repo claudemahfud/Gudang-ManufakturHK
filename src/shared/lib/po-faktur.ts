@@ -85,7 +85,7 @@ export async function terimaFakturPo(tx: Tx, poId: string, f: FakturInput) {
       sku,
       namaBarang: it.namaBarang,
       qty,
-      satuan: it.satuan,
+      satuan: satuanPo,
       hargaBeli: harga,
       supplier: po.supplier,
       noFaktur: f.noFaktur ?? po.noPo, // sama dengan nomor hutang/jurnal pembeliannya
@@ -98,7 +98,7 @@ export async function terimaFakturPo(tx: Tx, poId: string, f: FakturInput) {
       isiKarton: input.isiKarton ? Number(input.isiKarton) : null,
     });
     total += totalBeli;
-    diterima.push(`${it.namaBarang} (${sku}) x${qty} ${it.satuan}`);
+    diterima.push(`${it.namaBarang} (${sku}) x${qty} ${satuanPo}`);
 
     await tx
       .update(poLoadingItems)

@@ -13,7 +13,7 @@ export interface InfoSatuanProduk {
   hargaJual?: number | string | null;
 }
 
-const ALIAS_KARTON = new Set(['karton', 'krt', 'ctn', 'dus', 'dos']);
+const ALIAS_KARTON = new Set(['karton', 'krt', 'ctn', 'dus', 'dos', 'box']);
 
 /** Normalisasi input satuan ke 'pcs' atau 'karton'. */
 export function normalizeSatuan(raw: unknown): SatuanBarang {
