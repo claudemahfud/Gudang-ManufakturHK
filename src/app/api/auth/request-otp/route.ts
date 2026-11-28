@@ -26,10 +26,6 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: false, message: 'Email wajib diisi' }, { status: 400 });
     }
 
-    if ((await recentOtpRequests(email)) >= OTP_MAX_REQUESTS) {
-      return NextResponse.json(GENERIC_RESPONSE);
-    }
-
     const matches = await db
       .select({ id: users.id, aktif: users.aktif })
       .from(users)
@@ -43,7 +39,10 @@ export async function POST(req: Request) {
 
     const rawOtp = generateOtp();
 
-    await db.transaction(async (tx) => {
+    const dibuat = await db.transaction(async (tx) => {
+      // hitung & simpan di bawah satu kunci: permintaan serentak tidak melewati batas
+      await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${'otp:' + email}))`);
+      if ((await recentOtpRequests(tx, email)) >= OTP_MAX_REQUESTS) return false;
       // Kode lama tidak berlaku lagi begitu kode baru diminta
       await tx
         .update(otpCodes)
@@ -56,9 +55,10 @@ export async function POST(req: Request) {
         expiresAt: new Date(Date.now() + OTP_TTL_MS),
         used: false,
       });
+      return true;
     });
 
-    await deliverOtp(email, rawOtp);
+    if (dibuat) await deliverOtp(email, rawOtp);
 
     return NextResponse.json(GENERIC_RESPONSE);
   } catch (err) {

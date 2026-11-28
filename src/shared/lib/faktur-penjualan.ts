@@ -4,7 +4,8 @@ import { barangKeluar, fakturPenjualan, inventory, keuangan, logs } from '@/shar
 import { BusinessError, decrementStock, incrementStock } from '@/shared/lib/stock';
 import { hitungFaktur, LABEL_METODE, type MetodeBayar } from '@/shared/lib/faktur-hitung';
 import { fakturPunyaRetur } from '@/shared/lib/retur-pelanggan';
-import { AKUN, balikJurnal, penerimaKas, posting } from '@/shared/lib/jurnal';
+import { AKUN, balikJurnal, barisJurnalAktif, penerimaKas, posting } from '@/shared/lib/jurnal';
+import { tanggungKantor } from '@/shared/lib/setoran';
 
 const rp = (n: number) => Math.round(n * 100) / 100;
 
@@ -206,10 +207,23 @@ export async function batalkanFakturPenjualan(tx: Tx, noFaktur: string, user: st
     });
   }
 
+  // Tunai faktur yang sudah disetor penjual dikembalikan dari Kas kantor, bukan dari saldonya
+  const SUMBER_FAKTUR = ['FAKTUR', 'BAYAR_PIUTANG', 'VERIFIKASI'];
+  const dipegang = new Map<string, number>();
+  for (const b of await barisJurnalAktif(tx, noFaktur, SUMBER_FAKTUR)) {
+    if (b.akunKode === AKUN.KAS_SALES && b.sales) {
+      dipegang.set(b.sales, (dipegang.get(b.sales) ?? 0) + Number(b.debit) - Number(b.kredit));
+    }
+  }
+  // urut: dua pembatalan bersamaan mengunci penjual dengan urutan yang sama
+  for (const sales of [...dipegang.keys()].sort()) {
+    await tanggungKantor(tx, { divisi: faktur.divisi, cabang: faktur.cabang, referensi: noFaktur, user: username ?? user }, sales, dipegang.get(sales)!);
+  }
+
   // Balik jurnal faktur & semua pembayaran piutangnya (kas yang dibalik = dibayar di header)
   await balikJurnal(tx, {
     referensi: noFaktur,
-    sumber: ['FAKTUR', 'BAYAR_PIUTANG', 'VERIFIKASI'],
+    sumber: SUMBER_FAKTUR,
     keterangan: `Pembatalan faktur ${noFaktur} (${faktur.pelanggan})`,
     user: username ?? user,
   });

@@ -58,6 +58,7 @@ export const LABEL_SUMBER: Record<string, string> = {
   KAS_MANUAL: 'Kas Manual',
   SETORAN: 'Setoran ke Finance Pusat',
   VERIFIKASI: 'Transfer Tidak Ditemukan',
+  KOREKSI_KAS: 'Batal Sesudah Disetor (Kas Kantor)',
   RUSAK: 'Barang Rusak',
   PRODUKSI: 'Produksi Dapur',
   REVALUASI: 'Revaluasi HPP',

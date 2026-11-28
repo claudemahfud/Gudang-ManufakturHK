@@ -3,7 +3,8 @@ import { eq } from 'drizzle-orm';
 import { db } from '@/shared/lib/db';
 import { logs, users } from '@/shared/lib/db/schema';
 import { hashPassword, verifyPassword } from '@/shared/lib/auth/password';
-import { BATAS_GAGAL, POLA_PIN, catatGagal, jumlahGagal, superuserSaja, terkunci } from '@/shared/lib/keamanan-superuser';
+import { BATAS_GAGAL, JENDELA_MS, POLA_PIN, superuserSaja, terkunci } from '@/shared/lib/keamanan-superuser';
+import { ambilJatah, kembalikanJatah } from '@/shared/lib/auth/percobaan';
 
 // ============================================================
 // API: /api/profile/pin-reset — PIN Reset Total milik Superuser
@@ -22,8 +23,6 @@ export async function GET() {
 export async function PUT(req: Request) {
   const { galat, user } = await superuserSaja();
   if (galat) return galat;
-  if ((await jumlahGagal(user.username, GAGAL)) >= BATAS_GAGAL) return terkunci();
-
   const body = await req.json().catch(() => ({}));
   const password = typeof body?.password === 'string' ? body.password : '';
   const pin = typeof body?.pin === 'string' ? body.pin : '';
@@ -33,11 +32,14 @@ export async function PUT(req: Request) {
   if (/^(\d)\1{5}$/.test(pin) || '0123456789'.includes(pin) || '9876543210'.includes(pin)) {
     return NextResponse.json({ success: false, message: 'PIN terlalu mudah ditebak (angka sama / berurutan)' }, { status: 400 });
   }
+  const jatah = await ambilJatah(user.username, GAGAL, BATAS_GAGAL, JENDELA_MS, 'Password salah saat mengatur PIN Reset Total');
+  if (!jatah) return terkunci();
   const { ok } = await verifyPassword(password, user.passwordHash);
   if (!ok) {
-    await catatGagal(user.username, GAGAL, 'Password salah saat mengatur PIN Reset Total');
     return NextResponse.json({ success: false, message: 'Password akun salah' }, { status: 401 });
   }
+
+  await kembalikanJatah(jatah.id);
 
   await db.update(users).set({ pinResetHash: await hashPassword(pin), updatedAt: new Date() }).where(eq(users.id, user.id));
   await db.insert(logs).values({ user: user.username, aksi: 'PIN_RESET_DIATUR', detail: 'Superuser mengatur / mengganti PIN Reset Total' });

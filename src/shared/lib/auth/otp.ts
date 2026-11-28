@@ -1,7 +1,7 @@
 import crypto from 'crypto';
 import { and, count, eq, gt } from 'drizzle-orm';
 import { db } from '@/shared/lib/db';
-import { logs, otpCodes } from '@/shared/lib/db/schema';
+import { otpCodes } from '@/shared/lib/db/schema';
 
 // ============================================================
 // OTP RESET PASSWORD — aturan & batas percobaan (Node.js only)
@@ -24,25 +24,11 @@ export function generateOtp(): string {
   return crypto.randomInt(0, 1_000_000).toString().padStart(6, '0');
 }
 
-export async function recentOtpRequests(email: string): Promise<number> {
-  const [row] = await db
+export async function recentOtpRequests(ex: Pick<typeof db, 'select'>, email: string): Promise<number> {
+  const [row] = await ex
     .select({ n: count() })
     .from(otpCodes)
     .where(and(eq(otpCodes.email, email), gt(otpCodes.createdAt, new Date(Date.now() - OTP_WINDOW_MS))));
-  return Number(row?.n ?? 0);
-}
-
-export async function recentOtpFails(email: string): Promise<number> {
-  const [row] = await db
-    .select({ n: count() })
-    .from(logs)
-    .where(
-      and(
-        eq(logs.user, email.slice(0, 50)),
-        eq(logs.aksi, OTP_FAIL_ACTION),
-        gt(logs.createdAt, new Date(Date.now() - OTP_WINDOW_MS))
-      )
-    );
   return Number(row?.n ?? 0);
 }
 

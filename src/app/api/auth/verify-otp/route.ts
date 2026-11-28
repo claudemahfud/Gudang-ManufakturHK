@@ -3,7 +3,8 @@ import { db } from '@/shared/lib/db';
 import { users, otpCodes, logs } from '@/shared/lib/db/schema';
 import { and, desc, eq, gt, sql } from 'drizzle-orm';
 import { hashPassword, tokenHashEquals } from '@/shared/lib/auth/password';
-import { OTP_FAIL_ACTION, OTP_MAX_FAILS, normalizeEmail, recentOtpFails } from '@/shared/lib/auth/otp';
+import { OTP_FAIL_ACTION, OTP_MAX_FAILS, OTP_WINDOW_MS, normalizeEmail } from '@/shared/lib/auth/otp';
+import { ambilJatah, kembalikanJatah } from '@/shared/lib/auth/percobaan';
 
 const invalidOtp = () =>
   NextResponse.json(
@@ -33,7 +34,8 @@ export async function POST(req: Request) {
     }
 
     // Kunci sementara setelah terlalu banyak tebakan salah
-    if ((await recentOtpFails(email)) >= OTP_MAX_FAILS) {
+    const jatah = await ambilJatah(email, OTP_FAIL_ACTION, OTP_MAX_FAILS, OTP_WINDOW_MS, 'Verifikasi OTP reset password gagal');
+    if (!jatah) {
       await db
         .update(otpCodes)
         .set({ used: true })
@@ -53,11 +55,6 @@ export async function POST(req: Request) {
       .limit(1);
 
     if (!activeOtp || !/^\d{6}$/.test(otp) || !tokenHashEquals(otp, activeOtp.otpHash)) {
-      await db.insert(logs).values({
-        user: email.slice(0, 50),
-        aksi: OTP_FAIL_ACTION,
-        detail: 'Verifikasi OTP reset password gagal',
-      });
       return invalidOtp();
     }
 
@@ -98,6 +95,7 @@ export async function POST(req: Request) {
     });
 
     if (!consumed) return invalidOtp();
+    await kembalikanJatah(jatah.id);
 
     return NextResponse.json({
       success: true,

@@ -2,7 +2,8 @@ import { NextResponse } from 'next/server';
 import { sql } from 'drizzle-orm';
 import { db } from '@/shared/lib/db';
 import { verifyPassword } from '@/shared/lib/auth/password';
-import { BATAS_GAGAL, catatGagal, jumlahGagal, superuserSaja, terkunci } from '@/shared/lib/keamanan-superuser';
+import { BATAS_GAGAL, JENDELA_MS, superuserSaja, terkunci } from '@/shared/lib/keamanan-superuser';
+import { ambilJatah, kembalikanJatah } from '@/shared/lib/auth/percobaan';
 
 // ============================================================
 // API: POST /api/admin/reset-total  { pin, konfirmasi: 'RESET TOTAL' }
@@ -23,8 +24,6 @@ const DIKECUALIKAN = new Set(['users', 'akun', 'master_cabang']);
 export async function POST(req: Request) {
   const { galat, user } = await superuserSaja();
   if (galat) return galat;
-  if ((await jumlahGagal(user.username, GAGAL)) >= BATAS_GAGAL) return terkunci();
-
   const body = await req.json().catch(() => ({}));
   if (body?.konfirmasi !== KONFIRMASI) {
     return NextResponse.json({ success: false, message: `Ketik "${KONFIRMASI}" untuk konfirmasi` }, { status: 400 });
@@ -33,15 +32,18 @@ export async function POST(req: Request) {
     return NextResponse.json({ success: false, message: 'PIN Reset Total belum diatur. Atur di Setting Akun & Profil.' }, { status: 400 });
   }
   const pin = typeof body?.pin === 'string' ? body.pin : '';
+  const jatah = await ambilJatah(user.username, GAGAL, BATAS_GAGAL, JENDELA_MS, 'PIN salah saat Reset Total');
+  if (!jatah) return terkunci();
   const { ok } = await verifyPassword(pin, user.pinResetHash);
   if (!ok) {
-    await catatGagal(user.username, GAGAL, 'PIN salah saat Reset Total');
-    const sisa = BATAS_GAGAL - (await jumlahGagal(user.username, GAGAL));
+    const { sisa } = jatah;
     return NextResponse.json(
       { success: false, message: sisa > 0 ? `PIN salah. Sisa ${sisa} percobaan.` : 'PIN salah. Reset Total dikunci 15 menit.' },
       { status: 401 }
     );
   }
+
+  await kembalikanJatah(jatah.id);
 
   const tabel = (await db.execute(sql`
     SELECT tablename FROM pg_tables WHERE schemaname = 'public' ORDER BY tablename
