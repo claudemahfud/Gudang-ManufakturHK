@@ -4,6 +4,45 @@ Dokumen ini adalah pedoman utama bagi developer dan asisten AI yang bekerja di r
 
 ---
 
+## 🔒 ATURAN ENV & RAHASIA (WAJIB, TANPA PENGECUALIAN)
+
+> [!CAUTION]
+> **ENV TIDAK BOLEH DIUNGGAH KE MANA PUN. JANGAN MELOLOSKAN SATU PUN.**
+> Pernah terjadi: sandi database ditulis langsung di skrip, ter-push ke repo publik, dan tetap tersimpan di riwayat git setelah dihapus dari berkas. Satu-satunya perbaikan yang menutup kebocoran adalah mengganti sandinya.
+
+**Yang termasuk rahasia:** semua berkas env (`.env`, `.env.local`, `.env.production`, `*.env`, `env.txt`, ekspor env dari Vercel), `DATABASE_URL`, sandi database, `AUTH_SECRET`, `APP_SECRET`, API key / token apa pun, `service_role` key, private key, sandi dan PIN akun, serta cadangan repo atau dump database yang memuat salah satunya. Satu-satunya berkas env yang boleh masuk git adalah `.env.example`, dan **isinya hanya nama variabel dengan nilai contoh palsu**.
+
+**Dilarang** mengirim rahasia ke: commit, cabang, atau riwayat git (repo publik **maupun private**); isi atau judul PR, issue, komentar; chat, termasuk chat dengan asisten AI; tangkapan layar; log aplikasi, log build, dan keluaran terminal; Google Drive, email, paste site, atau layanan pihak ketiga lain; variabel berawalan `NEXT_PUBLIC_` (ikut terkirim ke browser).
+
+**Aturan kode:**
+* Semua rahasia dibaca dari `process.env`. Dilarang menulisnya di kode, skrip sekali pakai, migrasi, seed, tes, atau dokumentasi, juga sebagai nilai cadangan (`process.env.X || 'nilai-asli'`).
+* Skrip yang butuh env dijalankan dengan `node --env-file=.env.local ...`.
+* Asisten AI: jangan menampilkan isi berkas env atau mencetak nilai rahasia. Bila perlu memeriksa, cetak nama variabel atau hasil benar/salah saja.
+* Rahasia produksi hanya disimpan di `.env.local` (komputer sendiri) dan di Environment Variables milik Vercel, ditandai **Sensitive**. Pemilik yang mengetik nilainya sendiri.
+
+**Wajib sebelum setiap commit dan push:**
+1. `git status` dan `git diff --cached --name-only`: tidak ada berkas env selain `.env.example`. Dilarang `git add -f` untuk berkas env.
+2. Periksa isi diff: tidak ada URL database bersandi, token, atau kunci.
+3. Dilarang melonggarkan pola env di `.gitignore` dan `.vercelignore`.
+4. Ragu apakah sebuah nilai itu rahasia? Anggap rahasia dan **hentikan push**.
+
+**Bila rahasia terlanjur lolos:** ganti (rotate) rahasia itu **lebih dulu**, baru bersihkan riwayat git, lalu minta GitHub Support membuang cache dan referensi PR. Menghapus berkas atau menulis ulang riwayat saja **tidak** menutup kebocoran.
+
+### Pindah ke akun GitHub baru dan database Supabase baru
+
+Daftar ini dipakai **saat pemindahan dilakukan**. Pemindahan belum dijadwalkan; jangan memulainya tanpa perintah pemilik.
+
+1. **Rahasia baru semua.** Proyek Supabase baru memakai sandi database baru yang acak; buat `AUTH_SECRET`, `APP_SECRET`, dan API key baru. Dilarang menyalin rahasia lama.
+2. **Jangan membawa riwayat lama mentah-mentah.** Sebelum push pertama ke repo baru, pindai **seluruh riwayat** untuk rahasia (mis. `gitleaks detect` atau GitHub secret scanning). Bila ragu, mulai repo baru dari satu commit awal yang bersih.
+3. Jangan pernah push dari cadangan (`*.bundle`) atau salinan repo yang dibuat sebelum riwayat dibersihkan.
+4. Repo baru dibuat **Private**. Aktifkan **Secret scanning** dan **Push protection** sebelum push pertama (bila paket akun menyediakannya).
+5. `.gitignore` dan `.vercelignore` harus sudah ikut di commit pertama. Periksa `git ls-files` sebelum push: hanya `.env.example`.
+6. Isi Environment Variables di Vercel lewat dashboard oleh pemilik, bukan lewat berkas yang diunggah atau ditempel di chat.
+7. Data database dipindahkan lewat dump yang disimpan di luar folder repo, lalu dihapus setelah selesai.
+8. Setelah pindah terbukti berjalan: matikan atau hapus proyek lama dan cabut semua kunci lama.
+
+---
+
 ## ⚠️ PENTING: ATURAN ANTI-DUPLIKASI FITUR (WAJIB DIBACA)
 
 > [!CAUTION]
@@ -141,6 +180,13 @@ Teks tidak boleh bertumpuk padat tanpa napas (*kruntelan*). Setiap teks wajib me
   * Background gelap (dark mode / header POS): teks utama `text-white`, teks sekunder `text-slate-200` / `text-slate-300`.
 * **Line Height**: Gunakan `leading-tight` pada heading/title dan `leading-normal` atau `leading-relaxed` pada body copy untuk memastikan kenyamanan mata saat membaca (*breathing space*).
 * **Keyboard & Screen Reader**: Berikan atribut `aria-label`, `aria-labelledby`, dan support tombol `Esc` untuk menutup popup/drawer/mega menu.
+
+### 4. TypeScript & Layout Compact (WAJIB)
+* **TypeScript**: kode aplikasi ditulis dalam `.ts` / `.tsx`. Berkas baru dan baris yang diubah tidak memakai `any` atau `@ts-ignore`; beri tipe yang jelas. `npx tsc --noEmit` wajib lolos sebelum commit.
+* **WCAG**: setiap halaman dan komponen yang dibuat atau diubah memenuhi pedoman Level AA di atas, termasuk fokus keyboard yang terlihat, label pada setiap input, dan informasi yang tidak hanya dibedakan lewat warna.
+* **Compact dan padat**: utamakan banyak informasi terbaca dalam satu layar tanpa ruang kosong berlebih. Padat tidak berarti berdesakan: pola tipografi di atas tetap berlaku, dan target sentuh minimal 24x24 px (44x44 px untuk kasir / layar sentuh).
+* **Rapi, rata, terstruktur**: pakai grid dan skala jarak Tailwind yang konsisten; label, kolom, dan tombol sejajar; angka rata kanan dengan `tabular-nums`; blok halaman memakai tag semantik di atas.
+* **Dinamis**: layout menyesuaikan lebar layar (ponsel 360 px sampai desktop) tanpa gulir horizontal halaman; tabel lebar bergulir di dalam wadahnya sendiri; teks panjang tidak merusak susunan.
 
 ---
 
