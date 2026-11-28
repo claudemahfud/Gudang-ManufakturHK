@@ -1,6 +1,6 @@
-import { and, count, eq, gt } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import { db } from '@/shared/lib/db';
-import { logs, users } from '@/shared/lib/db/schema';
+import { users } from '@/shared/lib/db/schema';
 import { requireAuthRole } from '@/shared/lib/auth/rbac';
 import { roleUtamaDi } from '@/shared/lib/auth/roles';
 import { NextResponse } from 'next/server';
@@ -38,19 +38,6 @@ export async function superuserSaja() {
     return { galat: NextResponse.json({ success: false, message: 'Akun tidak ditemukan' }, { status: 401 }), user: null as null };
   }
   return { galat: null, user: u };
-}
-
-/** Jumlah kegagalan terbaru untuk aksi tertentu oleh akun ini. */
-export async function jumlahGagal(username: string, aksiGagal: string) {
-  const [row] = await db
-    .select({ n: count() })
-    .from(logs)
-    .where(and(eq(logs.user, username), eq(logs.aksi, aksiGagal), gt(logs.createdAt, new Date(Date.now() - JENDELA_MS))));
-  return Number(row?.n ?? 0);
-}
-
-export async function catatGagal(username: string, aksiGagal: string, detail: string) {
-  await db.insert(logs).values({ user: username, aksi: aksiGagal, detail });
 }
 
 export function terkunci() {

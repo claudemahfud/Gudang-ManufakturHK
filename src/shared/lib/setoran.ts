@@ -120,6 +120,38 @@ async function kunci(tx: Tx, id: string) {
   return r;
 }
 
+/**
+ * Dipanggil saat pembatalan penjualan akan mengurangi kas seorang penjual. Uang yang sudah disetor
+ * (atau terkunci pengajuan yang menunggu) tidak bisa ditarik lagi darinya: bagian itu keluar dari Kas
+ * kantor lewat jurnal koreksi, sehingga saldo penjual tidak minus. Return bagian yang ditanggung kantor.
+ */
+export async function tanggungKantor(
+  tx: Tx,
+  p: { divisi: string; cabang: string; referensi: string; user: string },
+  sales: string,
+  diambil: number
+) {
+  await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${'setoran:' + sales}))`);
+  const [s] = await saldoSales(tx, p.divisi, sales);
+  const kurang = rp(diambil - s.tersedia);
+  if (kurang <= TOLERANSI) return 0;
+  await posting(tx, {
+    tanggal: new Date(),
+    divisi: p.divisi,
+    cabang: p.cabang,
+    sumber: 'KOREKSI_KAS',
+    referensi: p.referensi,
+    keterangan: `Batal ${p.referensi}: Rp ${kurang.toLocaleString('id-ID')} sudah disetor ${s.nama}, dikembalikan dari Kas kantor`,
+    user: p.user,
+    manual: true,
+    baris: [
+      { akun: AKUN.KAS_SALES, debit: kurang, sales },
+      { akun: AKUN.KAS_TUNAI, kredit: kurang },
+    ],
+  });
+  return kurang;
+}
+
 /** Pemisahan tugas: yang menyetor tidak boleh mengonfirmasi/menolak setorannya sendiri. */
 function bukanSendiri(r: { sales: string; noSetoran: string }, username: string) {
   if (r.sales === username) {
@@ -246,7 +278,7 @@ export async function omsetHariIni(ex: Executor, divisi: string, sales: string) 
            COALESCE(SUM(b.debit - b.kredit) FILTER (WHERE b.akun_kode <> ${AKUN.KAS_SALES}), 0)::float8 AS non_tunai
     FROM jurnal_baris b JOIN jurnal j ON j.id = b.jurnal_id
     LEFT JOIN jurnal asal ON asal.id = j.pembalik_dari
-    WHERE b.sales = ${sales} AND j.entitas = ${entitasDari(divisi)} AND COALESCE(asal.sumber, j.sumber) NOT IN ('SETORAN','BIAYA','VERIFIKASI')
+    WHERE b.sales = ${sales} AND j.entitas = ${entitasDari(divisi)} AND COALESCE(asal.sumber, j.sumber) NOT IN ('SETORAN','BIAYA','VERIFIKASI','KOREKSI_KAS')
       AND (j.tanggal + interval '7 hours')::date = (now() AT TIME ZONE 'Asia/Jakarta')::date
   `)) as unknown as { tunai: number; non_tunai: number }[];
   return { tunai: rp(Number(r?.tunai) || 0), nonTunai: rp(Number(r?.non_tunai) || 0) };

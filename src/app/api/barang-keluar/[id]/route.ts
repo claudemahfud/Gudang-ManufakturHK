@@ -7,6 +7,7 @@ import { BusinessError, errorResponse, incrementStock } from '@/shared/lib/stock
 import { assertSupervisorPin, getPengaturan } from '@/shared/lib/pengaturan';
 import { batalkanFakturPenjualan } from '@/shared/lib/faktur-penjualan';
 import { AKUN, AKUN_KAS, barisJurnalAktif, posting } from '@/shared/lib/jurnal';
+import { tanggungKantor } from '@/shared/lib/setoran';
 
 const rp = (n: number) => Math.round(n * 100) / 100;
 
@@ -76,6 +77,9 @@ export async function DELETE(
         const bruto = rp(Number(item.hargaJual ?? 0) * item.qty);
         const neto = rp(total);
         const hpp = rp(Number(item.hpp ?? 0));
+        if (kas === AKUN.KAS_SALES && barisKas?.sales && neto > 0) {
+          await tanggungKantor(tx, { divisi: item.divisi, cabang: item.cabang, referensi: item.trxId, user }, barisKas.sales, neto);
+        }
         await posting(tx, {
           tanggal: new Date(),
           divisi: item.divisi,

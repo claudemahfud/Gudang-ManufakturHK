@@ -1,0 +1,8 @@
+# Env & rahasia tidak boleh ikut terunggah saat deploy lewat CLI (lihat CLAUDE.md)
+.env*
+*.env
+*.env.*
+env.txt
+!.env.example
+*.pem
+*.bundle
