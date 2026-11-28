@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { CheckCircle2, AlertOctagon, AlertTriangle, Info, X } from 'lucide-react';
+import SwipeDismiss from '@/shared/components/ui/SwipeDismiss';
 
 export interface ToastData {
   type: 'success' | 'error' | 'warning' | 'info';
@@ -23,9 +24,10 @@ export function ToastFloater({ toast, onClose }: ToastFloaterProps) {
   const isInfo = toast.type === 'info';
 
   return (
-    <div className="fixed top-5 right-5 z-[9999] max-w-md w-full animate-in slide-in-from-top-3 duration-200">
-      <div
-        className={`p-4 rounded-2xl shadow-2xl flex items-start gap-3 border backdrop-blur-md transition-all ${
+    <div className="fixed top-4 inset-x-3 sm:inset-x-auto sm:top-5 sm:right-5 z-[9999] sm:max-w-md sm:w-full animate-in slide-in-from-top-3 duration-200">
+      <SwipeDismiss onDismiss={onClose}>
+        <div
+          className={`p-4 rounded-2xl shadow-2xl flex items-start gap-3 border backdrop-blur-md transition-all ${
           isSuccess
             ? 'bg-emerald-900/95 text-white border-emerald-500/50 shadow-emerald-950/25'
             : isWarning
@@ -74,7 +76,8 @@ export function ToastFloater({ toast, onClose }: ToastFloaterProps) {
         >
           <X className="w-4 h-4" />
         </button>
-      </div>
+        </div>
+      </SwipeDismiss>
     </div>
   );
 }

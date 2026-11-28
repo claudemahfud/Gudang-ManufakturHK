@@ -6,7 +6,7 @@
 // ============================================================
 
 import { useState, useEffect, useRef } from 'react';
-import { formatRupiah, formatStok } from '@/shared/lib/utils';
+import { formatRupiah, formatStok, formatUkuranKali } from '@/shared/lib/utils';
 import type { InventoryItem } from '@/shared/types';
 import { useDivision } from '@/shared/context/DivisionContext';
 import { Factory, Coffee, Download, Trash2, AlertCircle, Sparkles, Info, Plus } from 'lucide-react';
@@ -1308,6 +1308,14 @@ export default function Inventory() {
                             />
                             <span className="text-xs text-gray-500">pcs per 1 karton (min. 2)</span>
                           </div>
+                          {Number(form.settingPcs) > 1 && (
+                            <p className="text-[11px] font-semibold text-emerald-700 mt-1.5">
+                              1 karton = {Number(form.settingPcs)} pcs
+                              {form.gramasi && formatUkuranKali(form.gramasi, Number(form.settingPcs))
+                                ? ` (= ${formatUkuranKali(form.gramasi, Number(form.settingPcs))})`
+                                : ''}
+                            </p>
+                          )}
                           <label className="block text-[11px] font-medium text-gray-600 mt-2.5 mb-1">
                             Harga Beli per Karton (Rp)
                           </label>

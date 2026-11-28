@@ -4,7 +4,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Camera, Calendar, DollarSign, Building2, CreditCard, CheckCircle2, AlertCircle, Trash2, Sparkles, FileText, Download, Search, RefreshCw, Plus, ChevronDown, Truck, RotateCcw } from 'lucide-react';
-import { formatTanggal, formatTanggalWaktu, formatRupiah, bacaGramasi, formatBerat } from '@/shared/lib/utils';
+import { formatTanggal, formatTanggalWaktu, formatRupiah, formatUkuranKali } from '@/shared/lib/utils';
 import { useBarcodeScanner } from '@/shared/hooks/useBarcodeScanner';
 import CameraBarcodeScanner from '@/shared/components/ui/CameraBarcodeScanner';
 import { ToastFloater, ToastData } from '@/shared/components/ui/ToastFloater';
@@ -273,7 +273,6 @@ export default function BarangMasuk() {
   // Isi karton: dari master bila ada, selain itu dari isian form (disimpan ke master saat simpan)
   const isiKarton = isiMaster || Math.floor(Number(form.isiKarton) || 0);
   const pengali = pakaiKarton && isiKarton > 1 ? isiKarton : 1;
-  const berat = bacaGramasi(selectedInv?.gramasi);
   const curStock = Number(selectedInv?.stok) || 0;
   const curPrice = Number(selectedInv?.hargaBeli) || 0;
   // Stok & HPP dihitung per pcs (server mengonversi dengan cara yang sama)
@@ -954,18 +953,22 @@ export default function BarangMasuk() {
                         <div className="space-y-0.5 text-[11px] text-gray-600">
                           <p>
                             1 pcs
-                            {berat
-                              ? ` = ${formatBerat(berat.nilai, berat.jenis)}`
-                              : selectedInv?.gramasi
-                                ? ` = ${selectedInv.gramasi}`
-                                : ''}
-                            {isiKarton > 1 &&
-                              ` · 1 karton = ${isiKarton} pcs${berat ? ` = ${formatBerat(berat.nilai * isiKarton, berat.jenis)}` : ''}`}
+                            {selectedInv?.gramasi ? ` = ${selectedInv.gramasi}` : ''}
+                            {isiKarton > 1 && (
+                              <>
+                                {' '}· 1 karton = {isiKarton} pcs
+                                {selectedInv?.gramasi && formatUkuranKali(selectedInv.gramasi, isiKarton)
+                                  ? ` = ${formatUkuranKali(selectedInv.gramasi, isiKarton)}`
+                                  : ''}
+                              </>
+                            )}
                           </p>
-                          {qtyIn > 0 && (pengali > 1 || berat) && (
+                          {qtyIn > 0 && (pengali > 1 || selectedInv?.gramasi) && (
                             <p className="font-semibold text-emerald-700">
                               Stok masuk: {qtyIn.toLocaleString('id-ID')} pcs
-                              {berat ? ` = ${formatBerat(berat.nilai * qtyIn, berat.jenis)}` : ''}
+                              {selectedInv?.gramasi && formatUkuranKali(selectedInv.gramasi, qtyIn)
+                                ? ` = ${formatUkuranKali(selectedInv.gramasi, qtyIn)}`
+                                : ''}
                             </p>
                           )}
                         </div>

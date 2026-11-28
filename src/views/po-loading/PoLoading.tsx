@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { formatTanggal, formatTanggalWaktu } from '@/shared/lib/utils';
+import { formatTanggal, formatTanggalWaktu, formatUkuranKali } from '@/shared/lib/utils';
 import { FileText, Download, Plus, Trash2, Search, RefreshCw, X, PackageCheck } from 'lucide-react';
 import DocumentModalViewer, { DocumentData } from '@/shared/components/documents/DocumentModalViewer';
 import { exportToCsv, exportRekapToPdfA4Landscape } from '@/shared/lib/exportDoc';
@@ -41,8 +41,15 @@ interface PoHeader {
 interface InventoryOption {
   sku: string;
   namaBarang: string;
+  supplier?: string | null;
+  gramasi?: string | null;
   pakaiKarton?: boolean | null;
   settingPcs?: number | null;
+}
+
+interface SupplierOption {
+  id: string;
+  nama: string;
 }
 
 interface ItemRow {
@@ -56,6 +63,7 @@ export default function PoLoading() {
   const router = useRouter();
   const [data, setData] = useState<PoHeader[]>([]);
   const [inventoryList, setInventoryList] = useState<InventoryOption[]>([]);
+  const [suppliersList, setSuppliersList] = useState<SupplierOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -197,9 +205,21 @@ export default function PoLoading() {
     } catch {}
   };
 
+  const fetchSuppliers = async () => {
+    try {
+      const res = await fetch('/api/suppliers');
+      const json = await res.json();
+      if (json.success && Array.isArray(json.data)) {
+        setSuppliersList(json.data);
+        setSupplier((prev) => prev || json.data[0]?.nama || '');
+      }
+    } catch {}
+  };
+
   useEffect(() => {
     fetchData();
     fetchInventory();
+    fetchSuppliers();
   }, []);
 
   const showToast = (message: string, type: 'success' | 'error') => {
@@ -259,7 +279,7 @@ export default function PoLoading() {
       if (json.success) {
         showToast('PO Loading berhasil dibuat!', 'success');
         setIsModalOpen(false);
-        setSupplier('');
+        setSupplier(suppliersList[0]?.nama || '');
         setArmada('');
         setCatatan('');
         setItems([{ sku: '', namaBarang: '', qtyOrder: 1, satuan: 'pcs' }]);
@@ -542,14 +562,29 @@ export default function PoLoading() {
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-gray-700 mb-1">Nama Supplier / Pabrik *</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="Contoh: PT. Sumber Makmur"
-                    value={supplier}
-                    onChange={(e) => setSupplier(e.target.value)}
-                    className="w-full h-10 px-3 rounded-xl border border-gray-200 text-sm focus:border-emerald-500 outline-none"
-                  />
+                  {suppliersList.length > 0 ? (
+                    <select
+                      required
+                      value={supplier}
+                      onChange={(e) => setSupplier(e.target.value)}
+                      className="w-full h-10 px-3 rounded-xl border border-gray-200 text-sm focus:border-emerald-500 outline-none bg-white font-medium"
+                    >
+                      {suppliersList.map((s) => (
+                        <option key={s.id} value={s.nama}>
+                          {s.nama}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <input
+                      type="text"
+                      required
+                      placeholder="Contoh: PT. Sumber Makmur"
+                      value={supplier}
+                      onChange={(e) => setSupplier(e.target.value)}
+                      className="w-full h-10 px-3 rounded-xl border border-gray-200 text-sm focus:border-emerald-500 outline-none"
+                    />
+                  )}
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-gray-700 mb-1">Armada / NoPol Pengangkut</label>
@@ -646,6 +681,9 @@ export default function PoLoading() {
                           {row.satuan === 'karton' && isi > 1 && row.qtyOrder > 0 && (
                             <span className="text-[10px] text-emerald-700 font-medium mt-0.5">
                               = {(row.qtyOrder * isi).toLocaleString('id-ID')} pcs
+                              {prod?.gramasi && formatUkuranKali(prod.gramasi, row.qtyOrder * isi)
+                                ? ` (${formatUkuranKali(prod.gramasi, row.qtyOrder * isi)})`
+                                : ''}
                             </span>
                           )}
                         </div>

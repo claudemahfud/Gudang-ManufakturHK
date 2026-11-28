@@ -97,6 +97,26 @@ export function formatBerat(nilai: number, jenis: 'berat' | 'volume'): string {
 }
 
 /**
+ * Hitung total ukuran/satuan untuk N pcs berdasarkan gramasi/satuan per item.
+ * Contoh: "1Kg" x 20 -> "20 kg (20.000 g)", "16oz" x 20 -> "320 oz", "1 bungkus" x 20 -> "20 bungkus".
+ */
+export function formatUkuranKali(gramasi: string | null | undefined, jumlahPcs: number): string | null {
+  const teks = String(gramasi ?? '').trim();
+  if (!teks || !Number.isFinite(jumlahPcs) || jumlahPcs <= 0) return null;
+  const g = bacaGramasi(teks);
+  if (g) return formatBerat(g.nilai * jumlahPcs, g.jenis);
+
+  const m = teks.replace(',', '.').match(/^([\d.]+)\s*(.+)$/);
+  const fmt = (x: number) => x.toLocaleString('id-ID', { maximumFractionDigits: 2 });
+  if (m) {
+    const n = parseFloat(m[1]);
+    const unit = m[2].trim();
+    if (Number.isFinite(n) && n > 0 && unit) return `${fmt(n * jumlahPcs)} ${unit}`;
+  }
+  return `${fmt(jumlahPcs)} ${teks}`;
+}
+
+/**
  * Generate nomor transaksi unik
  */
 export function generateTrxId(prefix: string = 'TRX'): string {

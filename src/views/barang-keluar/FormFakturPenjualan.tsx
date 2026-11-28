@@ -8,7 +8,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { Plus, Receipt, Trash2, X } from 'lucide-react';
-import { formatRupiah } from '@/shared/lib/utils';
+import { formatRupiah, formatUkuranKali } from '@/shared/lib/utils';
 import { hitungFaktur, LABEL_STATUS, type MetodeBayar } from '@/shared/lib/faktur-hitung';
 import PilihSatuan from '@/shared/components/ui/PilihSatuan';
 
@@ -17,6 +17,7 @@ export interface InventoryOption {
   namaBarang: string;
   stok: number;
   hargaJual: string | null;
+  gramasi?: string | null;
   settingPcs?: number;
   pakaiKarton?: boolean;
 }
@@ -352,7 +353,12 @@ export default function FormFakturPenjualan({
                             />
                             {lebih && <div className="text-[10px] text-red-600 mt-0.5 text-center">Stok {stok ?? 0} pcs</div>}
                             {!lebih && b.satuan === 'karton' && (
-                              <div className="text-[10px] text-gray-500 mt-0.5 text-center tabular-nums">= {qtyPcs(b)} pcs</div>
+                              <div className="text-[10px] text-gray-500 mt-0.5 text-center tabular-nums">
+                                = {qtyPcs(b)} pcs
+                                {produk?.gramasi && formatUkuranKali(produk.gramasi, qtyPcs(b))
+                                  ? ` (${formatUkuranKali(produk.gramasi, qtyPcs(b))})`
+                                  : ''}
+                              </div>
                             )}
                           </td>
                           <td className="p-2">
