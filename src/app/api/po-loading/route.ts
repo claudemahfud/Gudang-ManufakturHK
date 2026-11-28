@@ -3,10 +3,11 @@ import { db } from '@/shared/lib/db';
 import { poLoading, poLoadingItems, logs } from '@/shared/lib/db/schema';
 import { requireAuthRole, ROLES_WAREHOUSE } from '@/shared/lib/auth/rbac';
 import { resolveRequestCabang } from '@/shared/lib/stock';
-import { desc, inArray } from 'drizzle-orm';
+import { desc, eq, inArray } from 'drizzle-orm';
 import { PO_STATUS } from '@/shared/lib/po-status';
 import { nomorUrut } from '@/shared/lib/nomor-urut';
 import { normalizeSatuan } from '@/shared/lib/satuan';
+import { roleUtamaDi } from '@/shared/lib/auth/roles';
 
 // ============================================================
 // API: /api/po-loading
@@ -21,19 +22,28 @@ export async function GET(req: Request) {
 
     // ?terbuka=1: PO yang menunggu barang datang (untuk Barang Masuk), lengkap dengan item
     if (new URL(req.url).searchParams.get('terbuka') === '1') {
+      const userCabang = (authResult.user as any)?.cabang || 'Pusat';
+      const isExecutive = roleUtamaDi(authResult.user, ['Administrator', 'Direktur Utama', 'Manager', 'Manager Umum']);
       const open = await db
         .select()
         .from(poLoading)
-        .where(inArray(poLoading.status, [PO_STATUS.PROSES, PO_STATUS.SEBAGIAN]))
+        .where(
+          !isExecutive && userCabang !== 'ALL' && userCabang !== 'Pusat'
+            ? eq(poLoading.cabang, userCabang)
+            : inArray(poLoading.status, [PO_STATUS.PROSES, PO_STATUS.SEBAGIAN])
+        )
         .orderBy(desc(poLoading.tanggal))
         .limit(200);
-      const items = open.length
+      const openFiltered = open.filter(
+        (p) => p.status === PO_STATUS.PROSES || p.status === PO_STATUS.SEBAGIAN
+      );
+      const items = openFiltered.length
         ? await db
             .select()
             .from(poLoadingItems)
-            .where(inArray(poLoadingItems.poLoadingId, open.map((p) => p.id)))
+            .where(inArray(poLoadingItems.poLoadingId, openFiltered.map((p) => p.id)))
         : [];
-      const data = open.map((p) => ({ ...p, items: items.filter((it) => it.poLoadingId === p.id) }));
+      const data = openFiltered.map((p) => ({ ...p, items: items.filter((it) => it.poLoadingId === p.id) }));
       return NextResponse.json({ success: true, data });
     }
 
@@ -100,7 +110,7 @@ export async function POST(req: Request) {
       }
 
       await tx.insert(logs).values({
-        user,
+        user: user.slice(0, 50),
         aksi: 'BUAT_PO_LOADING',
         detail: `Menerbitkan ${noPo} ke supplier ${supplier}`,
       });

@@ -1,8 +1,9 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 import { formatTanggal, formatTanggalWaktu } from '@/shared/lib/utils';
-import { FileText, Download, Plus, Trash2, Search, RefreshCw } from 'lucide-react';
+import { FileText, Download, Plus, Trash2, Search, RefreshCw, X, PackageCheck } from 'lucide-react';
 import DocumentModalViewer, { DocumentData } from '@/shared/components/documents/DocumentModalViewer';
 import { exportToCsv, exportRekapToPdfA4Landscape } from '@/shared/lib/exportDoc';
 import DateTimeFilterBar from '@/shared/components/ui/DateTimeFilterBar';
@@ -52,6 +53,7 @@ interface ItemRow {
 }
 
 export default function PoLoading() {
+  const router = useRouter();
   const [data, setData] = useState<PoHeader[]>([]);
   const [inventoryList, setInventoryList] = useState<InventoryOption[]>([]);
   const [loading, setLoading] = useState(true);
@@ -707,8 +709,13 @@ export default function PoLoading() {
                 <h3 className="font-bold text-lg text-gray-800">PURCHASE ORDER</h3>
                 <div className="text-xs font-mono text-gray-500">No: {selectedDetail.noPo}</div>
               </div>
-              <button onClick={() => setSelectedDetail(null)} className="text-gray-400 hover:text-gray-600 font-bold">
-                
+              <button
+                type="button"
+                onClick={() => setSelectedDetail(null)}
+                aria-label="Tutup detail PO"
+                className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition"
+              >
+                <X className="w-5 h-5" />
               </button>
             </div>
 
@@ -749,10 +756,22 @@ export default function PoLoading() {
             </div>
 
             {isPoTerbuka(selectedDetail.status) && (
-              <p className="text-[11px] text-gray-500 bg-gray-50 border border-gray-100 rounded-lg px-3 py-2">
-                Saat barang tiba, terima lewat menu <strong>Barang Masuk &gt; PO Dalam Proses &gt; Barang Datang</strong>.
-                PO otomatis menjadi Faktur Pembelian dan stok bertambah sesuai barang yang diterima.
-              </p>
+              <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-gray-600 bg-emerald-50/70 border border-emerald-200 rounded-xl px-3.5 py-2.5">
+                <span>
+                  Saat barang tiba, terima lewat menu <strong>Barang Masuk &gt; PO Dalam Proses &gt; Barang Datang</strong>.
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedDetail(null);
+                    router.push('/barang-masuk');
+                  }}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-semibold transition shrink-0"
+                >
+                  <PackageCheck className="w-3.5 h-3.5" />
+                  <span>Terima Barang</span>
+                </button>
+              </div>
             )}
 
             <div className="flex flex-wrap items-center justify-between gap-2 pt-3 border-t">

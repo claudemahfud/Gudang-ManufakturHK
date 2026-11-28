@@ -17,6 +17,7 @@ export interface FakturItemInput {
   itemId: string;
   qtyTerima: unknown;
   hargaBeli?: unknown;
+  isiKarton?: unknown;
 }
 
 export interface FakturInput {
@@ -94,6 +95,7 @@ export async function terimaFakturPo(tx: Tx, poId: string, f: FakturInput) {
       cabang: po.cabang,
       keterangan: `Faktur pembelian dari ${po.noPo}`,
       user: f.user,
+      isiKarton: input.isiKarton ? Number(input.isiKarton) : null,
     });
     total += totalBeli;
     diterima.push(`${it.namaBarang} (${sku}) x${qty} ${it.satuan}`);
@@ -125,7 +127,7 @@ export async function terimaFakturPo(tx: Tx, poId: string, f: FakturInput) {
   await tx.update(poLoading).set({ status, updatedAt: new Date() }).where(eq(poLoading.id, poId));
 
   await tx.insert(logs).values({
-    user: f.user,
+    user: f.user.slice(0, 50),
     aksi: 'FAKTUR_PEMBELIAN_PO',
     detail: `Faktur ${f.noFaktur || '-'} dari ${po.noPo} (${po.supplier}) [${f.skemaBayar.toUpperCase()}] Rp ${total.toLocaleString('id-ID')}: ${diterima.join(', ')}. Status PO: ${status}`,
   });

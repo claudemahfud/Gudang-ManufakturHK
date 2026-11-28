@@ -221,5 +221,8 @@ export async function catatPembayaranPembelian(tx: Tx, p: PembayaranPembelianInp
 /** Jatuh tempo default 30 hari untuk skema hutang; null untuk lunas. */
 export function resolveJatuhTempo(skema: 'lunas' | 'hutang', tanggal: Date, jatuhTempo?: unknown): Date | null {
   if (skema !== 'hutang') return null;
-  return jatuhTempo ? new Date(String(jatuhTempo)) : new Date(tanggal.getTime() + 30 * 24 * 60 * 60 * 1000);
+  if (!jatuhTempo) return new Date(tanggal.getTime() + 30 * 24 * 60 * 60 * 1000);
+  const jt = new Date(String(jatuhTempo));
+  if (Number.isNaN(jt.getTime())) throw new BusinessError('Tanggal jatuh tempo tidak valid');
+  return jt;
 }

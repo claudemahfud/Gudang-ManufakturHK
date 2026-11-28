@@ -45,6 +45,7 @@ interface FakturRow {
   sisa: number;
   qtyTerima: string;
   hargaBeli: string;
+  isiKarton: string;
 }
 
 interface Hasil {
@@ -141,6 +142,7 @@ export default function PoDalamProses({ onReceived, notify }: { onReceived: () =
             sisa: it.qtyOrder - it.qtyTerima,
             qtyTerima: String(it.qtyOrder - it.qtyTerima),
             hargaBeli: hargaDefault > 0 ? String(hargaDefault) : '',
+            isiKarton: '',
           };
         })
         .filter((r) => r.sisa > 0)
@@ -156,9 +158,15 @@ export default function PoDalamProses({ onReceived, notify }: { onReceived: () =
     const q = Number(r.qtyTerima);
     return !Number.isInteger(q) || q < 0 || q > r.sisa;
   });
+  const isiKartonInvalid = rows.some((r) => {
+    const q = Number(r.qtyTerima);
+    if (q <= 0 || r.satuan !== 'karton') return false;
+    const isiMaster = isiKartonOf(produkMaster[r.sku.trim().toUpperCase()]);
+    return isiMaster <= 1 && (!Number.isInteger(Number(r.isiKarton)) || Number(r.isiKarton) < 2);
+  });
 
   const submit = async () => {
-    if (!po || !adaQty || qtyInvalid) return;
+    if (!po || !adaQty || qtyInvalid || isiKartonInvalid) return;
     setSubmitting(true);
     try {
       const res = await fetch(`/api/po-loading/${po.id}/faktur`, {
@@ -170,16 +178,20 @@ export default function PoDalamProses({ onReceived, notify }: { onReceived: () =
           skemaBayar,
           jatuhTempo: skemaBayar === 'hutang' && jatuhTempo ? jatuhTempo : undefined,
           divisi: division,
-          items: rows.map((r) => ({
-            itemId: r.itemId,
-            qtyTerima: Number(r.qtyTerima) || 0,
-            ...(bolehHpp && r.hargaBeli !== '' && { hargaBeli: Number(r.hargaBeli) }),
-          })),
+          items: rows.map((r) => {
+            const isiMaster = isiKartonOf(produkMaster[r.sku.trim().toUpperCase()]);
+            return {
+              itemId: r.itemId,
+              qtyTerima: Number(r.qtyTerima) || 0,
+              ...(bolehHpp && r.hargaBeli !== '' && { hargaBeli: Number(r.hargaBeli) }),
+              ...(r.satuan === 'karton' && isiMaster <= 1 && Number(r.isiKarton) >= 2 && { isiKarton: Number(r.isiKarton) }),
+            };
+          }),
         }),
       });
       const json = await res.json();
       if (!json.success) {
-        notify('error', json.message || 'Gagal menyimpan faktur pembelian');
+        notify('error', json.message || 'Gagal menyimpan faktur pembelian', json.penyebab);
         return;
       }
       setPo(null);
@@ -391,6 +403,20 @@ export default function PoDalamProses({ onReceived, notify }: { onReceived: () =
                               {r.sku}
                               {isi > 1 && <span className="ml-1.5 font-sans text-emerald-700 font-semibold">· 1 karton = {isi} pcs</span>}
                             </div>
+                            {r.satuan === 'karton' && isi <= 1 && q > 0 && (
+                              <div className="mt-1 flex items-center gap-1.5">
+                                <input
+                                  type="number"
+                                  min={2}
+                                  placeholder="Isi/krt"
+                                  value={r.isiKarton}
+                                  onChange={(e) => setRow(i, { isiKarton: e.target.value })}
+                                  aria-label={`Isi per karton ${r.namaBarang}`}
+                                  className="w-20 px-2 py-1 rounded border border-amber-300 bg-amber-50 text-[11px] font-semibold outline-none focus:border-emerald-500"
+                                />
+                                <span className="text-[10px] text-amber-700">pcs/karton (min. 2)</span>
+                              </div>
+                            )}
                           </td>
                           <td className="p-2.5 text-center tabular-nums text-gray-600">
                             {r.sisa} {r.satuan}
@@ -463,7 +489,7 @@ export default function PoDalamProses({ onReceived, notify }: { onReceived: () =
                 <button
                   type="button"
                   onClick={submit}
-                  disabled={submitting || !adaQty || qtyInvalid}
+                  disabled={submitting || !adaQty || qtyInvalid || isiKartonInvalid}
                   className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-bold"
                 >
                   {submitting ? 'Menyimpan...' : 'Submit Faktur Pembelian'}
