@@ -23,6 +23,7 @@ export interface BarisInput {
   hargaJual: number; // per satuan yang dipilih
   diskon: number;
   satuan: 'pcs' | 'karton';
+  isiKarton?: number | null;
 }
 
 export interface FakturPenjualanInput {
@@ -67,8 +68,18 @@ export async function buatFakturPenjualan(tx: Tx, f: FakturPenjualanInput) {
       .from(inventory)
       .where(eq(inventory.sku, b.sku));
     if (b.satuan === 'karton') {
-      if (!p?.pakaiKarton || p.settingPcs <= 1) throw new BusinessError(`Barang ${b.sku} tidak dijual per karton`);
-      isi = p.settingPcs;
+      const isiMaster = p?.pakaiKarton && p.settingPcs > 1 ? p.settingPcs : 0;
+      const isiForm = Math.floor(Number(b.isiKarton) || 0);
+      isi = isiMaster > 1 ? isiMaster : isiForm;
+      if (!Number.isFinite(isi) || isi <= 1) {
+        throw new BusinessError(`Isi per karton untuk ${b.sku} belum diatur (minimal 2 pcs).`);
+      }
+      if (isiMaster <= 1 && p) {
+        await tx
+          .update(inventory)
+          .set({ pakaiKarton: true, settingPcs: isi, updatedAt: new Date() })
+          .where(eq(inventory.sku, b.sku));
+      }
     }
     // Stok & baris barang_keluar selalu dalam pcs (laporan dan pembatalan bergantung pada ini).
     const qtyPcs = b.qty * isi;

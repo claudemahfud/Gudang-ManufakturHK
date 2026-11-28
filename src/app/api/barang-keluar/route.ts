@@ -161,7 +161,15 @@ export async function POST(req: Request) {
           { status: 400 }
         );
       }
-      baris.push({ sku, qty, hargaJual, diskon, satuan: it?.satuan === 'karton' ? 'karton' : 'pcs' });
+      const isiKarton = Number(it?.isiKarton) || 0;
+      baris.push({
+        sku,
+        qty,
+        hargaJual,
+        diskon,
+        satuan: it?.satuan === 'karton' ? 'karton' : 'pcs',
+        ...(isiKarton >= 2 && { isiKarton: Math.floor(isiKarton) }),
+      });
     }
 
     // Nomor diambil di dalam transaksi: gagal simpan = nomor tidak terpakai

@@ -39,6 +39,7 @@ interface Baris {
   hargaJual: number;
   diskon: number;
   satuan: 'pcs' | 'karton';
+  isiKarton?: number;
 }
 
 const barisKosong = (): Baris => ({ sku: '', qty: 1, hargaJual: 0, diskon: 0, satuan: 'pcs' });
@@ -123,11 +124,24 @@ export default function FormFakturPenjualan({
   const gantiSatuan = (i: number, satuan: Baris['satuan']) => {
     const p = invBySku.get(baris[i].sku);
     const hargaPcs = p?.hargaJual ? parseFloat(p.hargaJual) : 0;
-    ubahBaris(i, { satuan, hargaJual: satuan === 'karton' ? hargaPcs * isiKarton(p) : hargaPcs });
+    const isiMaster = isiKarton(p);
+    const isi = isiMaster > 1 ? isiMaster : (baris[i].isiKarton || 12);
+    ubahBaris(i, {
+      satuan,
+      ...(satuan === 'karton' && isiMaster <= 1 && !baris[i].isiKarton ? { isiKarton: isi } : {}),
+      hargaJual: satuan === 'karton' ? hargaPcs * isi : hargaPcs,
+    });
   };
 
-  const qtyPcs = (b: Baris) => (b.satuan === 'karton' ? b.qty * isiKarton(invBySku.get(b.sku)) : b.qty);
+  const isiEfektif = (b: Baris) => {
+    const m = isiKarton(invBySku.get(b.sku));
+    return m > 1 ? m : Math.max(1, Number(b.isiKarton) || 1);
+  };
+  const qtyPcs = (b: Baris) => (b.satuan === 'karton' ? b.qty * isiEfektif(b) : b.qty);
   const stokKurang = baris.some((b) => b.sku && qtyPcs(b) > (invBySku.get(b.sku)?.stok ?? 0));
+  const isiKartonKurang = baris.some(
+    (b) => b.sku && b.satuan === 'karton' && isiKarton(invBySku.get(b.sku)) <= 1 && (!b.isiKarton || b.isiKarton < 2)
+  );
   const barisTidakLengkap = baris.some((b) => !b.sku || !(b.qty > 0));
 
   const simpan = async (e: React.FormEvent) => {
@@ -135,6 +149,7 @@ export default function FormFakturPenjualan({
     if (submitting) return;
     if (!pelanggan.trim()) return notify('Pelanggan wajib diisi', 'error');
     if (barisTidakLengkap) return notify('Lengkapi produk dan jumlah di setiap baris', 'error');
+    if (isiKartonKurang) return notify('Isi per karton minimal 2 pcs untuk barang yang dijual kartonan', 'error');
     if (stokKurang) return notify('Ada barang yang jumlahnya melebihi stok', 'error');
 
     setSubmitting(true);
@@ -348,6 +363,27 @@ export default function FormFakturPenjualan({
                               produk={produk}
                               ariaLabel={`Satuan beli baris ${i + 1}`}
                             />
+                            {b.satuan === 'karton' && isi <= 0 && (
+                              <div className="mt-1 flex items-center gap-1">
+                                <input
+                                  type="number"
+                                  min={2}
+                                  value={b.isiKarton ?? ''}
+                                  onChange={(e) => {
+                                    const newIsi = parseInt(e.target.value, 10) || 0;
+                                    const hargaPcs = produk?.hargaJual ? parseFloat(produk.hargaJual) : 0;
+                                    ubahBaris(i, {
+                                      isiKarton: newIsi,
+                                      ...(hargaPcs > 0 && newIsi >= 2 ? { hargaJual: hargaPcs * newIsi } : {}),
+                                    });
+                                  }}
+                                  placeholder="Isi"
+                                  aria-label={`Isi per karton baris ${i + 1}`}
+                                  className="w-16 px-2 py-0.5 rounded border border-amber-300 bg-amber-50 text-[11px] font-semibold outline-none focus:border-emerald-500"
+                                />
+                                <span className="text-[10px] text-amber-700">pcs/krt</span>
+                              </div>
+                            )}
                           </td>
                           <td className="p-2">
                             <input

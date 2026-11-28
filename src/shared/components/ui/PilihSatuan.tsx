@@ -6,7 +6,7 @@ interface PilihSatuanProps {
   value: SatuanBarang;
   onChange: (satuan: SatuanBarang) => void;
   produk?: InfoSatuanProduk | null;
-  /** Jika true (mis. di Barang Masuk), tombol Karton tetap bisa diklik meski master belum atur isi/karton. */
+  /** Jika true (default), tombol Karton selalu bisa diklik untuk semua barang. */
   allowKartonBaru?: boolean;
   disabled?: boolean;
   compact?: boolean;
@@ -21,7 +21,7 @@ export default function PilihSatuan({
   value,
   onChange,
   produk,
-  allowKartonBaru = false,
+  allowKartonBaru = true,
   disabled = false,
   compact = false,
   ariaLabel = 'Pilih satuan barang',
