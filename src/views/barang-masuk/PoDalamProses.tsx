@@ -9,13 +9,15 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import { AlertTriangle, PackageCheck, RefreshCw, Truck, X } from 'lucide-react';
 import { formatRupiah, formatTanggal } from '@/shared/lib/utils';
 import { useDivision } from '@/shared/context/DivisionContext';
 import { ROUTES } from '@/router/routes';
 import { PO_STATUS, PO_STATUS_LABEL } from '@/shared/lib/po-status';
 import MemuatProgres from '@/shared/components/ui/MemuatProgres';
-import { hargaUntukSatuan, isiKartonOf, normalizeSatuan, type InfoSatuanProduk } from '@/shared/lib/satuan';
+import { hargaUntukSatuan, isiKartonOf, normalizeSatuan, satuanDasarOf, type InfoSatuanProduk } from '@/shared/lib/satuan';
+import FotoNota from '@/views/biaya-operasional/FotoNota';
 
 interface PoItem {
   id: string;
@@ -43,7 +45,9 @@ interface FakturRow {
   namaBarang: string;
   satuan: string;
   sisa: number;
+  kondisi: 'LENGKAP' | 'KURANG' | 'SEBAGIAN_RUSAK';
   qtyTerima: string;
+  qtyRusak: string;
   hargaBeli: string;
   isiKarton: string;
 }
@@ -65,6 +69,7 @@ const today = () => {
 
 export default function PoDalamProses({ onReceived, notify }: { onReceived: () => void; notify: Notify }) {
   const router = useRouter();
+  const { data: session } = useSession();
   const { division } = useDivision();
   const [list, setList] = useState<PoTerbuka[]>([]);
   const [loading, setLoading] = useState(true);
@@ -78,6 +83,9 @@ export default function PoDalamProses({ onReceived, notify }: { onReceived: () =
   const [tanggal, setTanggal] = useState(today());
   const [skemaBayar, setSkemaBayar] = useState<'lunas' | 'hutang'>('hutang');
   const [jatuhTempo, setJatuhTempo] = useState('');
+  const [diterimaOleh, setDiterimaOleh] = useState('');
+  const [fotoPenerimaan, setFotoPenerimaan] = useState<string[]>([]);
+  const [prosesFoto, setProsesFoto] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [hasil, setHasil] = useState<Hasil | null>(null);
 
@@ -101,6 +109,7 @@ export default function PoDalamProses({ onReceived, notify }: { onReceived: () =
             for (const it of invRes.data || []) {
               const key = String(it.sku || '').trim().toUpperCase();
               map[key] = {
+                gramasi: it.gramasi,
                 hargaBeli: it.hargaBeli,
                 hargaBeliKarton: it.hargaBeliKarton,
                 pakaiKarton: it.pakaiKarton,
@@ -128,6 +137,8 @@ export default function PoDalamProses({ onReceived, notify }: { onReceived: () =
     setTanggal(today());
     setSkemaBayar('hutang');
     setJatuhTempo('');
+    setDiterimaOleh(session?.user?.name || '');
+    setFotoPenerimaan([]);
     setRows(
       p.items
         .map((it) => {
@@ -140,7 +151,9 @@ export default function PoDalamProses({ onReceived, notify }: { onReceived: () =
             namaBarang: it.namaBarang,
             satuan: satuanPo,
             sisa: it.qtyOrder - it.qtyTerima,
+            kondisi: 'LENGKAP' as const,
             qtyTerima: String(it.qtyOrder - it.qtyTerima),
+            qtyRusak: '0',
             hargaBeli: hargaDefault > 0 ? String(hargaDefault) : '',
             isiKarton: '',
           };
@@ -166,7 +179,11 @@ export default function PoDalamProses({ onReceived, notify }: { onReceived: () =
   });
 
   const submit = async () => {
-    if (!po || !adaQty || qtyInvalid || isiKartonInvalid) return;
+    if (!po || !adaQty || qtyInvalid || isiKartonInvalid || prosesFoto) return;
+    const adaKurangAtauRusak = rows.some((r) => r.kondisi === 'KURANG' || r.kondisi === 'SEBAGIAN_RUSAK');
+    const skuBermasalah = rows
+      .filter((r) => r.kondisi === 'KURANG' || r.kondisi === 'SEBAGIAN_RUSAK')
+      .map((r) => r.sku);
     setSubmitting(true);
     try {
       const res = await fetch(`/api/po-loading/${po.id}/faktur`, {
@@ -178,6 +195,8 @@ export default function PoDalamProses({ onReceived, notify }: { onReceived: () =
           skemaBayar,
           jatuhTempo: skemaBayar === 'hutang' && jatuhTempo ? jatuhTempo : undefined,
           divisi: division,
+          diterimaOleh: diterimaOleh.trim() || null,
+          fotoPenerimaan: fotoPenerimaan[0] || null,
           items: rows.map((r) => {
             const isiMaster = isiKartonOf(produkMaster[r.sku.trim().toUpperCase()]);
             return {
@@ -194,14 +213,28 @@ export default function PoDalamProses({ onReceived, notify }: { onReceived: () =
         return;
       }
       setPo(null);
-      setHasil(json.data);
       notify(
         'success',
         `Faktur pembelian ${json.data.noFaktur || json.data.noPo} tersimpan. Stok sudah bertambah.`,
-        json.data.status === PO_STATUS.SEBAGIAN ? 'Sebagian barang belum datang: PO tetap ada di daftar ini.' : undefined
+        adaKurangAtauRusak
+          ? 'Ada barang kurang / sebagian rusak — mengarahkan ke Formulir Retur...'
+          : json.data.status === PO_STATUS.SEBAGIAN
+            ? 'Sebagian barang belum datang: PO tetap ada di daftar ini.'
+            : undefined
       );
       load();
       onReceived();
+
+      if (adaKurangAtauRusak) {
+        const q = new URLSearchParams({
+          returFaktur: json.data.noFaktur || json.data.noPo,
+          supplier: json.data.supplier || po.supplier || '',
+          skus: skuBermasalah.join(','),
+        });
+        router.push(`${ROUTES.LAPORAN_RUSAK_RETUR}?${q.toString()}`);
+      } else {
+        setHasil(json.data);
+      }
     } catch {
       notify('error', 'Terjadi kesalahan koneksi saat menyimpan faktur');
     } finally {
@@ -340,7 +373,7 @@ export default function PoDalamProses({ onReceived, notify }: { onReceived: () =
                   <input
                     value={noFaktur}
                     onChange={(e) => setNoFaktur(e.target.value)}
-                    placeholder={`Kosong = ${po.noPo}`}
+                    placeholder="Otomatis (BM...) jika dikosongkan"
                     className={`${input} mt-1 font-normal`}
                   />
                 </label>
@@ -393,14 +426,17 @@ export default function PoDalamProses({ onReceived, notify }: { onReceived: () =
                     {rows.map((r, i) => {
                       const q = Number(r.qtyTerima);
                       const salah = !Number.isInteger(q) || q < 0 || q > r.sisa;
-                      const isi = r.satuan === 'karton' ? isiKartonOf(produkMaster[r.sku.trim().toUpperCase()]) : 0;
+                      const infoProduk = produkMaster[r.sku.trim().toUpperCase()];
+                      const dasar = satuanDasarOf(infoProduk);
+                      const isi = r.satuan === 'karton' ? isiKartonOf(infoProduk) : 0;
+                      const labelSatuan = r.satuan === 'karton' ? 'karton' : dasar;
                       return (
                         <tr key={r.itemId}>
                           <td className="p-2.5">
                             <div className="font-semibold text-gray-800">{r.namaBarang}</div>
                             <div className="text-[10px] font-mono text-gray-400">
                               {r.sku}
-                              {isi > 1 && <span className="ml-1.5 font-sans text-emerald-700 font-semibold">· 1 karton = {isi} pcs</span>}
+                              {isi > 1 && <span className="ml-1.5 font-sans text-emerald-700 font-semibold">· 1 karton = {isi} {dasar}</span>}
                             </div>
                             {r.satuan === 'karton' && isi <= 1 && q > 0 && (
                               <div className="mt-1 flex items-center gap-1.5">
@@ -413,29 +449,102 @@ export default function PoDalamProses({ onReceived, notify }: { onReceived: () =
                                   aria-label={`Isi per karton ${r.namaBarang}`}
                                   className="w-20 px-2 py-1 rounded border border-amber-300 bg-amber-50 text-[11px] font-semibold outline-none focus:border-emerald-500"
                                 />
-                                <span className="text-[10px] text-amber-700">pcs/karton (min. 2)</span>
+                                <span className="text-[10px] text-amber-700">{dasar}/karton (min. 2)</span>
                               </div>
                             )}
                           </td>
                           <td className="p-2.5 text-center tabular-nums text-gray-600">
-                            {r.sisa} {r.satuan}
+                            {r.sisa} {labelSatuan}
                           </td>
                           <td className="p-2.5">
-                            <input
-                              type="number"
-                              min={0}
-                              max={r.sisa}
-                              value={r.qtyTerima}
-                              onChange={(e) => setRow(i, { qtyTerima: e.target.value })}
-                              aria-invalid={salah}
-                              aria-label={`Qty datang ${r.namaBarang}`}
-                              className={`w-full px-2 py-1.5 rounded-lg border text-center tabular-nums font-semibold outline-none ${
-                                salah ? 'border-red-400 bg-red-50' : 'border-gray-200 focus:border-emerald-500'
-                              }`}
-                            />
+                            <div className="flex flex-wrap gap-1 mb-1.5">
+                              {([
+                                { id: 'LENGKAP', label: 'Lengkap', cls: 'bg-emerald-600 text-white border-emerald-600' },
+                                { id: 'KURANG', label: 'Kurang', cls: 'bg-amber-600 text-white border-amber-600' },
+                                { id: 'SEBAGIAN_RUSAK', label: 'Sebagian Rusak', cls: 'bg-red-600 text-white border-red-600' },
+                              ] as const).map((opt) => (
+                                <button
+                                  key={opt.id}
+                                  type="button"
+                                  onClick={() => {
+                                    if (opt.id === 'LENGKAP') {
+                                      setRow(i, { kondisi: 'LENGKAP', qtyTerima: String(r.sisa), qtyRusak: '0' });
+                                    } else if (opt.id === 'KURANG') {
+                                      const cur = Number(r.qtyTerima);
+                                      setRow(i, {
+                                        kondisi: 'KURANG',
+                                        qtyTerima: cur >= r.sisa ? String(Math.max(0, r.sisa - 1)) : r.qtyTerima,
+                                        qtyRusak: '0',
+                                      });
+                                    } else {
+                                      const defaultRusak = Math.min(1, r.sisa);
+                                      setRow(i, {
+                                        kondisi: 'SEBAGIAN_RUSAK',
+                                        qtyRusak: String(defaultRusak),
+                                        qtyTerima: String(Math.max(0, r.sisa - defaultRusak)),
+                                      });
+                                    }
+                                  }}
+                                  className={`px-2 py-1 rounded-lg border text-[11px] font-semibold transition ${
+                                    r.kondisi === opt.id
+                                      ? opt.cls
+                                      : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
+                                  }`}
+                                >
+                                  {opt.label}
+                                </button>
+                              ))}
+                            </div>
+
+                            {r.kondisi === 'LENGKAP' ? (
+                              <div className="text-xs font-bold text-emerald-700">
+                                {r.sisa} {labelSatuan} (Lengkap)
+                              </div>
+                            ) : r.kondisi === 'KURANG' ? (
+                              <div className="flex items-center gap-1.5">
+                                <input
+                                  type="number"
+                                  min={0}
+                                  max={r.sisa}
+                                  value={r.qtyTerima}
+                                  onChange={(e) => setRow(i, { qtyTerima: e.target.value })}
+                                  aria-invalid={salah}
+                                  aria-label={`Qty datang ${r.namaBarang}`}
+                                  className={`w-24 px-2 py-1 rounded-lg border text-center tabular-nums font-semibold outline-none ${
+                                    salah ? 'border-red-400 bg-red-50' : 'border-amber-300 bg-amber-50/40 focus:border-emerald-500'
+                                  }`}
+                                />
+                                <span className="text-[11px] text-gray-500">datang dari {r.sisa} {labelSatuan}</span>
+                              </div>
+                            ) : (
+                              <div className="flex flex-wrap items-center gap-1.5">
+                                <label className="text-[10px] text-gray-600">
+                                  Rusak:
+                                  <input
+                                    type="number"
+                                    min={1}
+                                    max={r.sisa}
+                                    value={r.qtyRusak}
+                                    onChange={(e) => {
+                                      const rusak = Math.max(0, Math.min(r.sisa, parseInt(e.target.value, 10) || 0));
+                                      setRow(i, {
+                                        qtyRusak: e.target.value,
+                                        qtyTerima: String(Math.max(0, r.sisa - rusak)),
+                                      });
+                                    }}
+                                    aria-label={`Qty rusak ${r.namaBarang}`}
+                                    className="ml-1 w-16 px-1.5 py-1 rounded border border-red-300 bg-red-50/40 text-center tabular-nums font-semibold outline-none focus:border-red-500"
+                                  />
+                                </label>
+                                <span className="text-[11px] font-semibold text-emerald-700">
+                                  · Masuk baik: {q} {labelSatuan}
+                                </span>
+                              </div>
+                            )}
+
                             {isi > 1 && !salah && q > 0 && (
-                              <div className="text-[10px] text-emerald-700 text-center mt-0.5 font-medium">
-                                = {(q * isi).toLocaleString('id-ID')} pcs
+                              <div className="text-[10px] text-emerald-700 mt-0.5 font-medium">
+                                = {(q * isi).toLocaleString('id-ID')} {dasar}
                               </div>
                             )}
                             {salah && <div className="text-[10px] text-red-600 mt-0.5">0 – {r.sisa}</div>}
@@ -459,8 +568,30 @@ export default function PoDalamProses({ onReceived, notify }: { onReceived: () =
                   </tbody>
                 </table>
               </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                <label className="block min-w-0 text-xs font-semibold text-gray-700">
+                  Diterima Oleh *
+                  <input
+                    type="text"
+                    required
+                    placeholder="Nama penerima barang"
+                    value={diterimaOleh}
+                    onChange={(e) => setDiterimaOleh(e.target.value)}
+                    className={`${input} mt-1 font-medium`}
+                  />
+                </label>
+                <div className="min-w-0">
+                  <FotoNota
+                    foto={fotoPenerimaan}
+                    onChange={setFotoPenerimaan}
+                    onProses={setProsesFoto}
+                    maks={1}
+                    label="Upload Foto Penerimaan Barang"
+                  />
+                </div>
+              </div>
               <p className="text-[11px] text-gray-500">
-                Barang yang belum datang isi 0. Sisanya tetap menunggu di PO ini dan bisa diterima nanti.
+                Jika memilih <strong>Kurang</strong> atau <strong>Sebagian Rusak</strong>, jumlah barang masuk &amp; nominal faktur otomatis disesuaikan dan Anda langsung diarahkan ke Formulir Retur.
               </p>
             </div>
 
@@ -484,7 +615,7 @@ export default function PoDalamProses({ onReceived, notify }: { onReceived: () =
                 <button
                   type="button"
                   onClick={submit}
-                  disabled={submitting || !adaQty || qtyInvalid || isiKartonInvalid}
+                  disabled={submitting || !adaQty || qtyInvalid || isiKartonInvalid || prosesFoto}
                   className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-bold"
                 >
                   {submitting ? 'Menyimpan...' : 'Submit Faktur Pembelian'}

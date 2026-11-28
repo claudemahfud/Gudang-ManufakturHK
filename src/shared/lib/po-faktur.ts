@@ -5,6 +5,7 @@ import { catatBarangMasuk, catatPembayaranPembelian } from '@/shared/lib/barang-
 import { BusinessError, normalizeSku } from '@/shared/lib/stock';
 import { PO_STATUS } from '@/shared/lib/po-status';
 import { hargaUntukSatuan, normalizeSatuan } from '@/shared/lib/satuan';
+import { nomorUrut } from '@/shared/lib/nomor-urut';
 
 // ============================================================
 // Faktur Pembelian dari PO ("Barang Datang" di Barang Masuk).
@@ -28,6 +29,8 @@ export interface FakturInput {
   jatuhTempo: Date | null;
   divisi: string;
   user: string;
+  diterimaOleh?: string | null;
+  fotoPenerimaan?: string | null;
   bolehHpp: boolean; // boleh menentukan harga beli; selain itu harga master
 }
 
@@ -42,6 +45,7 @@ export async function terimaFakturPo(tx: Tx, poId: string, f: FakturInput) {
   const poItems = await tx.select().from(poLoadingItems).where(eq(poLoadingItems.poLoadingId, poId));
   const byId = new Map(poItems.map((it) => [it.id, it]));
   const seen = new Set<string>();
+  const noFakturFinal = f.noFaktur || (await nomorUrut(tx, 'BM', f.tanggal));
 
   let total = 0;
   const diterima: string[] = [];
@@ -85,12 +89,14 @@ export async function terimaFakturPo(tx: Tx, poId: string, f: FakturInput) {
       satuan: satuanPo,
       hargaBeli: harga,
       supplier: po.supplier,
-      noFaktur: f.noFaktur ?? po.noPo, // sama dengan nomor hutang/jurnal pembeliannya
+      noFaktur: noFakturFinal, // sama dengan nomor hutang/jurnal pembeliannya
       skemaBayar: f.skemaBayar,
       jatuhTempo: f.jatuhTempo,
       divisi: f.divisi,
       cabang: po.cabang,
       keterangan: `Faktur pembelian dari ${po.noPo}`,
+      diterimaOleh: f.diterimaOleh || f.user,
+      fotoPenerimaan: f.fotoPenerimaan || null,
       user: f.user,
       isiKarton: input.isiKarton ? Number(input.isiKarton) : null,
     });
@@ -110,7 +116,7 @@ export async function terimaFakturPo(tx: Tx, poId: string, f: FakturInput) {
     tanggal: f.tanggal,
     total,
     supplier: po.supplier,
-    noFaktur: f.noFaktur ?? po.noPo,
+    noFaktur: noFakturFinal,
     skemaBayar: f.skemaBayar,
     jatuhTempo: f.jatuhTempo,
     divisi: f.divisi,
@@ -126,13 +132,13 @@ export async function terimaFakturPo(tx: Tx, poId: string, f: FakturInput) {
   await tx.insert(logs).values({
     user: f.user.slice(0, 50),
     aksi: 'FAKTUR_PEMBELIAN_PO',
-    detail: `Faktur ${f.noFaktur || '-'} dari ${po.noPo} (${po.supplier}) [${f.skemaBayar.toUpperCase()}] Rp ${total.toLocaleString('id-ID')}: ${diterima.join(', ')}. Status PO: ${status}`,
+    detail: `Faktur ${noFakturFinal} dari ${po.noPo} (${po.supplier}) [${f.skemaBayar.toUpperCase()}] Rp ${total.toLocaleString('id-ID')}: ${diterima.join(', ')}. Status PO: ${status}`,
   });
 
   return {
     noPo: po.noPo,
     supplier: po.supplier,
-    noFaktur: f.noFaktur,
+    noFaktur: noFakturFinal,
     status,
     total,
     items: poItems.map((it) => ({ sku: normalizeSku(it.sku), namaBarang: it.namaBarang })),

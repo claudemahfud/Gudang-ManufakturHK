@@ -7,6 +7,8 @@ import { catatBarangMasuk, catatPembayaranPembelian, resolveJatuhTempo } from '@
 import { catatReturPelanggan } from '@/shared/lib/retur-pelanggan';
 import { BusinessError, errorResponse, normalizeSku, parsePositiveInt, resolveRequestCabang } from '@/shared/lib/stock';
 import { roleUtamaDi } from '@/shared/lib/auth/roles';
+import { nomorUrut } from '@/shared/lib/nomor-urut';
+import { keWebp } from '@/shared/lib/webp';
 
 // ============================================================
 // API: /api/barang-masuk
@@ -152,13 +154,22 @@ export async function POST(req: Request) {
       : (body.cabang || 'Pusat');
     const divisiToSave = body.divisi || 'MANUFAKTUR';
     const skuNorm = sku.trim().toUpperCase();
-    // Kredit tanpa nomor faktur: buat nomor agar baris barang masuk & hutangnya tetap tertaut
-    const noFakturFinal = noFaktur?.trim() || (paymentScheme === 'hutang' ? `BM-${Date.now()}` : null);
+    const diterimaOleh = typeof body.diterimaOleh === 'string' && body.diterimaOleh.trim() ? body.diterimaOleh.trim().slice(0, 100) : user;
+    let fotoPenerimaan: string | null = null;
+    if (typeof body.fotoPenerimaan === 'string' && body.fotoPenerimaan.trim()) {
+      const f = body.fotoPenerimaan.trim();
+      fotoPenerimaan = f.startsWith('data:application/pdf;')
+        ? f
+        : await keWebp(f, { lebar: 1400, tinggi: 1400, fit: 'inside', mutu: 78 });
+    }
 
     let insertedRecord: any = null;
 
     // Transaksi ACID untuk menjamin konsistensi Barang Masuk, Stok Inventory, Arus Kas, dan Neraca Hutang
     await db.transaction(async (tx) => {
+      // Semua penerimaan barang selalu memiliki nomor faktur otomatis (BM...) bila kosong
+      const noFakturFinal = noFaktur?.trim() || (await nomorUrut(tx, 'BM', parsedTanggal));
+
       // 1-2. Catat barang masuk, HPP rata-rata, dan stok cabang
       const { row } = await catatBarangMasuk(tx, {
         tanggal: parsedTanggal,
@@ -174,6 +185,8 @@ export async function POST(req: Request) {
         divisi: divisiToSave,
         cabang: cabangToSave,
         keterangan: keterangan || null,
+        diterimaOleh,
+        fotoPenerimaan,
         user,
         isiKarton: Number(body.isiKarton) || null,
       });

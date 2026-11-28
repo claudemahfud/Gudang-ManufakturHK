@@ -68,6 +68,8 @@ export const barangMasuk = pgTable('barang_masuk', {
   divisi: varchar('divisi', { length: 30 }).notNull().default('MANUFAKTUR'),
   cabang: varchar('cabang', { length: 50 }).notNull().default('Pusat'),
   keterangan: text('keterangan'),
+  diterimaOleh: varchar('diterima_oleh', { length: 100 }),
+  fotoPenerimaan: text('foto_penerimaan'),
   createdBy: varchar('created_by', { length: 50 }),
   createdAt: timestamp('created_at').defaultNow(),
 });
@@ -239,6 +241,8 @@ export const barangRusak = pgTable('barang_rusak', {
   divisi: varchar('divisi', { length: 30 }).notNull().default('MANUFAKTUR'),
   cabang: varchar('cabang', { length: 50 }).notNull().default('Pusat'),
   keterangan: text('keterangan'),
+  diterimaOleh: varchar('diterima_oleh', { length: 100 }),
+  fotoPenerimaan: text('foto_penerimaan'),
   createdBy: varchar('created_by', { length: 50 }),
   createdAt: timestamp('created_at').defaultNow(),
 });
@@ -258,6 +262,8 @@ export const mutasiBarang = pgTable('mutasi_barang', {
   divisi: varchar('divisi', { length: 30 }).notNull().default('MANUFAKTUR'),
   cabang: varchar('cabang', { length: 50 }).notNull().default('Pusat'),
   keterangan: text('keterangan'),
+  diterimaOleh: varchar('diterima_oleh', { length: 100 }),
+  fotoPenerimaan: text('foto_penerimaan'),
   createdBy: varchar('created_by', { length: 50 }),
   createdAt: timestamp('created_at').defaultNow(),
 });

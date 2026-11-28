@@ -11,6 +11,7 @@ import { Plus, Receipt, Trash2, X } from 'lucide-react';
 import { formatRupiah, formatUkuranKali } from '@/shared/lib/utils';
 import { hitungFaktur, LABEL_STATUS, type MetodeBayar } from '@/shared/lib/faktur-hitung';
 import PilihSatuan from '@/shared/components/ui/PilihSatuan';
+import { satuanDasarOf } from '@/shared/lib/satuan';
 
 export interface InventoryOption {
   sku: string;
@@ -351,10 +352,10 @@ export default function FormFakturPenjualan({
                               onChange={(e) => ubahBaris(i, { qty: parseInt(e.target.value, 10) || 0 })}
                               className={`${input} text-center font-bold tabular-nums ${lebih ? 'border-red-400 bg-red-50' : ''}`}
                             />
-                            {lebih && <div className="text-[10px] text-red-600 mt-0.5 text-center">Stok {stok ?? 0} pcs</div>}
+                            {lebih && <div className="text-[10px] text-red-600 mt-0.5 text-center">Stok {stok ?? 0} {satuanDasarOf(produk)}</div>}
                             {!lebih && b.satuan === 'karton' && (
                               <div className="text-[10px] text-gray-500 mt-0.5 text-center tabular-nums">
-                                = {qtyPcs(b)} pcs
+                                = {qtyPcs(b)} {satuanDasarOf(produk)}
                                 {produk?.gramasi && formatUkuranKali(produk.gramasi, qtyPcs(b))
                                   ? ` (${formatUkuranKali(produk.gramasi, qtyPcs(b))})`
                                   : ''}

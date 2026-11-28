@@ -1,6 +1,6 @@
 'use client';
 
-import { isiKartonOf, type InfoSatuanProduk, type SatuanBarang } from '@/shared/lib/satuan';
+import { isiKartonOf, satuanDasarOf, type InfoSatuanProduk, type SatuanBarang } from '@/shared/lib/satuan';
 
 interface PilihSatuanProps {
   value: SatuanBarang;
@@ -27,6 +27,7 @@ export default function PilihSatuan({
   ariaLabel = 'Pilih satuan barang',
 }: PilihSatuanProps) {
   const isi = isiKartonOf(produk);
+  const dasar = satuanDasarOf(produk);
   const kartonTersedia = isi > 1 || allowKartonBaru;
 
   const btnBase = compact
@@ -50,7 +51,7 @@ export default function PilihSatuan({
             : 'text-gray-600 hover:text-gray-900'
         }`}
       >
-        pcs
+        {dasar}
       </button>
       <button
         type="button"
@@ -58,7 +59,7 @@ export default function PilihSatuan({
         onClick={() => kartonTersedia && onChange('karton')}
         title={
           isi > 1
-            ? `1 karton = ${isi} pcs`
+            ? `1 karton = ${isi} ${dasar}`
             : allowKartonBaru
               ? 'Pilih untuk mengisi isi per karton'
               : 'Satuan karton belum diaktifkan di Master Inventory'

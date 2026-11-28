@@ -4,6 +4,7 @@ import { canViewCostPrice, requireAuthRole, ROLES_WAREHOUSE } from '@/shared/lib
 import { resolveJatuhTempo } from '@/shared/lib/barang-masuk';
 import { terimaFakturPo, type FakturItemInput } from '@/shared/lib/po-faktur';
 import { BusinessError, errorResponse } from '@/shared/lib/stock';
+import { keWebp } from '@/shared/lib/webp';
 
 // ============================================================
 // API: POST /api/po-loading/[id]/faktur
@@ -23,6 +24,17 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     if (Number.isNaN(tanggal.getTime())) throw new BusinessError('Tanggal faktur tidak valid');
     const skemaBayar: 'lunas' | 'hutang' = body.skemaBayar === 'hutang' ? 'hutang' : 'lunas';
 
+    const user = authResult.user?.name || authResult.user?.username || 'System';
+    const diterimaOleh =
+      typeof body.diterimaOleh === 'string' && body.diterimaOleh.trim() ? body.diterimaOleh.trim().slice(0, 100) : user;
+    let fotoPenerimaan: string | null = null;
+    if (typeof body.fotoPenerimaan === 'string' && body.fotoPenerimaan.trim()) {
+      const f = body.fotoPenerimaan.trim();
+      fotoPenerimaan = f.startsWith('data:application/pdf;')
+        ? f
+        : await keWebp(f, { lebar: 1400, tinggi: 1400, fit: 'inside', mutu: 78 });
+    }
+
     const hasil = await db.transaction((tx) =>
       terimaFakturPo(tx, id, {
         items: Array.isArray(body.items) ? (body.items as FakturItemInput[]) : [],
@@ -31,7 +43,9 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         skemaBayar,
         jatuhTempo: resolveJatuhTempo(skemaBayar, tanggal, body.jatuhTempo),
         divisi: typeof body.divisi === 'string' && body.divisi ? body.divisi : 'MANUFAKTUR',
-        user: authResult.user?.name || authResult.user?.username || 'System',
+        user,
+        diterimaOleh,
+        fotoPenerimaan,
         bolehHpp: canViewCostPrice(authResult.userRole),
       })
     );

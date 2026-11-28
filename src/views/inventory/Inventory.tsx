@@ -7,6 +7,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { formatRupiah, formatStok, formatUkuranKali } from '@/shared/lib/utils';
+import { satuanDasarOf } from '@/shared/lib/satuan';
 import type { InventoryItem } from '@/shared/types';
 import { useDivision } from '@/shared/context/DivisionContext';
 import { Factory, Coffee, Download, Trash2, AlertCircle, Sparkles, Info, Plus } from 'lucide-react';

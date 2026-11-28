@@ -3,6 +3,7 @@ import { db } from '@/shared/lib/db';
 import { barangMasuk, hutangSupplier, inventory, keuangan } from '@/shared/lib/db/schema';
 import { BusinessError, incrementStock } from '@/shared/lib/stock';
 import { AKUN, posting } from '@/shared/lib/jurnal';
+import { nomorUrut } from '@/shared/lib/nomor-urut';
 
 // ============================================================
 // Pencatatan Barang Masuk (dipakai Barang Masuk manual & Faktur Pembelian dari PO)
@@ -26,6 +27,8 @@ export interface BarangMasukInput {
   divisi: string;
   cabang: string;
   keterangan: string | null;
+  diterimaOleh?: string | null;
+  fotoPenerimaan?: string | null;
   user: string;
   /** Isi per karton dari form, dipakai (dan disimpan ke master) bila master belum punya */
   isiKarton?: number | null;
@@ -108,6 +111,8 @@ export async function catatBarangMasuk(tx: Tx, input: BarangMasukInput) {
       divisi: it.divisi,
       cabang: it.cabang,
       keterangan: it.keterangan,
+      diterimaOleh: it.diterimaOleh || it.user.slice(0, 100),
+      fotoPenerimaan: it.fotoPenerimaan || null,
       createdBy: it.user,
     })
     .returning();
@@ -176,7 +181,7 @@ export interface PembayaranPembelianInput {
 export async function catatPembayaranPembelian(tx: Tx, p: PembayaranPembelianInput) {
   if (p.total <= 0) return;
   // Nomor faktur hutang wajib sama dengan barang_masuk.no_faktur (pembatalan mencari hutang lewat nomor ini)
-  const noFaktur = p.noFaktur || `BM-${Date.now()}`;
+  const noFaktur = p.noFaktur || (await nomorUrut(tx, 'BM', p.tanggal));
 
   if (p.skemaBayar === 'lunas') {
     await tx.insert(keuangan).values({

@@ -6,11 +6,33 @@
 export type SatuanBarang = 'pcs' | 'karton';
 
 export interface InfoSatuanProduk {
+  gramasi?: string | null;
   pakaiKarton?: boolean | null;
   settingPcs?: number | string | null;
   hargaBeli?: number | string | null;
   hargaBeliKarton?: number | string | null;
   hargaJual?: number | string | null;
+}
+
+/**
+ * Ambil satuan dasar dari Master Inventory (mis. "1 kg" -> "kg", "1 liter" -> "liter", "500 gram" -> "pcs").
+ */
+export function satuanDasarOf(produk?: { gramasi?: string | null } | null): string {
+  const s = String(produk?.gramasi ?? '').trim();
+  if (!s) return 'pcs';
+  const m = s.replace(',', '.').match(/^([\d.]+)\s*(.+)$/);
+  if (m) {
+    const angka = parseFloat(m[1]);
+    const unit = m[2].trim().toLowerCase();
+    if (angka === 1 && unit) {
+      if (unit === 'g' || unit === 'gr') return 'gram';
+      if (unit === 'l' || unit === 'lt') return 'liter';
+      if (unit === 'bks') return 'bungkus';
+      return unit;
+    }
+    return 'pcs';
+  }
+  return s.toLowerCase();
 }
 
 const ALIAS_KARTON = new Set(['karton', 'krt', 'ctn', 'dus', 'dos', 'box']);

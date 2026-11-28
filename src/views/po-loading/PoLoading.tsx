@@ -11,7 +11,7 @@ import { isPoTerbuka, PO_STATUS, PO_STATUS_LABEL } from '@/shared/lib/po-status'
 import { AksiHeader, GrupIkon, TombolIkon, TombolUtama } from '@/shared/components/ui/AksiHeader';
 import MemuatProgres from '@/shared/components/ui/MemuatProgres';
 import PilihSatuan from '@/shared/components/ui/PilihSatuan';
-import { isiKartonOf, type SatuanBarang } from '@/shared/lib/satuan';
+import { isiKartonOf, satuanDasarOf, type SatuanBarang } from '@/shared/lib/satuan';
 
 const statusBadge = (status: string) =>
   status === PO_STATUS.SELESAI
@@ -680,7 +680,7 @@ export default function PoLoading() {
                           />
                           {row.satuan === 'karton' && isi > 1 && row.qtyOrder > 0 && (
                             <span className="text-[10px] text-emerald-700 font-medium mt-0.5">
-                              = {(row.qtyOrder * isi).toLocaleString('id-ID')} pcs
+                              = {(row.qtyOrder * isi).toLocaleString('id-ID')} {satuanDasarOf(prod)}
                               {prod?.gramasi && formatUkuranKali(prod.gramasi, row.qtyOrder * isi)
                                 ? ` (${formatUkuranKali(prod.gramasi, row.qtyOrder * isi)})`
                                 : ''}

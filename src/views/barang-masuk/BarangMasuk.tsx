@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import { Camera, Calendar, DollarSign, Building2, CreditCard, CheckCircle2, AlertCircle, Trash2, Sparkles, FileText, Download, Search, RefreshCw, Plus, ChevronDown, Truck, RotateCcw } from 'lucide-react';
 import { formatTanggal, formatTanggalWaktu, formatRupiah, formatUkuranKali } from '@/shared/lib/utils';
 import { useBarcodeScanner } from '@/shared/hooks/useBarcodeScanner';
@@ -16,7 +17,8 @@ import FormReturPelanggan from './FormReturPelanggan';
 import { AksiHeader, GrupIkon, TombolIkon } from '@/shared/components/ui/AksiHeader';
 import MemuatProgres from '@/shared/components/ui/MemuatProgres';
 import PilihSatuan from '@/shared/components/ui/PilihSatuan';
-import { normalizeSatuan } from '@/shared/lib/satuan';
+import { normalizeSatuan, satuanDasarOf } from '@/shared/lib/satuan';
+import FotoNota from '@/views/biaya-operasional/FotoNota';
 
 // ============================================================
 // PAGE: Barang Masuk (Purchasing & Penerimaan Stok)
@@ -38,6 +40,8 @@ interface ItemMasuk {
   jatuhTempo?: string | null;
   noFaktur: string | null;
   keterangan: string | null;
+  diterimaOleh?: string | null;
+  fotoPenerimaan?: string | null;
   createdBy: string | null;
 }
 
@@ -77,6 +81,7 @@ export default function BarangMasuk() {
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const router = useRouter();
+  const { data: session } = useSession();
   // Dropdown tombol Catat Barang Masuk: PO Loading Baru / Retur Pelanggan
   const [menuCatat, setMenuCatat] = useState(false);
   const refMenuCatat = useRef<HTMLDivElement>(null);
@@ -119,10 +124,13 @@ export default function BarangMasuk() {
     skemaBayar: 'lunas' as 'lunas' | 'hutang',
     jatuhTempo: defaultJatuhTempo(),
     noFaktur: '',
+    diterimaOleh: '',
     keterangan: '',
   };
 
   const [form, setForm] = useState(initialForm);
+  const [fotoPenerimaan, setFotoPenerimaan] = useState<string[]>([]);
+  const [prosesFoto, setProsesFoto] = useState(false);
   const [toast, setToast] = useState<ToastData | null>(null);
 
   const showToast = (
@@ -257,7 +265,9 @@ export default function BarangMasuk() {
     setForm({
       ...initialForm,
       supplier: suppliers[0]?.nama || '',
+      diterimaOleh: session?.user?.name || '',
     });
+    setFotoPenerimaan([]);
     setJenisMasuk(jenis);
     setIsModalOpen(true);
   };
@@ -270,6 +280,7 @@ export default function BarangMasuk() {
   const isiMaster =
     selectedInv?.pakaiKarton && Number(selectedInv.settingPcs) > 1 ? Number(selectedInv.settingPcs) : 0;
   const pakaiKarton = form.satuan === 'karton';
+  const dasar = satuanDasarOf(selectedInv);
   // Isi karton: dari master bila ada, selain itu dari isian form (disimpan ke master saat simpan)
   const isiKarton = isiMaster || Math.floor(Number(form.isiKarton) || 0);
   const pengali = pakaiKarton && isiKarton > 1 ? isiKarton : 1;
@@ -324,6 +335,8 @@ export default function BarangMasuk() {
         skemaBayar: form.skemaBayar,
         jatuhTempo: form.skemaBayar === 'hutang' ? form.jatuhTempo : null,
         noFaktur: form.noFaktur.trim() || null,
+        diterimaOleh: form.diterimaOleh.trim() || null,
+        fotoPenerimaan: fotoPenerimaan[0] || null,
         keterangan: form.keterangan.trim() || null,
       };
 
@@ -911,7 +924,7 @@ export default function BarangMasuk() {
                             className="w-full pl-3.5 pr-16 py-2.5 rounded-xl border border-gray-200 text-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 outline-none transition font-bold text-gray-800"
                           />
                           <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-gray-500 pointer-events-none">
-                            {pakaiKarton ? 'karton' : 'pcs'}
+                            {pakaiKarton ? 'karton' : dasar}
                           </span>
                         </div>
                       </div>
@@ -1149,19 +1162,43 @@ export default function BarangMasuk() {
                       </div>
                     )}
 
-                    {/* No Faktur & Catatan */}
-                    <div>
-                      <label className="block text-xs font-bold text-gray-700 mb-1 uppercase tracking-wider">
-                        Nomor Faktur / Surat Jalan Suplier
-                      </label>
-                      <input
-                        type="text"
-                        placeholder="Contoh: INV/2026/001 atau SJ-998"
-                        value={form.noFaktur}
-                        onChange={(e) => setForm({ ...form, noFaktur: e.target.value })}
-                        className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 text-sm focus:border-emerald-500 outline-none transition font-mono"
-                      />
+                    {/* No Faktur, Diterima Oleh, Foto & Catatan */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs font-bold text-gray-700 mb-1 uppercase tracking-wider">
+                          Nomor Faktur Suplier
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="Otomatis (BM...) jika dikosongkan"
+                          value={form.noFaktur}
+                          onChange={(e) => setForm({ ...form, noFaktur: e.target.value })}
+                          className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 text-sm focus:border-emerald-500 outline-none transition font-mono"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold text-gray-700 mb-1 uppercase tracking-wider">
+                          Diterima Oleh <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          required
+                          placeholder="Nama penerima barang"
+                          value={form.diterimaOleh}
+                          onChange={(e) => setForm({ ...form, diterimaOleh: e.target.value })}
+                          className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 text-sm focus:border-emerald-500 outline-none transition font-medium"
+                        />
+                      </div>
                     </div>
+
+                    <FotoNota
+                      foto={fotoPenerimaan}
+                      onChange={setFotoPenerimaan}
+                      onProses={setProsesFoto}
+                      maks={1}
+                      label="Upload Foto Penerimaan Barang / Surat Jalan"
+                    />
 
                     <div>
                       <label className="block text-xs font-bold text-gray-700 mb-1 uppercase tracking-wider">
@@ -1191,7 +1228,7 @@ export default function BarangMasuk() {
                 </button>
                 <button
                   type="submit"
-                  disabled={submitting}
+                  disabled={submitting || prosesFoto}
                   className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs sm:text-sm font-semibold transition disabled:opacity-50 shadow-md shadow-emerald-600/20 flex items-center gap-2"
                 >
                   {submitting && (
